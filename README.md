@@ -1,5 +1,12 @@
 # @dcyfr/ai
 
+> Portable AI agent framework with plugin architecture for multi-provider integration, telemetry tracking, and quality validation.
+
+[![npm version](https://badge.fury.io/js/%40dcyfr%2Fai.svg)](https://www.npmjs.com/package/@dcyfr/ai)
+[![npm downloads](https://img.shields.io/npm/dm/@dcyfr/ai.svg)](https://www.npmjs.com/package/@dcyfr/ai)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.3-blue)](https://www.typescriptlang.org/)
+
 Portable AI agent framework with plugin architecture for managing multiple AI providers, tracking telemetry, and ensuring quality compliance.
 
 ## Features
