@@ -5,13 +5,17 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "type": "module",
+  "bin": {
+    "dcyfr-ai": "./bin/dcyfr-ai.js"
+  },
   "scripts": {
     "build": "tsc",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "lint": "eslint packages/",
-    "prepare": "npm run build"
+    "prepare": "npm run build",
+    "cli": "node bin/cli.js"
   },
   "keywords": [
     "ai",
@@ -48,5 +52,16 @@
   },
   "engines": {
     "node": ">=18.0.0"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "config",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "publishConfig": {
+    "access": "public"
   }
 }

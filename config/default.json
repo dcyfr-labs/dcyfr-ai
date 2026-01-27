@@ -1,0 +1,123 @@
+{
+  "$schema": "https://dcyfr.ai/schema/config.json",
+  "version": "1.0.0",
+  "projectName": "my-app",
+  "telemetry": {
+    "enabled": true,
+    "storage": "file",
+    "storagePath": ".dcyfr/telemetry",
+    "retentionDays": 30,
+    "sampling": 1.0
+  },
+  "providers": {
+    "enabled": true,
+    "primary": "claude",
+    "fallback": ["groq", "ollama", "copilot"],
+    "timeout": 30000,
+    "retries": 3,
+    "providers": {
+      "claude": {
+        "enabled": true,
+        "model": "claude-3-5-sonnet-20241022",
+        "maxTokens": 8192
+      },
+      "groq": {
+        "enabled": true,
+        "model": "llama-3.3-70b-versatile"
+      },
+      "ollama": {
+        "enabled": true,
+        "baseUrl": "http://localhost:11434",
+        "model": "llama3.2"
+      },
+      "copilot": {
+        "enabled": true
+      }
+    }
+  },
+  "validation": {
+    "enabled": true,
+    "parallel": true,
+    "failFast": false,
+    "gates": [
+      {
+        "name": "typescript",
+        "plugins": ["typescript-compiler"],
+        "required": true,
+        "failureMode": "error"
+      },
+      {
+        "name": "linting",
+        "plugins": ["eslint"],
+        "required": true,
+        "failureMode": "error"
+      },
+      {
+        "name": "testing",
+        "plugins": ["vitest"],
+        "required": false,
+        "failureMode": "warn"
+      }
+    ]
+  },
+  "plugins": [
+    {
+      "name": "typescript-compiler",
+      "enabled": true,
+      "timeout": 30000,
+      "failureMode": "error"
+    },
+    {
+      "name": "eslint",
+      "enabled": true,
+      "timeout": 15000,
+      "failureMode": "warn"
+    }
+  ],
+  "agents": {
+    "designTokens": {
+      "enabled": true,
+      "tokenFile": "src/lib/design-tokens.ts",
+      "compliance": 0.90,
+      "autofix": false,
+      "strictMode": true,
+      "patterns": {
+        "spacing": ["SPACING.XS", "SPACING.SM", "SPACING.MD", "SPACING.LG", "SPACING.XL"],
+        "typography": ["TYPOGRAPHY.H1", "TYPOGRAPHY.H2", "TYPOGRAPHY.BODY"],
+        "colors": ["SEMANTIC_COLORS.primary", "SEMANTIC_COLORS.success"]
+      }
+    },
+    "barrelExports": {
+      "enabled": true,
+      "barrelPaths": ["@/components", "@/lib", "@/utils"],
+      "allowRelativeWithin": false,
+      "strictMode": true,
+      "exceptions": ["src/app/**/layout.tsx", "src/app/**/page.tsx"]
+    },
+    "pageLayout": {
+      "enabled": true,
+      "targetUsage": 0.90,
+      "pagePattern": "src/app/**/page.tsx",
+      "exceptions": ["ArticleLayout", "ArchiveLayout", "ErrorLayout"],
+      "strictMode": true
+    },
+    "testData": {
+      "enabled": true,
+      "testPattern": "**/*.{test,spec}.{ts,tsx,js,jsx}",
+      "sensitivePatterns": {
+        "apiKeys": true,
+        "passwords": true,
+        "secrets": true,
+        "tokens": true,
+        "emails": true,
+        "urls": true
+      },
+      "allowedPrefixes": ["MOCK_", "TEST_", "FAKE_", "FIXTURE_"]
+    }
+  },
+  "project": {
+    "root": ".",
+    "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.js", "src/**/*.jsx"],
+    "exclude": ["node_modules/**", "dist/**", "build/**", ".next/**", "coverage/**"]
+  }
+}

@@ -1,0 +1,16 @@
+# DCYFR AI Framework - Minimal Configuration
+# Only specify what differs from defaults
+
+version: '1.0.0'
+projectName: my-minimal-app
+
+# Enable only what you need
+agents:
+  designTokens:
+    enabled: true
+  barrelExports:
+    enabled: true
+  pageLayout:
+    enabled: false
+  testData:
+    enabled: true

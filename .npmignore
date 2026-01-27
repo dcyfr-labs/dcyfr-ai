@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.next/
+.dcyfr/
+*.log
+*.tgz
+.DS_Store
+.env
+.env.local
+.env.*.local
+coverage/
+.nyc_output/
