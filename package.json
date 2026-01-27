@@ -2,8 +2,8 @@
   "name": "@dcyfr/ai",
   "version": "1.0.0",
   "description": "Portable AI agent framework with plugin architecture",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./dist/ai/index.js",
+  "types": "./dist/ai/index.d.ts",
   "type": "module",
   "bin": {
     "dcyfr-ai": "./bin/dcyfr-ai.js"
