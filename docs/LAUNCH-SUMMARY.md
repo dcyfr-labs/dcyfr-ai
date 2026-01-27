@@ -10,7 +10,7 @@ The @dcyfr/ai framework has been successfully modularized from dcyfr-labs and is
 
 ### Phase 0: Repository Setup ✅
 - Created dcyfr-ai repository
-- Created dcyfr-agents repository (private)
+- Created dcyfr-ai-agents repository (private)
 - Established package structure
 
 ### Phase 1: Foundation ✅
