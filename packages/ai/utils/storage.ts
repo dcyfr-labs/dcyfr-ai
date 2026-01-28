@@ -6,7 +6,14 @@
 import type { StorageAdapter, StorageType } from '../types';
 
 /**
- * In-memory storage adapter (default, no persistence)
+ * Check if running in browser environment
+ */
+const isBrowser = typeof globalThis !== 'undefined' &&
+  typeof (globalThis as any).window !== 'undefined' &&
+  typeof (globalThis as any).window.document !== 'undefined';
+
+/**
+ * In-memory storage adapter (default, works in both browser and Node.js)
  */
 export class MemoryStorageAdapter implements StorageAdapter {
   type: StorageType = 'memory';
@@ -38,21 +45,34 @@ export class MemoryStorageAdapter implements StorageAdapter {
 
 /**
  * File-based storage adapter (Node.js only)
+ *
+ * This adapter requires Node.js and will throw an error if used in a browser environment.
  */
 export class FileStorageAdapter implements StorageAdapter {
   type: StorageType = 'file';
   private basePath: string;
 
   constructor(basePath: string) {
+    if (isBrowser) {
+      throw new Error(
+        'FileStorageAdapter is not available in browser environments. ' +
+        'Use MemoryStorageAdapter instead, or run this code on the server.'
+      );
+    }
     this.basePath = basePath;
   }
 
   async get<T>(key: string): Promise<T | null> {
+    if (isBrowser) {
+      throw new Error('FileStorageAdapter.get() is not available in browser environments.');
+    }
+
     try {
-      const fs = await import('fs/promises');
-      const path = await import('path');
-      const filePath = path.join(this.basePath, `${key}.json`);
-      const content = await fs.readFile(filePath, 'utf-8');
+      // Dynamic imports for Node.js modules
+      const { readFile } = await import('fs/promises');
+      const { join } = await import('path');
+      const filePath = join(this.basePath, `${key}.json`);
+      const content = await readFile(filePath, 'utf-8');
       return JSON.parse(content) as T;
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
@@ -63,23 +83,31 @@ export class FileStorageAdapter implements StorageAdapter {
   }
 
   async set<T>(key: string, value: T): Promise<void> {
-    const fs = await import('fs/promises');
-    const path = await import('path');
-    const filePath = path.join(this.basePath, `${key}.json`);
-    
+    if (isBrowser) {
+      throw new Error('FileStorageAdapter.set() is not available in browser environments.');
+    }
+
+    const { writeFile, mkdir } = await import('fs/promises');
+    const { join } = await import('path');
+    const filePath = join(this.basePath, `${key}.json`);
+
     // Ensure directory exists
-    await fs.mkdir(this.basePath, { recursive: true });
-    
-    await fs.writeFile(filePath, JSON.stringify(value, null, 2), 'utf-8');
+    await mkdir(this.basePath, { recursive: true });
+
+    await writeFile(filePath, JSON.stringify(value, null, 2), 'utf-8');
   }
 
   async delete(key: string): Promise<void> {
-    const fs = await import('fs/promises');
-    const path = await import('path');
-    const filePath = path.join(this.basePath, `${key}.json`);
-    
+    if (isBrowser) {
+      throw new Error('FileStorageAdapter.delete() is not available in browser environments.');
+    }
+
+    const { unlink } = await import('fs/promises');
+    const { join } = await import('path');
+    const filePath = join(this.basePath, `${key}.json`);
+
     try {
-      await fs.unlink(filePath);
+      await unlink(filePath);
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
         throw error;
@@ -88,15 +116,18 @@ export class FileStorageAdapter implements StorageAdapter {
   }
 
   async list(prefix?: string): Promise<string[]> {
-    const fs = await import('fs/promises');
-    const path = await import('path');
-    
+    if (isBrowser) {
+      throw new Error('FileStorageAdapter.list() is not available in browser environments.');
+    }
+
+    const { readdir } = await import('fs/promises');
+
     try {
-      const files = await fs.readdir(this.basePath);
+      const files = await readdir(this.basePath);
       const jsonFiles = files
         .filter(f => f.endsWith('.json'))
         .map(f => f.replace(/\.json$/, ''));
-      
+
       if (!prefix) return jsonFiles;
       return jsonFiles.filter(key => key.startsWith(prefix));
     } catch (error) {
@@ -108,18 +139,22 @@ export class FileStorageAdapter implements StorageAdapter {
   }
 
   async clear(): Promise<void> {
-    const fs = await import('fs/promises');
-    const path = await import('path');
-    
+    if (isBrowser) {
+      throw new Error('FileStorageAdapter.clear() is not available in browser environments.');
+    }
+
+    const { unlink } = await import('fs/promises');
+    const { join } = await import('path');
+
     try {
       const files = await this.list();
       await Promise.all(
         files.map(key => {
-          const filePath = path.join(this.basePath, `${key}.json`);
-          return fs.unlink(filePath);
+          const filePath = join(this.basePath, `${key}.json`);
+          return unlink(filePath);
         })
       );
-    } catch (error) {
+    } catch {
       // Ignore errors during clear
     }
   }
@@ -127,12 +162,22 @@ export class FileStorageAdapter implements StorageAdapter {
 
 /**
  * Storage adapter factory
+ *
+ * In browser environments, only 'memory' storage is available.
+ * File-based storage requires a Node.js environment.
  */
 export function createStorageAdapter(type: StorageType, options?: { basePath?: string }): StorageAdapter {
   switch (type) {
     case 'memory':
       return new MemoryStorageAdapter();
     case 'file':
+      if (isBrowser) {
+        console.warn(
+          '⚠️ FileStorageAdapter requested in browser environment. ' +
+          'Falling back to MemoryStorageAdapter. Data will not persist.'
+        );
+        return new MemoryStorageAdapter();
+      }
       if (!options?.basePath) {
         throw new Error('FileStorageAdapter requires basePath option');
       }

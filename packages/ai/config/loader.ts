@@ -1,17 +1,23 @@
 /**
  * Configuration Loader - Three-layer config merge system
- * 
+ *
  * Loads and merges configuration from multiple sources:
  * 1. Framework defaults (from schema.ts)
  * 2. Project config (.dcyfr.yaml, .dcyfr.json, package.json)
  * 3. User overrides (environment variables, CLI flags)
+ *
+ * In browser environments, only defaults and user-provided overrides are used.
+ * File-based configuration loading requires Node.js.
  */
 
-import { readFile } from 'fs/promises';
-import { existsSync } from 'fs';
-import { parse as parseYaml } from 'yaml';
-import { join } from 'path';
 import { FrameworkConfigSchema, DEFAULT_CONFIG, type FrameworkConfig } from './schema.js';
+
+/**
+ * Check if running in browser environment
+ */
+const isBrowser = typeof globalThis !== 'undefined' &&
+  typeof (globalThis as any).window !== 'undefined' &&
+  typeof (globalThis as any).window.document !== 'undefined';
 
 /**
  * Configuration file names to search for (in priority order)
@@ -36,28 +42,37 @@ const ENV_PREFIX = 'DCYFR_';
 export interface LoaderOptions {
   /**
    * Project root directory (default: process.cwd())
+   * Ignored in browser environments.
    */
   projectRoot?: string;
-  
+
   /**
    * Override configuration file path
+   * Ignored in browser environments.
    */
   configFile?: string;
-  
+
   /**
    * Enable environment variable overrides
+   * Only works in Node.js environments.
    */
   enableEnvOverrides?: boolean;
-  
+
   /**
    * Enable package.json config section
+   * Ignored in browser environments.
    */
   enablePackageJson?: boolean;
-  
+
   /**
    * Validation mode
    */
   validate?: boolean;
+
+  /**
+   * Direct configuration overrides (works in both browser and Node.js)
+   */
+  overrides?: Partial<FrameworkConfig>;
 }
 
 /**
@@ -66,45 +81,55 @@ export interface LoaderOptions {
 export class ConfigLoader {
   private projectRoot: string;
   private options: LoaderOptions;
-  
+
   constructor(options: LoaderOptions = {}) {
-    this.projectRoot = options.projectRoot || process.cwd();
+    // In browser, projectRoot is not meaningful
+    this.projectRoot = isBrowser ? '' : (options.projectRoot || (typeof process !== 'undefined' ? process.cwd() : ''));
     this.options = {
-      enableEnvOverrides: true,
-      enablePackageJson: true,
+      enableEnvOverrides: !isBrowser,
+      enablePackageJson: !isBrowser,
       validate: true,
       ...options,
     };
   }
-  
+
   /**
    * Load complete configuration with three-layer merge
    */
   async load(): Promise<FrameworkConfig> {
     // Layer 1: Framework defaults
     const defaults = { ...DEFAULT_CONFIG };
-    
-    // Layer 2: Project configuration
-    const projectConfig = await this.loadProjectConfig();
-    
-    // Layer 3: User overrides
-    const userOverrides = this.loadUserOverrides();
-    
+
+    // Layer 2: Project configuration (Node.js only)
+    const projectConfig = isBrowser ? {} : await this.loadProjectConfig();
+
+    // Layer 3: User overrides (environment variables in Node.js, or direct overrides)
+    const envOverrides = isBrowser ? {} : this.loadUserOverrides();
+    const directOverrides = this.options.overrides || {};
+
     // Merge all layers (deep merge)
-    const merged = this.deepMerge(defaults, projectConfig, userOverrides);
-    
+    const merged = this.deepMerge(defaults, projectConfig, envOverrides, directOverrides);
+
     // Validate final configuration
     if (this.options.validate) {
       return this.validate(merged);
     }
-    
+
     return merged;
   }
-  
+
   /**
-   * Load project configuration from files
+   * Load project configuration from files (Node.js only)
    */
   private async loadProjectConfig(): Promise<Partial<FrameworkConfig>> {
+    if (isBrowser) {
+      return {};
+    }
+
+    // Dynamic imports for Node.js modules
+    const { existsSync } = await import('fs');
+    const { join } = await import('path');
+
     // Try custom config file first
     if (this.options.configFile) {
       const customPath = join(this.projectRoot, this.options.configFile);
@@ -113,7 +138,7 @@ export class ConfigLoader {
       }
       throw new Error(`Config file not found: ${this.options.configFile}`);
     }
-    
+
     // Search for config files in priority order
     for (const filename of CONFIG_FILES) {
       const filepath = join(this.projectRoot, filename);
@@ -122,7 +147,7 @@ export class ConfigLoader {
         return await this.loadConfigFile(filepath);
       }
     }
-    
+
     // Try package.json
     if (this.options.enablePackageJson) {
       const pkgConfig = await this.loadPackageJsonConfig();
@@ -130,69 +155,87 @@ export class ConfigLoader {
         return pkgConfig;
       }
     }
-    
+
     // No project config found, use defaults
     console.log('ℹ️  No config file found, using defaults');
     return {};
   }
-  
+
   /**
-   * Load configuration from a specific file
+   * Load configuration from a specific file (Node.js only)
    */
   private async loadConfigFile(filepath: string): Promise<Partial<FrameworkConfig>> {
+    if (isBrowser) {
+      return {};
+    }
+
     try {
+      const { readFile } = await import('fs/promises');
       const content = await readFile(filepath, 'utf-8');
-      
+
       if (filepath.endsWith('.json')) {
         return JSON.parse(content);
       }
-      
+
       if (filepath.endsWith('.yaml') || filepath.endsWith('.yml')) {
+        const { parse: parseYaml } = await import('yaml');
         return parseYaml(content);
       }
-      
+
       throw new Error(`Unsupported config file format: ${filepath}`);
     } catch (error) {
       throw new Error(`Failed to load config file ${filepath}: ${error}`);
     }
   }
-  
+
   /**
-   * Load configuration from package.json
+   * Load configuration from package.json (Node.js only)
    */
   private async loadPackageJsonConfig(): Promise<Partial<FrameworkConfig> | null> {
+    if (isBrowser) {
+      return null;
+    }
+
+    const { existsSync } = await import('fs');
+    const { readFile } = await import('fs/promises');
+    const { join } = await import('path');
+
     const pkgPath = join(this.projectRoot, 'package.json');
-    
+
     if (!existsSync(pkgPath)) {
       return null;
     }
-    
+
     try {
       const content = await readFile(pkgPath, 'utf-8');
       const pkg = JSON.parse(content);
-      
+
       if (pkg.dcyfr) {
         console.log('📦 Loading config from package.json');
         return pkg.dcyfr;
       }
-      
+
       return null;
     } catch (error) {
       console.warn(`⚠️  Failed to load package.json: ${error}`);
       return null;
     }
   }
-  
+
   /**
-   * Load user overrides from environment variables
+   * Load user overrides from environment variables (Node.js only)
    */
   private loadUserOverrides(): Partial<FrameworkConfig> {
-    if (!this.options.enableEnvOverrides) {
+    if (isBrowser || !this.options.enableEnvOverrides) {
       return {};
     }
-    
+
+    if (typeof process === 'undefined' || !process.env) {
+      return {};
+    }
+
     const overrides: Record<string, unknown> = {};
-    
+
     // Parse environment variables with DCYFR_ prefix
     for (const [key, value] of Object.entries(process.env)) {
       if (key.startsWith(ENV_PREFIX)) {
@@ -200,29 +243,29 @@ export class ConfigLoader {
           .substring(ENV_PREFIX.length)
           .toLowerCase()
           .replace(/_/g, '.');
-        
+
         this.setNestedValue(overrides, configKey, this.parseEnvValue(value));
       }
     }
-    
+
     return overrides as Partial<FrameworkConfig>;
   }
-  
+
   /**
    * Parse environment variable value to appropriate type
    */
   private parseEnvValue(value: string | undefined): unknown {
     if (!value) return undefined;
-    
+
     // Boolean
     if (value === 'true') return true;
     if (value === 'false') return false;
-    
+
     // Number
     if (/^\d+(\.\d+)?$/.test(value)) {
       return parseFloat(value);
     }
-    
+
     // JSON
     if (value.startsWith('{') || value.startsWith('[')) {
       try {
@@ -231,17 +274,17 @@ export class ConfigLoader {
         return value;
       }
     }
-    
+
     return value;
   }
-  
+
   /**
    * Set nested object value using dot notation
    */
   private setNestedValue(obj: Record<string, unknown>, path: string, value: unknown): void {
     const keys = path.split('.');
     let current = obj;
-    
+
     for (let i = 0; i < keys.length - 1; i++) {
       const key = keys[i];
       if (!(key in current)) {
@@ -249,20 +292,20 @@ export class ConfigLoader {
       }
       current = current[key] as Record<string, unknown>;
     }
-    
+
     current[keys[keys.length - 1]] = value;
   }
-  
+
   /**
    * Deep merge multiple objects
    */
   private deepMerge(...objects: Array<Partial<FrameworkConfig>>): FrameworkConfig {
     const result: Record<string, unknown> = {};
-    
+
     for (const obj of objects) {
       for (const [key, value] of Object.entries(obj)) {
         if (value === undefined) continue;
-        
+
         if (this.isPlainObject(value) && this.isPlainObject(result[key])) {
           result[key] = this.deepMerge(
             result[key] as Partial<FrameworkConfig>,
@@ -273,10 +316,10 @@ export class ConfigLoader {
         }
       }
     }
-    
+
     return result as FrameworkConfig;
   }
-  
+
   /**
    * Check if value is a plain object
    */
@@ -288,7 +331,7 @@ export class ConfigLoader {
       Object.getPrototypeOf(value) === Object.prototype
     );
   }
-  
+
   /**
    * Validate configuration against schema
    */
@@ -301,29 +344,39 @@ export class ConfigLoader {
       throw new Error('Invalid configuration');
     }
   }
-  
+
   /**
-   * Get configuration file path (if exists)
+   * Get configuration file path (if exists) - Node.js only
    */
   async getConfigFilePath(): Promise<string | null> {
+    if (isBrowser) {
+      return null;
+    }
+
+    const { existsSync } = await import('fs');
+    const { join } = await import('path');
+
     if (this.options.configFile) {
       const customPath = join(this.projectRoot, this.options.configFile);
       return existsSync(customPath) ? customPath : null;
     }
-    
+
     for (const filename of CONFIG_FILES) {
       const filepath = join(this.projectRoot, filename);
       if (existsSync(filepath)) {
         return filepath;
       }
     }
-    
+
     return null;
   }
 }
 
 /**
  * Convenience function to load configuration
+ *
+ * In browser environments, returns default configuration merged with any
+ * provided overrides. File-based configuration is only loaded in Node.js.
  */
 export async function loadConfig(options?: LoaderOptions): Promise<FrameworkConfig> {
   const loader = new ConfigLoader(options);
