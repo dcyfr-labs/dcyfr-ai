@@ -153,6 +153,150 @@ export const ProviderConfigSchema = z.object({
 }).default({});
 
 /**
+ * Agent category schema
+ */
+export const AgentCategorySchema = z.enum([
+  'core',
+  'development',
+  'architecture',
+  'testing',
+  'security',
+  'performance',
+  'content',
+  'devops',
+  'data',
+  'research',
+  'specialized',
+]);
+
+/**
+ * Agent tier schema
+ */
+export const AgentTierSchema = z.enum(['public', 'private', 'project']);
+
+/**
+ * Agent model schema
+ */
+export const AgentModelSchema = z.enum(['haiku', 'sonnet', 'opus']);
+
+/**
+ * Agent permission mode schema
+ */
+export const AgentPermissionModeSchema = z.enum(['readonly', 'acceptEdits', 'full']);
+
+/**
+ * Agent quality gate schema
+ */
+export const AgentQualityGateSchema = z.object({
+  name: z.string(),
+  threshold: z.number().min(0).max(1),
+  metric: z.string(),
+  failureMode: FailureModeSchema.default('warn'),
+});
+
+/**
+ * Agent proactive trigger schema
+ */
+export const AgentProactiveTriggerSchema = z.object({
+  pattern: z.string(),
+  action: z.enum(['warn', 'block', 'fix', 'suggest']),
+  message: z.string(),
+  priority: z.number().default(50),
+});
+
+/**
+ * Agent manifest schema
+ */
+export const AgentManifestSchema = z.object({
+  name: z.string(),
+  version: z.string().regex(/^\d+\.\d+\.\d+/),
+  description: z.string(),
+  category: AgentCategorySchema,
+  tier: AgentTierSchema,
+  model: AgentModelSchema.default('sonnet'),
+  permissionMode: AgentPermissionModeSchema.default('acceptEdits'),
+  tools: z.array(z.string()).default([]),
+  delegatesTo: z.array(z.string()).optional(),
+  delegatedFrom: z.array(z.string()).optional(),
+  proactiveTriggers: z.array(AgentProactiveTriggerSchema).optional(),
+  qualityGates: z.array(AgentQualityGateSchema).optional(),
+  author: z.string().optional(),
+  license: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+});
+
+/**
+ * Agent registry tier configuration schema
+ */
+export const AgentTierConfigSchema = z.object({
+  enabled: z.boolean().default(true),
+  source: z.string().optional(),
+  paths: z.array(z.string()).optional(),
+});
+
+/**
+ * Agent registry configuration schema
+ */
+export const AgentRegistryConfigSchema = z.object({
+  autoDiscover: z.boolean().default(false),
+  projectPaths: z.array(z.string()).default(['.claude/agents', '.github/agents']),
+  public: AgentTierConfigSchema.default({ enabled: true, source: '@dcyfr/ai/agents-builtin' }),
+  private: AgentTierConfigSchema.default({ enabled: false }),
+  project: AgentTierConfigSchema.default({ enabled: true, paths: ['.claude/agents', '.github/agents'] }),
+}).default({});
+
+/**
+ * Agent routing rule schema
+ */
+export const AgentRoutingRuleSchema = z.object({
+  pattern: z.string(),
+  agent: z.string(),
+  priority: z.number().default(50),
+});
+
+/**
+ * Agent router configuration schema
+ */
+export const AgentRouterConfigSchema = z.object({
+  defaultAgent: z.string().default('fullstack-developer'),
+  routingRules: z.array(AgentRoutingRuleSchema).default([]),
+  delegationEnabled: z.boolean().default(true),
+  maxDelegationDepth: z.number().min(0).default(3),
+}).default({});
+
+/**
+ * MCP transport schema
+ */
+export const MCPTransportSchema = z.enum(['stdio', 'sse', 'websocket']);
+
+/**
+ * MCP server configuration schema
+ */
+export const MCPServerConfigSchema = z.object({
+  name: z.string(),
+  description: z.string().optional(),
+  transport: MCPTransportSchema,
+  command: z.string().optional(),
+  args: z.array(z.string()).optional(),
+  env: z.record(z.string()).optional(),
+  url: z.string().optional(),
+  enabled: z.boolean().default(true),
+  tier: AgentTierSchema.optional(),
+  tags: z.array(z.string()).optional(),
+});
+
+/**
+ * MCP registry configuration schema
+ */
+export const MCPRegistryConfigSchema = z.object({
+  autoDiscover: z.boolean().default(false),
+  searchPaths: z.array(z.string()).default(['.mcp.json', '.vscode/mcp.json']),
+  configFileName: z.string().default('.mcp.json'),
+  healthCheckInterval: z.number().positive().default(60000),
+  healthMonitoring: z.boolean().default(false),
+}).default({});
+
+/**
  * Main framework configuration schema
  */
 export const FrameworkConfigSchema = z.object({
@@ -194,6 +338,15 @@ export const FrameworkConfigSchema = z.object({
       '.next/**',
     ]),
   }).default({}),
+
+  // Agent registry configuration
+  agentRegistry: AgentRegistryConfigSchema,
+
+  // Agent router configuration
+  agentRouter: AgentRouterConfigSchema,
+
+  // MCP registry configuration
+  mcpRegistry: MCPRegistryConfigSchema,
 });
 
 /**
@@ -210,6 +363,24 @@ export type TelemetryConfig = z.infer<typeof TelemetryConfigSchema>;
 export type ProviderConfig = z.infer<typeof ProviderConfigSchema>;
 export type Severity = z.infer<typeof SeveritySchema>;
 export type FailureMode = z.infer<typeof FailureModeSchema>;
+
+// Agent schema types
+export type AgentCategory = z.infer<typeof AgentCategorySchema>;
+export type AgentTier = z.infer<typeof AgentTierSchema>;
+export type AgentModel = z.infer<typeof AgentModelSchema>;
+export type AgentPermissionMode = z.infer<typeof AgentPermissionModeSchema>;
+export type AgentQualityGateConfig = z.infer<typeof AgentQualityGateSchema>;
+export type AgentProactiveTriggerConfig = z.infer<typeof AgentProactiveTriggerSchema>;
+export type AgentManifestConfig = z.infer<typeof AgentManifestSchema>;
+export type AgentTierConfig = z.infer<typeof AgentTierConfigSchema>;
+export type AgentRegistryConfig = z.infer<typeof AgentRegistryConfigSchema>;
+export type AgentRoutingRuleConfig = z.infer<typeof AgentRoutingRuleSchema>;
+export type AgentRouterConfig = z.infer<typeof AgentRouterConfigSchema>;
+
+// MCP schema types
+export type MCPTransport = z.infer<typeof MCPTransportSchema>;
+export type MCPServerConfig = z.infer<typeof MCPServerConfigSchema>;
+export type MCPRegistryConfig = z.infer<typeof MCPRegistryConfigSchema>;
 
 /**
  * Default framework configuration
@@ -294,5 +465,28 @@ export const DEFAULT_CONFIG: FrameworkConfig = {
       'build/**',
       '.next/**',
     ],
+  },
+
+  agentRegistry: {
+    autoDiscover: false,
+    projectPaths: ['.claude/agents', '.github/agents'],
+    public: { enabled: true, source: '@dcyfr/ai/agents-builtin' },
+    private: { enabled: false },
+    project: { enabled: true, paths: ['.claude/agents', '.github/agents'] },
+  },
+
+  agentRouter: {
+    defaultAgent: 'fullstack-developer',
+    routingRules: [],
+    delegationEnabled: true,
+    maxDelegationDepth: 3,
+  },
+
+  mcpRegistry: {
+    autoDiscover: false,
+    searchPaths: ['.mcp.json', '.vscode/mcp.json'],
+    configFileName: '.mcp.json',
+    healthCheckInterval: 60000,
+    healthMonitoring: false,
   },
 };

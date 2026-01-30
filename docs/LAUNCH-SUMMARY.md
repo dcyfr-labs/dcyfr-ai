@@ -164,7 +164,7 @@ Zero breaking changes confirmed ✅
 
 ### 1. Final Build
 ```bash
-cd /Users/drew/DCYFR/code/dcyfr-ai
+cd ${WORKSPACE_ROOT}/dcyfr-ai
 npm run build
 npm test
 ```

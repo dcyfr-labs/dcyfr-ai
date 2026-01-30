@@ -33,7 +33,7 @@
 
 **Next: Create Git Release Tag for dcyfr-ai**
 ```bash
-cd /Users/drew/DCYFR/code/dcyfr-ai
+cd ${WORKSPACE_ROOT}/dcyfr-ai
 git tag -a v1.0.0 -m "v1.0.0 - Portable AI agent framework"
 git push origin v1.0.0
 ```
