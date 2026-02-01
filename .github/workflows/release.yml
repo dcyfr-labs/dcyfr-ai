@@ -11,7 +11,6 @@ concurrency:
 
 permissions:
   contents: write
-  pull-requests: write
   id-token: write
 
 env:
@@ -61,39 +60,78 @@ jobs:
       - name: Check for Changesets
         id: check-changesets
         run: |
-          if [ -d ".changeset" ] && [ -n "$(find .changeset -name '*.md' ! -name 'README.md' -print -quit 2>/dev/null)" ]; then
+          CHANGESET_FILES=$(find .changeset -name '*.md' ! -name 'README.md' 2>/dev/null | wc -l)
+          if [ "$CHANGESET_FILES" -gt 0 ]; then
             echo "has_changesets=true" >> $GITHUB_OUTPUT
-            echo "📦 Changesets found, will create release PR or publish"
+            echo "📦 Found $CHANGESET_FILES changeset(s), will publish"
           else
             echo "has_changesets=false" >> $GITHUB_OUTPUT
             echo "ℹ️ No changesets found, skipping release"
           fi
 
-      - name: Create Release Pull Request or Publish
+      - name: Version Packages
         if: steps.check-changesets.outputs.has_changesets == 'true'
-        id: changesets
-        uses: changesets/action@v1
-        with:
-          publish: npm run release
-          version: npm run changeset:version
-          title: 'chore(release): version packages'
-          commit: 'chore(release): version packages'
-          createGithubReleases: true
+        run: |
+          npm run changeset:version
+          echo "📝 Version updated"
+
+      - name: Commit Version Changes
+        if: steps.check-changesets.outputs.has_changesets == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "chore(release): version packages" || echo "No changes to commit"
+          git push origin main
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Get Package Version
+        if: steps.check-changesets.outputs.has_changesets == 'true'
+        id: package-version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "📦 Publishing version: $VERSION"
+
+      - name: Publish to npm
+        if: steps.check-changesets.outputs.has_changesets == 'true'
+        run: npm publish --access public
+        env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Log Release Status
-        if: always()
+      - name: Create GitHub Release
+        if: steps.check-changesets.outputs.has_changesets == 'true'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ steps.package-version.outputs.version }}
+          name: v${{ steps.package-version.outputs.version }}
+          body: |
+            ## @dcyfr/ai v${{ steps.package-version.outputs.version }}
+            
+            See [CHANGELOG.md](https://github.com/dcyfr/dcyfr-ai/blob/main/CHANGELOG.md) for details.
+            
+            ### Install
+            ```bash
+            npm install @dcyfr/ai@${{ steps.package-version.outputs.version }}
+            ```
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create Summary
+        if: steps.check-changesets.outputs.has_changesets == 'true'
         run: |
-          echo "=== Release Status ==="
-          if [ "${{ steps.changesets.outputs.published }}" == "true" ]; then
-            echo "✅ Successfully published packages to npm"
-            echo "📦 Published packages:"
-            echo '${{ steps.changesets.outputs.publishedPackages }}' | jq '.' 2>/dev/null || echo "Unable to parse packages"
-          elif [ "${{ steps.changesets.outputs.hasChangesets }}" == "true" ]; then
-            echo "📝 Release PR created/updated - waiting for merge"
-          else
-            echo "ℹ️ No release action taken"
-          fi
+          echo "## 🚀 Release Published" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "| --- | --- |" >> $GITHUB_STEP_SUMMARY
+          echo "| Package | \`@dcyfr/ai\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Version | \`${{ steps.package-version.outputs.version }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| npm | https://www.npmjs.com/package/@dcyfr/ai |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Install" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "npm install @dcyfr/ai@${{ steps.package-version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
