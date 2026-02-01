@@ -39,6 +39,13 @@ jobs:
           cache: 'npm'
           cache-dependency-path: '**/package.json'
 
+      - name: Verify npm version and OIDC support
+        run: |
+          echo "npm version: $(npm --version)"
+          npm --version | awk '{if ($1 < 11.5) exit 1}'
+          echo "OIDC environment variables:"
+          env | grep ACTIONS_ID_TOKEN || echo "⚠️ No OIDC tokens found"
+
       - name: Install Dependencies
         run: npm install --ignore-scripts
 
