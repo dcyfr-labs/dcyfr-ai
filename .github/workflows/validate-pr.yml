@@ -21,7 +21,12 @@ jobs:
           node-version: 20
 
       - name: Install Dependencies
-        run: npm ci
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
 
       - name: Type Check
         run: npm run typecheck
