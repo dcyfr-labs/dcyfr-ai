@@ -176,6 +176,8 @@ Commands:
   config:validate         Validate configuration file
   config:init             Initialize new configuration file
   config:schema           Show configuration schema
+  tui:dashboard           Interactive validation dashboard (OpenTUI)
+  tui:wizard              Interactive configuration wizard (OpenTUI)
   help                    Show this help message
 
 Options:
@@ -228,6 +230,16 @@ async function main() {
     case 'config:schema':
     case 'schema':
       await showSchema();
+      break;
+
+    case 'tui:dashboard':
+    case 'tui:wizard':
+    case 'tui':
+      // Delegate to TUI CLI
+      console.log('🎨 Launching interactive TUI...\n');
+      console.log('Use: npx @dcyfr/ai-tui ' + options.command.replace('tui:', ''));
+      console.log('Or run: node bin/tui.js ' + options.command.replace('tui:', ''));
+      process.exit(0);
       break;
 
     case 'help':

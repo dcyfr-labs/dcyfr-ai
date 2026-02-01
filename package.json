@@ -6,7 +6,8 @@
   "types": "./dist/ai/index.d.ts",
   "type": "module",
   "bin": {
-    "dcyfr-ai": "./bin/dcyfr-ai.js"
+    "dcyfr-ai": "./bin/dcyfr-ai.js",
+    "dcyfr-ai-tui": "./bin/tui.js"
   },
   "scripts": {
     "build": "tsc",
@@ -15,7 +16,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint packages/",
     "prepare": "npm run build",
-    "cli": "node bin/cli.js"
+    "cli": "node bin/cli.js",
+    "tui": "node bin/tui.js"
   },
   "keywords": [
     "ai",
@@ -38,14 +40,18 @@
   },
   "homepage": "https://github.com/dcyfr/dcyfr-ai#readme",
   "dependencies": {
-    "zod": "^3.22.4",
-    "yaml": "^2.3.4"
+    "chalk": "^4.1.2",
+    "cli-table3": "^0.6.5",
+    "inquirer": "^13.2.2",
+    "ora": "^9.1.0",
+    "yaml": "^2.3.4",
+    "zod": "^3.22.4"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
+    "eslint": "^8.55.0",
     "typescript": "^5.3.0",
-    "vitest": "^1.0.0",
-    "eslint": "^8.55.0"
+    "vitest": "^1.0.0"
   },
   "peerDependencies": {
     "typescript": "^5.0.0"
