@@ -1,0 +1,51 @@
+name: Validate PR
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  validate:
+    name: Validate Changes
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Type Check
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+      - name: Test
+        run: npm run test
+
+      - name: Check for Changeset
+        run: |
+          # Check if this is a release PR from changesets
+          if [[ "${{ github.head_ref }}" == "changeset-release/main" ]]; then
+            echo "This is a release PR, skipping changeset check"
+            exit 0
+          fi
+          
+          # Check if there are changesets
+          if [ -z "$(ls -A .changeset/*.md 2>/dev/null | grep -v README.md)" ]; then
+            echo "::warning::No changeset found. If this PR includes user-facing changes, please run 'npm run changeset' to add one."
+          else
+            echo "✓ Changeset found"
+          fi

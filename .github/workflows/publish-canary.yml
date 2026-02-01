@@ -1,0 +1,53 @@
+name: Publish Canary
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag for canary release (e.g., beta, alpha, next)'
+        required: false
+        default: 'canary'
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish-canary:
+    name: Publish Canary Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Version Package (Canary)
+        run: |
+          # Get current version
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          # Generate canary version with timestamp
+          CANARY_VERSION="${CURRENT_VERSION}-${{ inputs.tag }}.$(date +%Y%m%d%H%M%S)"
+          
+          echo "Publishing canary version: $CANARY_VERSION"
+          npm version $CANARY_VERSION --no-git-tag-version
+
+      - name: Publish Canary to npm
+        run: npm publish --tag ${{ inputs.tag }} --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Output Published Version
+        run: |
+          PUBLISHED_VERSION=$(node -p "require('./package.json').version")
+          echo "::notice::Published @dcyfr/ai@$PUBLISHED_VERSION with tag ${{ inputs.tag }}"

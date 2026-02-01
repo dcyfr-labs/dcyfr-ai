@@ -48,4 +48,6 @@ tmp/
 # Private directories
 .dcyfr-workspace/
 **/.private/**
+
+# Changesets (don't ignore .changeset/*.md files - those should be committed)
 **/.archive/**

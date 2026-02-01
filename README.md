@@ -187,31 +187,28 @@ See [examples/](./examples/) directory:
 - [Configuration Guide](./docs/configuration.md)
 - [Plugin Development](./docs/plugins.md)
 - [API Reference](./docs/api.md)
-
-## Architecture
-
-```
-@dcyfr/ai (Public Framework)
-├── Core
-│   ├── TelemetryEngine - Usage tracking
-│   └── ProviderRegistry - Multi-provider AI
-├── Plugins
-│   ├── PluginLoader - Dynamic loading
-│   └── ValidationFramework - Quality gates
-├── Config
-│   ├── Schema (Zod) - Validation
-│   └── Loader - Three-layer merge
-└── CLI
-    └── Config tools
-
-@dcyfr/agents (Private Agents)
-└── Specialized validators for DCYFR projects
-```
-
-## License
-
-MIT © DCYFR Labs
+- [Release Management](./docs/RELEASE_MANAGEMENT.md) - Publishing and versioning
+- [Quick Release Guide](./docs/RELEASE_QUICK_START.md) - TL;DR for releases
 
 ## Contributing
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for contribution guidelines.
+
+### Release Process
+
+We use [Changesets](https://github.com/changesets/changesets) for automated versioning and publishing.
+
+**For contributors:**
+```bash
+# Add a changeset describing your changes
+npm run changeset
+
+# Commit the changeset with your PR
+git add .changeset/*.md
+git commit -m "feat: your feature"
+```
+
+**For maintainers:**
+- Changesets automatically creates Release PRs
+- Merging a Release PR publishes to npm
+- See [Release Management](./docs/RELEASE_MANAGEMENT.md) for full details
