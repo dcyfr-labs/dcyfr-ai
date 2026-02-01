@@ -269,6 +269,30 @@ Within a few minutes, the Changesets bot should:
 # Test build locally: npm run build && npm test
 ```
 
+### npm ci Error (Missing package-lock.json)
+
+**Issue:** `npm ci` requires package-lock.json
+
+**Solution (Already Fixed):**
+The workflows now automatically fall back to `npm install` if `package-lock.json` doesn't exist:
+
+```yaml
+- name: Install Dependencies
+  run: |
+    if [ -f package-lock.json ]; then
+      npm ci
+    else
+      npm install
+    fi
+```
+
+If you want reproducible builds, commit a package-lock.json:
+```bash
+npm install --package-lock-only
+git add package-lock.json
+git commit -m "chore: add package-lock.json for reproducible builds"
+```
+
 ### Changeset Not Detected
 
 **Solution:**

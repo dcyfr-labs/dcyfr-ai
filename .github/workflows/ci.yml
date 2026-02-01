@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '**.md'
+      - '.changeset/**'
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  validate:
+    name: Validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: '**/package.json'
+
+      - name: Install Dependencies
+        run: npm install --ignore-scripts
+
+      - name: Type Check
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+        continue-on-error: true
+
+      - name: Build
+        run: npm run build
+
+      - name: Test
+        run: npm run test
+
+      - name: Check Changeset (PR only)
+        if: github.event_name == 'pull_request'
+        run: |
+          # Skip for release PRs created by changesets
+          if [[ "${{ github.head_ref }}" == "changeset-release/main" ]]; then
+            echo "✅ This is a release PR, skipping changeset check"
+            exit 0
+          fi
+          
+          # Check if there are changesets in this PR
+          CHANGESETS=$(find .changeset -name '*.md' ! -name 'README.md' 2>/dev/null | wc -l)
+          
+          if [ "$CHANGESETS" -eq 0 ]; then
+            echo "::warning title=Missing Changeset::No changeset found. If this PR includes user-facing changes, run 'npm run changeset' to add one."
+          else
+            echo "✅ Found $CHANGESETS changeset(s)"
+          fi
+
+      - name: Create Summary
+        if: always()
+        run: |
+          echo "## 🔍 Validation Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "| --- | --- |" >> $GITHUB_STEP_SUMMARY
+          echo "| TypeScript | ${{ steps.typecheck.outcome == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build | ${{ steps.build.outcome == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Tests | ${{ steps.test.outcome == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY

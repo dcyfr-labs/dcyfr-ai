@@ -5,54 +5,95 @@ on:
     branches:
       - main
 
-concurrency: ${{ github.workflow }}-${{ github.ref }}
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 
 permissions:
   contents: write
   pull-requests: write
   id-token: write
 
+env:
+  NODE_VERSION: '20'
+  NPM_CONFIG_PROVENANCE: true
+
 jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+
     steps:
-      - name: Checkout Repo
+      - name: Checkout Repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: ${{ env.NODE_VERSION }}
           registry-url: 'https://registry.npmjs.org'
+          cache: 'npm'
+          cache-dependency-path: '**/package.json'
+
+      - name: Configure npm
+        run: |
+          echo "//registry.npmjs.org/:_authToken=\${NODE_AUTH_TOKEN}" > ~/.npmrc
+          echo "registry=https://registry.npmjs.org/" >> ~/.npmrc
+          echo "access=public" >> ~/.npmrc
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Install Dependencies
-        run: |
-          if [ -f package-lock.json ]; then
-            npm ci
-          else
-            npm install
-          fi
+        run: npm install --ignore-scripts
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Build
+      - name: Build Package
         run: npm run build
 
-      - name: Create Release Pull Request or Publish to npm
+      - name: Run Tests
+        run: npm run test
+
+      - name: Check for Changesets
+        id: check-changesets
+        run: |
+          if [ -d ".changeset" ] && [ -n "$(find .changeset -name '*.md' ! -name 'README.md' -print -quit 2>/dev/null)" ]; then
+            echo "has_changesets=true" >> $GITHUB_OUTPUT
+            echo "📦 Changesets found, will create release PR or publish"
+          else
+            echo "has_changesets=false" >> $GITHUB_OUTPUT
+            echo "ℹ️ No changesets found, skipping release"
+          fi
+
+      - name: Create Release Pull Request or Publish
+        if: steps.check-changesets.outputs.has_changesets == 'true'
         id: changesets
         uses: changesets/action@v1
         with:
           publish: npm run release
-          title: 'chore: release package'
-          commit: 'chore: release package'
+          version: npm run changeset:version
+          title: 'chore(release): version packages'
+          commit: 'chore(release): version packages'
+          createGithubReleases: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Publish to npm with provenance
-        if: steps.changesets.outputs.published == 'true'
+      - name: Log Release Status
+        if: always()
         run: |
-          echo "Published packages:"
-          echo '${{ steps.changesets.outputs.publishedPackages }}' | jq -r '.[] | "  - \(.name)@\(.version)"'
+          echo "=== Release Status ==="
+          if [ "${{ steps.changesets.outputs.published }}" == "true" ]; then
+            echo "✅ Successfully published packages to npm"
+            echo "📦 Published packages:"
+            echo '${{ steps.changesets.outputs.publishedPackages }}' | jq '.' 2>/dev/null || echo "Unable to parse packages"
+          elif [ "${{ steps.changesets.outputs.hasChangesets }}" == "true" ]; then
+            echo "📝 Release PR created/updated - waiting for merge"
+          else
+            echo "ℹ️ No release action taken"
+          fi
