@@ -211,8 +211,10 @@ export class AgentLoader {
 
     for (const searchPath of this.config.searchPaths) {
       try {
-        // Use dynamic import to get the glob function
-        const { glob } = await import('glob');
+        // Use dynamic import and promisify glob
+        const { glob: globCallback } = await import('glob');
+        const { promisify } = await import('util');
+        const glob = promisify(globCallback) as (pattern: string, options?: any) => Promise<string[]>;
 
         // Search for agent files
         const patterns = [
