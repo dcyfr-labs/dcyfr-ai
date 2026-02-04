@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) 2026 Drew
+Copyright (c) 2025-2026 DCYFR Labs (https://www.dcyfr.ai)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -19,3 +19,29 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+---
+
+## Commercial Use
+
+This software is dual-licensed:
+
+- **MIT License** applies to personal, educational, and non-commercial use
+- **Commercial License** required for business and revenue-generating use
+
+### Commercial use includes:
+- Using @dcyfr/ai in a product or service that generates revenue
+- Deploying in a business environment (>5 employees)
+- Providing consulting/services using @dcyfr/ai for profit
+- Distributing as part of a commercial offering
+
+### To obtain a commercial license:
+- View tiers: https://github.com/dcyfr/workspace/blob/main/SPONSORSHIP.md
+- Contact: licensing@dcyfr.ai
+- GitHub Sponsors: https://github.com/sponsors/dcyfr
+
+For questions about whether your use requires a commercial license, contact licensing@dcyfr.ai.
+
+## Trademark
+
+"DCYFR" is a trademark of DCYFR Labs. See TRADEMARK.md for usage guidelines.

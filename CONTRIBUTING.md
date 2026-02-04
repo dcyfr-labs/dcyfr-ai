@@ -6,6 +6,28 @@ Thank you for your interest in contributing to @dcyfr/ai! This document provides
 
 Be respectful, inclusive, and professional in all interactions.
 
+## Licensing & Contributions
+
+### Your Contributions
+
+By contributing to @dcyfr/ai, you agree that:
+- Your contributions will be licensed under the MIT License (personal/non-commercial)
+- Commercial use of @dcyfr/ai requires a paid tier (see [LICENSE](./LICENSE))
+- You have the right to submit the contribution under this license
+- You grant DCYFR Labs perpetual rights to use, modify, and distribute your contribution
+
+### Trademark
+
+Do not use "DCYFR" trademarks in ways that imply endorsement without permission. See [TRADEMARK.md](../TRADEMARK.md) for usage guidelines.
+
+### Commercial Contributors
+
+If you're contributing while working for a company using @dcyfr/ai commercially, ensure your company has the appropriate commercial license tier (Developer tier or higher).
+
+**Questions?** Contact licensing@dcyfr.ai
+
+---
+
 ## How to Contribute
 
 ### Reporting Bugs

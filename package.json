@@ -59,7 +59,7 @@
     "@changesets/cli": "^2.29.8",
     "@types/glob": "^8.1.0",
     "@types/node": "^20.0.0",
-    "eslint": "^8.55.0",
+    "eslint": "^9.39.2",
     "typescript": "^5.3.0",
     "vitest": "^4.0.18"
   },
