@@ -1,3 +1,4 @@
+<!-- TLP:CLEAR -->
 # Terminal UI Integration - Final Implementation
 
 ## Overview

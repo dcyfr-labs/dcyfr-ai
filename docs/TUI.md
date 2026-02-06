@@ -1,3 +1,4 @@
+<!-- TLP:CLEAR -->
 # OpenTUI Integration for DCYFR AI Framework
 
 This document describes the OpenTUI integration that provides interactive terminal UIs for the dcyfr-ai CLI.

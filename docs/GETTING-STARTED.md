@@ -1,3 +1,4 @@
+<!-- TLP:CLEAR -->
 # Getting Started with @dcyfr/ai
 
 Welcome to @dcyfr/ai - a portable AI agent framework with plugin architecture for multi-provider AI integration, telemetry tracking, and quality validation.

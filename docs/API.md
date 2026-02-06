@@ -1,3 +1,4 @@
+<!-- TLP:CLEAR -->
 # API Reference
 
 Complete API documentation for @dcyfr/ai framework.

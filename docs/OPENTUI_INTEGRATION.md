@@ -1,3 +1,4 @@
+<!-- TLP:CLEAR -->
 # DCYFR AI Framework - Terminal UI Integration
 
 ## What We Built
