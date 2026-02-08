@@ -10,6 +10,39 @@
 
 Portable AI agent framework with plugin architecture for managing multiple AI providers, tracking telemetry, and ensuring quality compliance.
 
+## Table of Contents
+
+<details>
+<summary>📑 Table of Contents</summary>
+
+- [Features](#features)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Configuration](#configuration)
+  - [File Formats](#file-formats)
+  - [Three-Layer Merge](#three-layer-merge)
+  - [Environment Overrides](#environment-overrides)
+- [Architecture](#architecture)
+- [Plugin System](#plugin-system)
+  - [Built-in Agents](#built-in-agents)
+  - [Custom Plugins](#custom-plugins)
+- [CLI Commands](#cli-commands)
+- [Examples](#examples)
+- [Documentation](#documentation)
+- [Contributing](#contributing)
+- [Troubleshooting](#-troubleshooting)
+  - [Installation Issues](#installation-issues)
+  - [Configuration Issues](#configuration-issues)
+  - [Plugin Issues](#plugin-issues)
+  - [CLI Issues](#cli-issues)
+- [FAQ](#-faq)
+- [Performance Benchmarks](#-performance-benchmarks)
+- [Security](#-security)
+- [Known Limitations](#️-known-limitations)
+- [License & Sponsorship](#-license--sponsorship)
+
+</details>
+
 ## Features
 
 - 🔌 **Plugin Architecture** - Extensible validation system with custom agents
@@ -89,6 +122,42 @@ npx @dcyfr/ai config:validate
 npx @dcyfr/ai config:validate --verbose
 ```
 
+## Architecture
+
+The DCYFR AI framework follows a layered architecture with clear separation of concerns:
+
+```mermaid
+graph TB
+    A[Configuration Files] -->|Load & Merge| B[Config Loader]
+    B -->|Initialize| C[Plugin Registry]
+    C -->|Register| D[Validation Engine]
+    C -->|Register| E[Telemetry Engine]
+    D -->|Execute| F[Quality Gates]
+    E -->|Track| G[Storage Adapters]
+    B -->|Configure| H[CLI Interface]
+    H -->|Commands| I[User]
+
+    style A fill:#e1f5ff
+    style B fill:#fff3cd
+    style C fill:#d4edda
+    style D fill:#d4edda
+    style E fill:#d4edda
+    style H fill:#cfe2ff
+    style I fill:#f8d7da
+```
+
+### Key Components
+
+- **Config Loader**: Three-layer merge system (defaults → project config → env vars)
+- **Plugin Registry**: Manages custom and built-in validation agents
+- **Validation Engine**: Executes quality gates in parallel or serial mode
+- **Telemetry Engine**: Tracks usage, costs, quality metrics with pluggable storage
+- **CLI Interface**: User-facing commands for config management and validation
+
+[⬆️ Back to top](#dcyfr-ai)
+
+---
+
 ## Configuration
 
 ### File Formats
@@ -155,6 +224,10 @@ const loader = new PluginLoader();
 await loader.loadPlugin(customPlugin);
 ```
 
+[⬆️ Back to top](#dcyfr-ai)
+
+---
+
 ## CLI Commands
 
 ```bash
@@ -174,6 +247,10 @@ npx @dcyfr/ai config:schema
 # Help
 npx @dcyfr/ai help
 ```
+
+[⬆️ Back to top](#dcyfr-ai)
+
+---
 
 ## Examples
 
@@ -213,6 +290,8 @@ git commit -m "feat: your feature"
 - Changesets automatically creates Release PRs
 - Merging a Release PR publishes to npm
 - See [Release Management](./docs/RELEASE_MANAGEMENT.md) for full details
+
+[⬆️ Back to top](#dcyfr-ai)
 
 ---
 
@@ -294,6 +373,8 @@ await loader.runValidation();
   2. Increase timeout in config: `timeout: 60000` (60 seconds)
   3. Check for infinite loops in custom plugins
 
+[⬆️ Back to top](#dcyfr-ai)
+
 ---
 
 ## 📚 FAQ
@@ -354,6 +435,8 @@ Telemetry tracks: API calls, token usage, costs, latency, quality scores. See [d
 
 A: Yes! @dcyfr/ai is used in production at dcyfr-labs and other projects. It has comprehensive test coverage, semantic versioning, automated releases via Changesets, and follows best practices for package publishing.
 
+[⬆️ Back to top](#dcyfr-ai)
+
 ---
 
 ## 📊 Performance Benchmarks
@@ -374,6 +457,8 @@ A: Yes! @dcyfr/ai is used in production at dcyfr-labs and other projects. It has
 - **vs. Custom Scripts:** 10-20x faster due to optimized plugin execution
 - **vs. Serial Validation:** 2-5x faster with parallel execution mode
 - **vs. LangChain:** ~10x smaller bundle size (~200KB vs 2MB+)
+
+[⬆️ Back to top](#dcyfr-ai)
 
 ---
 
@@ -397,6 +482,8 @@ Found a security issue? Report it privately:
 - Review plugin code before loading (plugins have full access to filesystem)
 - Keep dependencies updated: `npm outdated`, `npm update`
 - Enable GitHub security scanning in your repository
+
+[⬆️ Back to top](#dcyfr-ai)
 
 ---
 
@@ -423,6 +510,8 @@ Found a security issue? Report it privately:
 - [ ] CommonJS compatibility mode (for legacy projects)
 
 See [GitHub Issues](https://github.com/dcyfr/dcyfr-ai/issues) for tracked feature requests and bugs.
+
+[⬆️ Back to top](#dcyfr-ai)
 
 ---
 
