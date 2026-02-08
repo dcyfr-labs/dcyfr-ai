@@ -1,0 +1,141 @@
+name: ✨ Feature Request
+description: Suggest a new feature or enhancement
+title: "[Feature]: "
+labels: ["enhancement", "triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for suggesting a new feature! Please fill out the sections below to help us understand your proposal.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: Is your feature request related to a problem? Please describe the problem you're trying to solve.
+      placeholder: I'm always frustrated when... OR I need to do X but currently there's no way to...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe the solution you'd like to see.
+      placeholder: I would like to be able to... OR It would be great if the library could...
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Have you considered any alternative solutions or workarounds?
+      placeholder: I've tried... OR One workaround is...
+    validations:
+      required: false
+
+  - type: textarea
+    id: example
+    attributes:
+      label: Example Usage
+      description: Show how you envision using this feature with code examples or API design.
+      render: typescript
+      placeholder: |
+        import { NewFeature } from '@dcyfr/package';
+        
+        // Proposed API usage
+        const result = await NewFeature.doSomething({
+          option: 'value'
+        });
+    validations:
+      required: false
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority/Impact
+      description: How important is this feature to your use case?
+      options:
+        - "Critical - Blocking my project"
+        - "High - Significantly improves my workflow"
+        - "Medium - Nice to have"
+        - "Low - Just an idea"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Feature Scope
+      description: What type of feature is this?
+      options:
+        - "New API/Method"
+        - "Enhancement to existing feature"
+        - "Developer Experience (DX) improvement"
+        - "Documentation improvement"
+        - "Performance optimization"
+        - "Security enhancement"
+        - "Other"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: breaking-change
+    attributes:
+      label: Breaking Change
+      description: Would this feature require breaking changes to existing APIs?
+      options:
+        - label: This would require breaking changes to existing APIs
+        - label: This can be implemented without breaking changes
+        - label: I'm not sure
+
+  - type: textarea
+    id: use-cases
+    attributes:
+      label: Use Cases
+      description: Describe specific real-world scenarios where this feature would be useful.
+      placeholder: |
+        1. When building X, developers need to Y...
+        2. In production scenarios where...
+        3. For teams that...
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Add any other context, screenshots, links to similar features in other libraries, etc.
+      placeholder: |
+        - Similar to X feature in Y library: [link]
+        - Related discussion: [link]
+        - Screenshot: [attach]
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      description: Are you willing to contribute to implementing this feature?
+      options:
+        - label: I'm willing to submit a PR to implement this feature
+        - label: I can help with testing and feedback
+        - label: I can help with documentation
+        - label: I need someone else to implement this
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submission Checklist
+      description: Please confirm the following before submitting
+      options:
+        - label: I have searched existing issues and discussions to ensure this hasn't been proposed before
+          required: true
+        - label: This feature aligns with the project's goals and scope
+          required: false
+        - label: I have provided clear examples of how this feature would be used
+          required: false
