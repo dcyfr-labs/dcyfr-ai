@@ -124,3 +124,16 @@ export type {
   PromptIntelErrorResponse,
 } from './servers/shared/promptintel-types.js';
 export { PromptIntelClient } from './servers/shared/promptintel-client.js';
+
+// ============================================================================
+// MCP Server Factories
+// ============================================================================
+
+// Content Manager MCP server factory and types
+export type {
+  ContentProvider,
+  ContentItem as ContentManagerItem,
+  ContentMetadata as ContentManagerMetadata,
+  ContentSearchOptions,
+} from './servers/content-manager/content-provider.js';
+export { createContentManagerServer } from './servers/content-manager/index.js';

@@ -18,7 +18,7 @@
 
 import { FastMCP } from 'fastmcp';
 import { z } from 'zod';
-import { redis } from './shared/redis-client.js';
+import { redis } from '../shared/redis-client.js';
 import {
   filterProductionData,
   warnProductionFallback,
@@ -29,15 +29,15 @@ import {
   logToolExecution,
   measurePerformance,
   getTimeRangeMs,
-} from './shared/utils.js';
-import { analyticsCache } from './shared/cache.js';
+} from '../shared/utils.js';
+import { analyticsCache } from '../shared/cache.js';
 import type {
   TimeRange,
   PageViewData,
   TrendingContent,
   Milestone,
   AnalyticsSummary,
-} from './shared/types.js';
+} from '../shared/types.js';
 
 // ============================================================================
 // Server Configuration
