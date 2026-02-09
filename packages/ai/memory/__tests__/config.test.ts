@@ -24,6 +24,12 @@ describe('Memory Configuration', () => {
 
   describe('loadMemoryConfig', () => {
     it('loads default configuration when no env vars set', () => {
+      // Clear all memory-related env vars
+      delete process.env.VECTOR_DB_PROVIDER;
+      delete process.env.VECTOR_DB_URL;
+      delete process.env.OPENAI_API_KEY;
+      delete process.env.LLM_PROVIDER;
+      
       const config = loadMemoryConfig();
 
       expect(config.vectorDB.provider).toBe('qdrant');
@@ -184,6 +190,173 @@ describe('Memory Configuration', () => {
       };
 
       expect(() => validateMemoryConfig(config)).toThrow('LLM_EMBEDDING_MODEL is required');
+    });
+
+    it('validates Weaviate configuration successfully', () => {
+      const config: MemoryConfig = {
+        vectorDB: {
+          provider: 'weaviate',
+          url: 'http://weaviate:8080',
+          apiKey: 'weaviate-key',
+          index: 'MemoryClass',
+        },
+        llm: {
+          provider: 'openai',
+          apiKey: 'sk-test',
+          embeddingModel: 'text-embedding-3-small',
+        },
+      };
+
+      expect(() => validateMemoryConfig(config)).not.toThrow();
+    });
+
+    it('throws error on unsupported vector DB provider', () => {
+      const config: MemoryConfig = {
+        vectorDB: {
+          provider: 'unknown' as any,
+          url: 'http://localhost',
+          index: 'test',
+        },
+        llm: {
+          provider: 'openai',
+          apiKey: 'sk-test',
+          embeddingModel: 'text-embedding-3-small',
+        },
+      };
+
+      expect(() => validateMemoryConfig(config)).toThrow('Unsupported vector DB provider');
+    });
+
+    it('throws error when LLM provider missing', () => {
+      const config: MemoryConfig = {
+        vectorDB: {
+          provider: 'qdrant',
+          url: 'http://localhost:6333',
+          index: 'test',
+        },
+        llm: {
+          apiKey: 'sk-test',
+          embeddingModel: 'text-embedding-3-small',
+        } as any,
+      };
+
+      expect(() => validateMemoryConfig(config)).toThrow('LLM_PROVIDER is required');
+    });
+
+    it('throws error when Weaviate URL missing', () => {
+      const config: MemoryConfig = {
+        vectorDB: {
+          provider: 'weaviate',
+          index: 'test',
+        },
+        llm: {
+          provider: 'openai',
+          apiKey: 'sk-test',
+          embeddingModel: 'text-embedding-3-small',
+        },
+      };
+
+      expect(() => validateMemoryConfig(config)).toThrow('VECTOR_DB_URL is required for Weaviate');
+    });
+
+    it('throws error when Pinecone environment missing', () => {
+      const config: MemoryConfig = {
+        vectorDB: {
+          provider: 'pinecone',
+          apiKey: 'test-key',
+          index: 'test',
+        },
+        llm: {
+          provider: 'openai',
+          apiKey: 'sk-test',
+          embeddingModel: 'text-embedding-3-small',
+        },
+      };
+
+      expect(() => validateMemoryConfig(config)).toThrow('VECTOR_DB_ENVIRONMENT is required for Pinecone');
+    });
+
+    it('validates Anthropic LLM provider', () => {
+      const config: MemoryConfig = {
+        vectorDB: {
+          provider: 'qdrant',
+          url: 'http://localhost:6333',
+          index: 'test',
+        },
+        llm: {
+          provider: 'anthropic',
+          apiKey: 'sk-ant-test',
+          embeddingModel: 'text-embedding-3-small',
+        },
+      };
+
+      expect(() => validateMemoryConfig(config)).not.toThrow();
+    });
+
+    it('validates caching configuration', () => {
+      const config: MemoryConfig = {
+        vectorDB: {
+          provider: 'qdrant',
+          url: 'http://localhost:6333',
+          index: 'test',
+        },
+        llm: {
+          provider: 'openai',
+          apiKey: 'sk-test',
+          embeddingModel: 'text-embedding-3-small',
+        },
+        caching: {
+          enabled: true,
+          ttl: 600,
+          maxSize: 2000,
+        },
+      };
+
+      expect(() => validateMemoryConfig(config)).not.toThrow();
+    });
+
+    it('throws error when cache TTL is invalid', () => {
+      const config: MemoryConfig = {
+        vectorDB: {
+          provider: 'qdrant',
+          url: 'http://localhost:6333',
+          index: 'test',
+        },
+        llm: {
+          provider: 'openai',
+          apiKey: 'sk-test',
+          embeddingModel: 'text-embedding-3-small',
+        },
+        caching: {
+          enabled: true,
+          ttl: 0,
+          maxSize: 1000,
+        },
+      };
+
+      expect(() => validateMemoryConfig(config)).toThrow('MEMORY_CACHE_TTL must be greater than 0');
+    });
+
+    it('throws error when cache max size is invalid', () => {
+      const config: MemoryConfig = {
+        vectorDB: {
+          provider: 'qdrant',
+          url: 'http://localhost:6333',
+          index: 'test',
+        },
+        llm: {
+          provider: 'openai',
+          apiKey: 'sk-test',
+          embeddingModel: 'text-embedding-3-small',
+        },
+        caching: {
+          enabled: true,
+          ttl: 300,
+          maxSize: -1,
+        },
+      };
+
+      expect(() => validateMemoryConfig(config)).toThrow('MEMORY_CACHE_MAX_SIZE must be greater than 0');
     });
   });
 
