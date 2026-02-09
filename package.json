@@ -5,6 +5,16 @@
   "main": "./dist/ai/index.js",
   "types": "./dist/ai/index.d.ts",
   "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/ai/index.d.ts",
+      "import": "./dist/ai/index.js"
+    },
+    "./mcp": {
+      "types": "./dist/ai/mcp/index.d.ts",
+      "import": "./dist/ai/mcp/index.js"
+    }
+  },
   "bin": {
     "dcyfr-ai": "./bin/dcyfr-ai.js",
     "dcyfr-ai-tui": "./bin/tui.js"

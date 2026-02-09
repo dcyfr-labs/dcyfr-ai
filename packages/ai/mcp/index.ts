@@ -16,14 +16,14 @@ export type {
   LoadedMCPServer,
   MCPRegistryConfig,
   MCPHealthCheckResult,
-} from './types';
+} from './types.js';
 
 // MCP Registry exports
 export {
   MCPRegistry,
   getGlobalMCPRegistry,
   resetGlobalMCPRegistry,
-} from './mcp-registry';
+} from './mcp-registry.js';
 
 // ============================================================================
 // Shared MCP Server Infrastructure

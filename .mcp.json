@@ -1,0 +1,150 @@
+{
+  "$schema": "https://modelcontextprotocol.io/schema/mcp.json",
+  "description": "MCP servers for dcyfr-ai (synced from dcyfr-labs)",
+  "mcpServers": {
+    "memory": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-memory"
+      ]
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/Users/drew/DCYFR/workspace/dcyfr-labs"
+      ],
+      "type": "stdio"
+    },
+    "github": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/"
+    },
+    "deepgraph-nextjs": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-code-graph@latest",
+        "vercel/next.js"
+      ]
+    },
+    "deepgraph-typescript": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-code-graph@latest",
+        "microsoft/TypeScript"
+      ]
+    },
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@executeautomation/playwright-mcp-server"
+      ]
+    },
+    "chrome-devtools": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "chrome-devtools-mcp@latest"
+      ]
+    },
+    "vercel": {
+      "url": "https://mcp.vercel.com",
+      "type": "http"
+    },
+    "sentry": {
+      "url": "https://mcp.sentry.dev/mcp/dcyfr-labs/dcyfr-labs",
+      "type": "http"
+    },
+    "axiom": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://mcp.axiom.co/mcp"
+      ]
+    },
+    "context7": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@upstash/context7-mcp@latest"
+      ],
+      "type": "stdio"
+    },
+    "octocode": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "octocode-mcp@latest"
+      ]
+    },
+    "arxiv": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": [
+        "arxiv-mcp-server"
+      ]
+    },
+    "perplexity": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@perplexity-ai/mcp-server"
+      ],
+      "env": {
+        "PERPLEXITY_API_KEY": "${PERPLEXITY_API_KEY}"
+      }
+    },
+    "dcyfr-analytics": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "dotenv",
+        "-e",
+        ".env.local",
+        "--",
+        "npm",
+        "run",
+        "mcp:analytics"
+      ],
+      "cwd": "/Users/drew/DCYFR/code/dcyfr-labs"
+    },
+    "dcyfr-designtokens": {
+      "type": "stdio",
+      "command": "npm",
+      "args": [
+        "run",
+        "mcp:tokens"
+      ],
+      "cwd": "/Users/drew/DCYFR/code/dcyfr-labs"
+    },
+    "dcyfr-contentmanager": {
+      "type": "stdio",
+      "command": "npm",
+      "args": [
+        "run",
+        "mcp:content"
+      ],
+      "cwd": "/Users/drew/DCYFR/code/dcyfr-labs"
+    },
+    "dcyfr-promptintel": {
+      "type": "stdio",
+      "command": "npm",
+      "args": [
+        "run",
+        "mcp:promptintel"
+      ],
+      "cwd": "/Users/drew/DCYFR/code/dcyfr-labs",
+      "env": {
+        "PROMPTINTEL_API_KEY": "${PROMPTINTEL_API_KEY}"
+      }
+    }
+  }
+}

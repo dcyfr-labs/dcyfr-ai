@@ -81,7 +81,7 @@ export class DCYFRMemoryImpl implements DCYFRMemory {
         limit,
       });
 
-      return result.results.map(item => ({
+      return result.results.map((item: any) => ({
         id: item.id,
         content: item.memory,
         owner: userId,
@@ -110,7 +110,7 @@ export class DCYFRMemoryImpl implements DCYFRMemory {
         filters: topic ? { topic } : undefined,
       });
 
-      return result.results.map(item => ({
+      return result.results.map((item: any) => ({
         id: item.id,
         content: item.memory,
         owner: userId,
@@ -178,7 +178,7 @@ export class DCYFRMemoryImpl implements DCYFRMemory {
     agentId: string,
     query: string,
     limit: number = DEFAULTS.AGENT_MEMORY_LIMIT
-  ): Promise<AgentMemory[]> {
+  ): Promise<MemorySearchResult[]> {
     try {
       const client = await this.ensureInitialized();
 
@@ -187,11 +187,12 @@ export class DCYFRMemoryImpl implements DCYFRMemory {
         limit,
       });
 
-      return result.results.map(item => ({
+      return result.results.map((item: any) => ({
         id: item.id,
         content: item.memory,
         owner: item.metadata?.agentId || agentId,
         ownerType: 'agent' as const,
+        relevance: item.score || 0.5,
         agentId: item.metadata?.agentId || agentId,
         sessionId: item.metadata?.sessionId,
         state: item.metadata?.state,
@@ -276,7 +277,7 @@ export class DCYFRMemoryImpl implements DCYFRMemory {
       const now = new Date();
 
       // Filter out expired memories
-      const validMemories = result.results.filter(item => {
+      const validMemories = result.results.filter((item: any) => {
         const expiresAt = item.metadata?.expiresAt;
         if (!expiresAt) return true; // No expiration = keep
         return new Date(expiresAt) > now;
@@ -284,7 +285,7 @@ export class DCYFRMemoryImpl implements DCYFRMemory {
 
       // Concatenate all memory content
       return validMemories
-        .map(item => item.memory)
+        .map((item: any) => item.memory)
         .join('\n\n');
     } catch (error: any) {
       throw new Error(`Failed to get session context: ${error.message}`);

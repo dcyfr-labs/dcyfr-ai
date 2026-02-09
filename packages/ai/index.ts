@@ -190,7 +190,7 @@ export {
   getMemoryConfig,
   loadMemoryConfig,
   validateMemoryConfig,
-  DEFAULT_CONFIG,
+  DEFAULT_CONFIG as DEFAULT_MEMORY_CONFIG,
   createMem0Client,
   getMem0Client,
   resetMem0Client,
