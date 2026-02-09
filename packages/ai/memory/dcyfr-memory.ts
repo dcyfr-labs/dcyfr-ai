@@ -1,10 +1,5 @@
 /**
- * DCYFR Memory Implementation
- * 
- * Concrete implementation of DCYFRMemory interface using mem0 OSS as backend.
- * Provides user, agent, and session memory with vector search capabilities.
- * 
- * @module @dcyfr/ai/memory/dcyfr-memory
+ * DCYFR Memory implementation wrapping mem0 OSS client
  */
 
 import type {
@@ -12,259 +7,311 @@ import type {
   Memory,
   MemorySearchResult,
   MemoryContext,
+  AgentMemory,
 } from './types.js';
-import type { Mem0Client } from './mem0-client.js';
-import { getMem0Client } from './mem0-client.js';
-import { getMemoryConfig } from './config.js';
+import { getMem0Client, resetMem0Client as resetClient } from './mem0-client.js';
 
-/**
- * Default configuration for memory operations
- */
+// Default limits for memory queries
 const DEFAULTS = {
-  USER_MEMORY_LIMIT: 3,
-  AGENT_MEMORY_LIMIT: 3,
-  SESSION_TTL: 3600, // 1 hour in seconds
+  USER_MEMORY_LIMIT: 100,
+  AGENT_MEMORY_LIMIT: 50,
+  SESSION_MEMORY_LIMIT: 30,
 };
 
 /**
- * DCYFR Memory implementation using mem0 OSS
- * 
- * Wraps mem0 OSS client to provide consistent API for DCYFR applications.
- * Handles user preferences, agent state, and temporary session context.
+ * DCYFRMemory implementation using mem0 OSS as the backend
  */
 export class DCYFRMemoryImpl implements DCYFRMemory {
-  private client: Mem0Client | null = null;
-  private initialized = false;
-
-  constructor() {}
+  private mem0ClientPromise: Promise<any> | null = null;
 
   /**
    * Lazy initialization of mem0 client
-   * Called automatically on first operation
    */
-  private async ensureInitialized(): Promise<Mem0Client> {
-    if (this.client && this.initialized) {
-      return this.client;
+  private async ensureInitialized() {
+    if (!this.mem0ClientPromise) {
+      this.mem0ClientPromise = getMem0Client();
     }
-
-    const config = getMemoryConfig();
-    this.client = await getMem0Client(config);
-    this.initialized = true;
-    return this.client;
+    return this.mem0ClientPromise;
   }
 
-  // ===== User-Level Memories =====
+  // ============================================================================
+  // User Memory Operations
+  // ============================================================================
 
+  /**
+   * Add memory associated with a specific user
+   */
   async addUserMemory(
     userId: string,
     message: string,
     context?: MemoryContext
   ): Promise<string> {
-    const client = await this.ensureInitialized();
+    try {
+      const client = await this.ensureInitialized();
 
-    const result = await client.add(message, {
-      userId,
-      metadata: {
-        ownerType: 'user',
-        topic: context?.topic,
-        importance: context?.importance || 0.5,
-        ...context?.metadata,
-      },
-    });
+      const result = await client.add(message, {
+        userId,
+        metadata: {
+          ownerType: 'user',
+          topic: context?.topic,
+          importance: context?.importance || 0.5,
+          ...context?.metadata,
+        },
+      });
 
-    return result.results[0]?.id || '';
+      return result.results[0]?.id || '';
+    } catch (error: any) {
+      throw new Error(`Failed to add user memory: ${error.message}`);
+    }
   }
 
+  /**
+   * Search user memories using semantic search
+   */
   async searchUserMemories(
     userId: string,
     query: string,
     limit: number = DEFAULTS.USER_MEMORY_LIMIT
   ): Promise<MemorySearchResult[]> {
-    const client = await this.ensureInitialized();
+    try {
+      const client = await this.ensureInitialized();
 
-    const result = await client.search(query, {
-      userId,
-      limit,
-    });
+      const result = await client.search(query, {
+        userId,
+        limit,
+      });
 
-    return result.results.map(item => ({
-      id: item.id,
-      content: item.memory,
-      owner: userId,
-      ownerType: 'user' as const,
-      importance: item.metadata?.importance || 0.5,
-      topic: item.metadata?.topic,
-      createdAt: item.createdAt ? new Date(item.createdAt) : new Date(),
-      metadata: item.metadata,
-      relevance: item.score || 1.0,
-    }));
+      return result.results.map(item => ({
+        id: item.id,
+        content: item.memory,
+        owner: userId,
+        ownerType: 'user' as const,
+        importance: item.metadata?.importance || 0.5,
+        topic: item.metadata?.topic,
+        createdAt: item.createdAt ? new Date(item.createdAt) : new Date(),
+        metadata: item.metadata,
+        relevance: item.score || 1.0,
+      }));
+    } catch (error: any) {
+      throw new Error(`Failed to search user memories: ${error.message}`);
+    }
   }
 
-  async getUserMemories(
-    userId: string,
-    topic?: string
-  ): Promise<Memory[]> {
-    const client = await this.ensureInitialized();
+  /**
+   * Get all memories for a user
+   */
+  async getUserMemories(userId: string, topic?: string): Promise<Memory[]> {
+    try {
+      const client = await this.ensureInitialized();
 
-    // Search with empty query to get all memories
-    const result = await client.search('', {
-      userId,
-      limit: 100,
-      filters: topic ? { topic } : undefined,
-    });
+      const result = await client.search('', {
+        userId,
+        limit: DEFAULTS.USER_MEMORY_LIMIT,
+        filters: topic ? { topic } : undefined,
+      });
 
-    return result.results.map(item => ({
-      id: item.id,
-      content: item.memory,
-      owner: userId,
-      ownerType: 'user' as const,
-      importance: item.metadata?.importance || 0.5,
-      topic: item.metadata?.topic,
-      createdAt: item.createdAt ? new Date(item.createdAt) : new Date(),
-      metadata: item.metadata,
-    }));
+      return result.results.map(item => ({
+        id: item.id,
+        content: item.memory,
+        owner: userId,
+        ownerType: 'user' as const,
+        importance: item.metadata?.importance || 0.5,
+        topic: item.metadata?.topic,
+        createdAt: item.createdAt ? new Date(item.createdAt) : new Date(),
+        metadata: item.metadata,
+      }));
+    } catch (error: any) {
+      throw new Error(`Failed to get user memories: ${error.message}`);
+    }
   }
 
-  // ===== Agent-Level Memories =====
+  /**
+   * Delete all memories for a user
+   */
+  async deleteUserMemories(userId: string): Promise<void> {
+    try {
+      const client = await this.ensureInitialized();
+      await client.deleteAll({ userId });
+    } catch (error: any) {
+      throw new Error(`Failed to delete user memories: ${error.message}`);
+    }
+  }
 
+  // ============================================================================
+  // Agent Memory Operations
+  // ============================================================================
+
+  /**
+   * Store agent workflow state
+   */
   async addAgentMemory(
     agentId: string,
     sessionId: string,
-    state: Record<string, any>
+    state: Record<string, unknown>
   ): Promise<string> {
-    const client = await this.ensureInitialized();
+    try {
+      const client = await this.ensureInitialized();
 
-    const message = `Agent state: ${JSON.stringify(state)}`;
+      const message = `Agent state: ${JSON.stringify(state)}`;
 
-    const result = await client.add(message, {
-      agentId,
-      runId: sessionId,
-      metadata: {
-        ownerType: 'agent',
+      const result = await client.add(message, {
         agentId,
-        sessionId,
-        state,
-      },
-    });
+        runId: sessionId,
+        metadata: {
+          ownerType: 'agent',
+          agentId,
+          sessionId,
+          state,
+        },
+      });
 
-    return result.results[0]?.id || '';
+      return result.results[0]?.id || '';
+    } catch (error: any) {
+      throw new Error(`Failed to add agent memory: ${error.message}`);
+    }
   }
 
+  /**
+   * Search agent memories
+   */
   async searchAgentMemories(
     agentId: string,
     query: string,
     limit: number = DEFAULTS.AGENT_MEMORY_LIMIT
-  ): Promise<MemorySearchResult[]> {
-    const client = await this.ensureInitialized();
+  ): Promise<AgentMemory[]> {
+    try {
+      const client = await this.ensureInitialized();
 
-    const result = await client.search(query, {
-      agentId,
-      limit,
-    });
+      const result = await client.search(query, {
+        agentId,
+        limit,
+      });
 
-    return result.results.map(item => ({
-      id: item.id,
-      content: item.memory,
-      owner: agentId,
-      ownerType: 'agent' as const,
-      agentId,
-      sessionId: item.metadata?.sessionId || '',
-      state: item.metadata?.state,
-      importance: item.metadata?.importance || 0.5,
-      createdAt: item.createdAt ? new Date(item.createdAt) : new Date(),
-      metadata: item.metadata,
-      relevance: item.score || 1.0,
-    })) as MemorySearchResult[];
+      return result.results.map(item => ({
+        id: item.id,
+        content: item.memory,
+        owner: item.metadata?.agentId || agentId,
+        ownerType: 'agent' as const,
+        agentId: item.metadata?.agentId || agentId,
+        sessionId: item.metadata?.sessionId,
+        state: item.metadata?.state,
+        createdAt: item.createdAt ? new Date(item.createdAt) : new Date(),
+        metadata: item.metadata,
+      }));
+    } catch (error: any) {
+      throw new Error(`Failed to search agent memories: ${error.message}`);
+    }
   }
 
+  /**
+   * Get agent workflow state for a specific session
+   */
   async getAgentState(
     agentId: string,
     sessionId: string
-  ): Promise<Record<string, any> | null> {
-    const client = await this.ensureInitialized();
+  ): Promise<Record<string, unknown> | null> {
+    try {
+      const client = await this.ensureInitialized();
 
-    const result = await client.search('', {
-      agentId,
-      runId: sessionId,
-      limit: 1,
-    });
+      const result = await client.search('', {
+        agentId,
+        runId: sessionId,
+        limit: 1,
+      });
 
-    if (result.results.length === 0) {
-      return null;
+      if (result.results.length === 0) {
+        return null;
+      }
+
+      return result.results[0].metadata?.state || null;
+    } catch (error: any) {
+      throw new Error(`Failed to get agent state: ${error.message}`);
     }
-
-    return result.results[0].metadata?.state || null;
   }
 
-  // ===== Session-Level Memories =====
+  // ============================================================================
+  // Session Memory Operations
+  // ============================================================================
 
+  /**
+   * Add temporary session context with TTL
+   */
   async addSessionMemory(
     sessionId: string,
     message: string,
-    ttl: number = DEFAULTS.SESSION_TTL
+    ttl: number = 3600
   ): Promise<string> {
-    const client = await this.ensureInitialized();
+    try {
+      const client = await this.ensureInitialized();
 
-    const expiresAt = new Date(Date.now() + ttl * 1000);
+      const expiresAt = new Date(Date.now() + ttl * 1000);
 
-    const result = await client.add(message, {
-      runId: sessionId,
-      metadata: {
-        ownerType: 'session',
-        sessionId,
-        expiresAt: expiresAt.toISOString(),
-      },
-    });
+      const result = await client.add(message, {
+        runId: sessionId,
+        metadata: {
+          ownerType: 'session',
+          sessionId,
+          expiresAt: expiresAt.toISOString(),
+        },
+      });
 
-    return result.results[0]?.id || '';
+      return result.results[0]?.id || '';
+    } catch (error: any) {
+      throw new Error(`Failed to add session memory: ${error.message}`);
+    }
   }
 
+  /**
+   * Get concatenated session context (filters out expired memories)
+   */
   async getSessionContext(sessionId: string): Promise<string> {
-    const client = await this.ensureInitialized();
+    try {
+      const client = await this.ensureInitialized();
 
-    const result = await client.search('', {
-      runId: sessionId,
-      limit: 50,
-    });
+      const result = await client.search('', {
+        runId: sessionId,
+        limit: DEFAULTS.SESSION_MEMORY_LIMIT,
+      });
 
-    // Filter out expired memories
-    const now = new Date();
-    const validMemories = result.results.filter(item => {
-      if (item.metadata?.expiresAt) {
-        const expiresAt = new Date(item.metadata.expiresAt);
-        return expiresAt > now;
-      }
-      return true; // No expiration = keep
-    });
+      const now = new Date();
 
-    // Concatenate all memory content
-    return validMemories
-      .map(item => item.memory)
-      .join('\n\n');
+      // Filter out expired memories
+      const validMemories = result.results.filter(item => {
+        const expiresAt = item.metadata?.expiresAt;
+        if (!expiresAt) return true; // No expiration = keep
+        return new Date(expiresAt) > now;
+      });
+
+      // Concatenate all memory content
+      return validMemories
+        .map(item => item.memory)
+        .join('\n\n');
+    } catch (error: any) {
+      throw new Error(`Failed to get session context: ${error.message}`);
+    }
   }
 
-  // ===== Admin/Utility Methods =====
-
-  async deleteUserMemories(userId: string): Promise<void> {
-    const client = await this.ensureInitialized();
-    await client.deleteAll({ userId });
-  }
-
+  /**
+   * Delete all memories for a session
+   */
   async deleteSessionMemories(sessionId: string): Promise<void> {
-    const client = await this.ensureInitialized();
-    await client.deleteAll({ runId: sessionId });
+    try {
+      const client = await this.ensureInitialized();
+      await client.deleteAll({ runId: sessionId });
+    } catch (error: any) {
+      throw new Error(`Failed to delete session memories: ${error.message}`);
+    }
   }
 }
 
-/**
- * Singleton instance of DCYFRMemory
- */
-let memoryInstance: DCYFRMemory | null = null;
+// ============================================================================
+// Singleton Factory
+// ============================================================================
+
+let memoryInstance: DCYFRMemoryImpl | null = null;
 
 /**
- * Get or create DCYFRMemory singleton
- * 
- * @returns DCYFRMemory instance
+ * Get singleton DCYFRMemory instance
  */
 export function getMemory(): DCYFRMemory {
   if (!memoryInstance) {
@@ -274,8 +321,9 @@ export function getMemory(): DCYFRMemory {
 }
 
 /**
- * Reset memory singleton (for testing)
+ * Reset memory instance (for testing)
  */
 export function resetMemory(): void {
   memoryInstance = null;
+  resetClient();
 }
