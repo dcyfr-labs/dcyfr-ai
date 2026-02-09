@@ -24,3 +24,103 @@ export {
   getGlobalMCPRegistry,
   resetGlobalMCPRegistry,
 } from './mcp-registry';
+
+// ============================================================================
+// Shared MCP Server Infrastructure
+// ============================================================================
+
+// Shared types for MCP servers
+export type {
+  MCPContext,
+  MCPError,
+  TimeRange,
+  PageViewData,
+  TrendingContent,
+  EngagementMetric,
+  ActivityLog,
+  Milestone,
+  AnalyticsSummary,
+  TokenCategory,
+  TokenViolation,
+  TokenValidationResult,
+  TokenSuggestion,
+  TokenUsage,
+  ComplianceReport,
+  ContentType,
+  ContentMetadata,
+  ContentItem,
+  ContentAnalysis,
+  RelatedContent,
+  TopicTaxonomy,
+  SearchResult,
+  CacheEntry,
+  CacheOptions,
+  ScholarAuthor,
+  ScholarPaper,
+  ScholarCitation,
+  ScholarReference,
+  ScholarSearchResult,
+  ScholarBulkSearchResult,
+  ScholarAuthorSearchResult,
+  ScholarRecommendation,
+  ScholarSearchParams,
+  ScholarCacheStats,
+} from './servers/shared/types.js';
+
+// Shared utilities
+export {
+  MCPToolError,
+  handleToolError,
+  isProduction,
+  isDevelopment,
+  getEnvironment,
+  filterProductionData,
+  warnProductionFallback,
+  getTimeRangeMs,
+  isWithinTimeRange,
+  sanitizePath,
+  extractSlug,
+  calculateReadingTime,
+  dedupe,
+  sortByProperty,
+  limitResults,
+  isValidUrl,
+  isValidPath,
+  measurePerformance,
+  logToolExecution,
+} from './servers/shared/utils.js';
+
+// Cache utilities
+export {
+  SimpleCache,
+  analyticsCache,
+  tokensCache,
+  contentCache,
+  scholarPapersCache,
+  scholarSearchCache,
+  scholarAuthorsCache,
+} from './servers/shared/cache.js';
+
+// Redis client
+export {
+  redis,
+  getRedisKeyPrefix,
+  getRedisEnvironment,
+  closeRedisClient,
+} from './servers/shared/redis-client.js';
+
+// Rate limiter
+export type { RateLimiterStats } from './servers/shared/rate-limiter.js';
+export { RateLimiter } from './servers/shared/rate-limiter.js';
+
+// PromptIntel client and types
+export type {
+  PromptIntelIoPC,
+  PromptIntelTaxonomy,
+  PromptIntelAgentReport,
+  PromptIntelSearchParams,
+  PromptIntelClientConfig,
+  PromptIntelHealthResponse,
+  PromptIntelErrorResponse,
+} from './servers/shared/promptintel-types.js';
+export { PromptIntelClient } from './servers/shared/promptintel-client.js';
