@@ -182,6 +182,35 @@ export {
   resetGlobalMCPRegistry,
 } from './mcp';
 
+// Memory module exports
+export {
+  getMemory,
+  resetMemory,
+  DCYFRMemoryImpl,
+  getMemoryConfig,
+  loadMemoryConfig,
+  validateMemoryConfig,
+  DEFAULT_CONFIG,
+  createMem0Client,
+  getMem0Client,
+  resetMem0Client,
+} from './memory';
+
+export type {
+  DCYFRMemory,
+  Memory,
+  MemorySearchResult,
+  MemoryContext,
+  AgentMemory,
+  SessionMemory,
+  MemoryProvider,
+  VectorDBProvider,
+  VectorDBConfig,
+  LLMConfig,
+  MemoryConfig,
+  Mem0Client,
+} from './memory';
+
 // Built-in agents exports
 export {
   // Development agents
