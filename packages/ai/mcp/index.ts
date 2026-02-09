@@ -137,3 +137,14 @@ export type {
   ContentSearchOptions,
 } from './servers/content-manager/content-provider.js';
 export { createContentManagerServer } from './servers/content-manager/index.js';
+
+// Design Tokens MCP server factory and types
+export type {
+  TokenProvider,
+  TokenCategory as DesignTokenCategory,
+  TokenViolation as DesignTokenViolation,
+  ValidationResult as DesignTokenValidationResult,
+  TokenSuggestion as DesignTokenSuggestion,
+  ComplianceReport as DesignTokenComplianceReport,
+} from './servers/design-tokens/token-provider.js';
+export { createDesignTokenServer } from './servers/design-tokens/index.js';
