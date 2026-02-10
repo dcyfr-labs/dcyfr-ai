@@ -36,8 +36,13 @@ import type {
   AgentExecutionResult,
   LoadedAgent,
 } from './types';
-import type { TaskContext } from '../types';
+import type { TaskContext as AgentTaskContext } from '../types';
+import type { TaskContext as RuntimeTaskContext } from '../runtime/types';
 import { AgentRegistry } from './agent-registry';
+import { AgentRuntime } from '../runtime/agent-runtime.js';
+import type { ProviderRegistry } from '../core/provider-registry';
+import type { DCYFRMemory } from '../memory/types';
+import type { TelemetryEngine } from '../core/telemetry-engine';
 
 /**
  * Default routing rules based on task patterns
@@ -134,12 +139,21 @@ export class AgentRouter {
   private registry: AgentRegistry;
   private config: AgentRouterConfig;
   private delegationDepth: number = 0;
+  private providerRegistry: ProviderRegistry;
+  private memory: DCYFRMemory;
+  private telemetry: TelemetryEngine;
 
   constructor(
     registry: AgentRegistry,
+    providerRegistry: ProviderRegistry,
+    memory: DCYFRMemory,
+    telemetry: TelemetryEngine,
     config: Partial<AgentRouterConfig> = {}
   ) {
     this.registry = registry;
+    this.providerRegistry = providerRegistry;
+    this.memory = memory;
+    this.telemetry = telemetry;
     this.config = { ...DEFAULT_CONFIG, ...config };
   }
 
@@ -183,7 +197,7 @@ export class AgentRouter {
    * Route with custom rules (merges with default rules)
    */
   async routeWithRules(
-    task: TaskContext,
+    task: AgentTaskContext,
     customRules: AgentRoutingRule[]
   ): Promise<AgentRoutingResult> {
     const originalRules = this.config.routingRules;
@@ -256,17 +270,44 @@ export class AgentRouter {
           await agent.onBeforeExecute(context);
         }
 
-        // Execute agent (placeholder - actual execution depends on integration)
-        // In real usage, this would call the AI provider with the agent's prompt
+        // Create AgentRuntime instance for this agent
+        const runtime = new AgentRuntime(
+          agent.manifest.name,
+          this.providerRegistry,
+          this.memory,
+          this.telemetry,
+          {
+            maxIterations: 10,
+            timeout: 120000, // 2 minutes
+            memoryEnabled: true,
+            systemPrompt: agent.systemPrompt || agent.instructions,
+          }
+        );
+
+        // Convert AgentExecutionContext to TaskContext
+        const taskContext: RuntimeTaskContext = {
+          task: context.task.description,
+          userId: context.metadata?.userId as string,
+          sessionId: context.metadata?.sessionId as string,
+          agentId: agent.manifest.name,
+          tools: [], // TODO: Extract from manifest.tools and resolve
+          metadata: context.metadata,
+        };
+
+        // Execute via AgentRuntime
+        const runtimeResult = await runtime.execute(taskContext);
+
+        // Convert back to AgentExecutionResult
         const result: AgentExecutionResult = {
-          success: true,
+          success: runtimeResult.success,
           agentName: agent.manifest.name,
-          executionTime: Date.now() - startTime,
+          executionTime: runtimeResult.executionTime,
           fallbackUsed: i > 0,
           originalAgent: i > 0 ? primaryAgent.manifest.name : undefined,
-          filesModified: [],
-          violations: [],
-          warnings: [],
+          filesModified: [], // TODO: Extract from tool observations
+          violations: [], // TODO: Extract from quality gates
+          warnings: [], // TODO: Extract from runtime warnings
+          error: runtimeResult.error ? new Error(runtimeResult.error) : undefined,
         };
 
         // Call onAfterExecute hook
@@ -274,14 +315,27 @@ export class AgentRouter {
           await agent.onAfterExecute(context, result);
         }
 
-        return result;
+        // Return on success
+        if (result.success) {
+          return result;
+        }
+
+        // If this was the last agent, return the failed result
+        if (i === agents.length - 1) {
+          return result;
+        }
+
+        // Log fallback attempt
+        console.warn(
+          `⚠️  Agent '${agent.manifest.name}' failed, trying fallback...`
+        );
       } catch (error) {
         // Call onError hook
         if (agent.onError) {
           await agent.onError(error as Error, context);
         }
 
-        // If this was the last agent, throw the error
+        // If this was the last agent, return failure
         if (i === agents.length - 1) {
           return {
             success: false,
@@ -298,7 +352,7 @@ export class AgentRouter {
 
         // Try next fallback
         console.warn(
-          `⚠️  Agent '${agent.manifest.name}' failed, trying fallback...`
+          `⚠️  Agent '${agent.manifest.name}' failed with error: ${(error as Error).message}, trying fallback...`
         );
       }
     }
