@@ -127,6 +127,15 @@ export class ProviderRegistry {
         enabled: true,
       },
       {
+        name: 'msty',
+        apiEndpoint: process.env.MSTY_LOCAL_AI_URL || 'http://localhost:8000',
+        healthCheckUrl: `${process.env.MSTY_LOCAL_AI_URL || 'http://localhost:8000'}/v1/models`,
+        maxRetries: 2,
+        retryDelay: 500,
+        timeout: 30000,
+        enabled: !!process.env.MSTY_LOCAL_AI_URL,
+      },
+      {
         name: 'copilot',
         maxRetries: 2,
         retryDelay: 500,

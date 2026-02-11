@@ -8,7 +8,7 @@
 /**
  * Supported AI provider types
  */
-export type ProviderType = "claude" | "groq" | "ollama" | "copilot" | "openai" | "anthropic";
+export type ProviderType = "claude" | "groq" | "ollama" | "copilot" | "openai" | "anthropic" | "msty";
 
 /**
  * Agent types - typically maps to primary providers
