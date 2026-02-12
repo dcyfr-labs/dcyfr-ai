@@ -160,7 +160,7 @@ export class AgentRouter {
   /**
    * Route a task to the most appropriate agent
    */
-  async route(task: TaskContext): Promise<AgentRoutingResult> {
+  async route(task: AgentTaskContext): Promise<AgentRoutingResult> {
     // Find matching rules sorted by priority
     const matchedRules = this.findMatchingRules(task);
 
@@ -216,7 +216,7 @@ export class AgentRouter {
   async delegate(
     fromAgent: Agent,
     toAgentName: string,
-    task: TaskContext
+    task: AgentTaskContext
   ): Promise<Agent> {
     if (!this.config.delegationEnabled) {
       throw new Error('Delegation is disabled');
@@ -409,7 +409,7 @@ export class AgentRouter {
   /**
    * Find matching routing rules for a task
    */
-  private findMatchingRules(task: TaskContext): AgentRoutingRule[] {
+  private findMatchingRules(task: AgentTaskContext): AgentRoutingRule[] {
     const matches: AgentRoutingRule[] = [];
 
     for (const rule of this.config.routingRules) {
@@ -441,7 +441,7 @@ export class AgentRouter {
   /**
    * Find fallback agents for a primary agent
    */
-  private findFallbacks(primaryAgent: Agent, task: TaskContext): Agent[] {
+  private findFallbacks(primaryAgent: Agent, task: AgentTaskContext): Agent[] {
     const fallbacks: Agent[] = [];
     const seen = new Set<string>([primaryAgent.manifest.name]);
 
@@ -478,7 +478,7 @@ export class AgentRouter {
    */
   private calculateConfidence(
     rule: AgentRoutingRule,
-    task: TaskContext
+    task: AgentTaskContext
   ): number {
     // Base confidence from priority (lower priority = higher confidence)
     const priorityConfidence = Math.max(0, 1 - rule.priority / 100);
@@ -504,7 +504,17 @@ export function getGlobalAgentRouter(
   config?: Partial<AgentRouterConfig>
 ): AgentRouter {
   if (!globalRouter) {
-    globalRouter = new AgentRouter(registry, config);
+    // For now, create with placeholder dependencies
+    // This should be updated to properly inject dependencies
+    const { getMemory } = require('../memory/index.js');
+    const { TelemetryEngine } = require('../core/telemetry-engine.js');
+    const { ProviderRegistry } = require('../core/provider-registry.js');
+    
+    const providerRegistry = new ProviderRegistry({});
+    const memory = getMemory();
+    const telemetry = new TelemetryEngine();
+    
+    globalRouter = new AgentRouter(registry, providerRegistry, memory, telemetry, config);
   }
   return globalRouter;
 }
