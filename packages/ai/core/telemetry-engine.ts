@@ -517,4 +517,88 @@ export class TelemetryEngine {
       taskTypes: {} as Record<TaskType, number>,
     };
   }
+
+  /**
+   * Track an execution event with timeout protection
+   * 
+   * Stores events for later aggregation and analysis.
+   * Timeout protection ensures telemetry doesn't block execution.
+   * 
+   * @param event - Execution event to track
+   * @param timeout - Maximum time to wait for storage (default: 1000ms)
+   * @returns Promise that resolves when event is stored (or timeout occurs)
+   */
+  async trackExecution(event: any, timeout = 1000): Promise<void> {
+    const startTime = Date.now();
+    
+    try {
+      // Create timeout promise
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Telemetry timeout')), timeout);
+      });
+
+      // Store event with timeout protection
+      await Promise.race([
+        this.storeEvent(event),
+        timeoutPromise,
+      ]);
+
+      // Track telemetry latency
+      const latency = Date.now() - startTime;
+      if (latency > 100) {
+        console.warn(`[TelemetryEngine] Slow telemetry storage: ${latency}ms`);
+      }
+    } catch (error) {
+      // Log but don't throw - telemetry failures shouldn't break execution
+      if (error instanceof Error && error.message === 'Telemetry timeout') {
+        console.warn('[TelemetryEngine] Event storage timed out');
+      } else {
+        console.error('[TelemetryEngine] Failed to track event:', error);
+      }
+    }
+  }
+
+  /**
+   * Store an event to the storage backend
+   * @private
+   */
+  private async storeEvent(event: any): Promise<void> {
+    try {
+      // Get existing events
+      const events = await this.storage.get<any[]>('telemetry-events') || [];
+      
+      // Add new event
+      events.push(event);
+      
+      // Save back to storage
+      await this.storage.set('telemetry-events', events);
+    } catch (error) {
+      throw new Error(`Event storage failed: ${error}`);
+    }
+  }
+
+  /**
+   * Get all tracked events (for analysis and debugging)
+   * 
+   * @returns Array of tracked execution events
+   */
+  async getEvents(): Promise<any[]> {
+    try {
+      return await this.storage.get<any[]>('telemetry-events') || [];
+    } catch (error) {
+      console.error('[TelemetryEngine] Failed to retrieve events:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Clear all tracked events
+   */
+  async clearEvents(): Promise<void> {
+    try {
+      await this.storage.set('telemetry-events', []);
+    } catch (error) {
+      console.error('[TelemetryEngine] Failed to clear events:', error);
+    }
+  }
 }

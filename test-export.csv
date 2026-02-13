@@ -1,0 +1,5 @@
+Session ID,Agent Type,Task Type,Description,Start Time,End Time,Status,Model Used,Input Tokens,Output Tokens,Total Cost,Duration (ms)
+session-004,gpt-3.5-turbo,documentation,Generate API documentation from OpenAPI spec,2026-02-13T00:52:22.464Z,,success,gpt-3.5-turbo,150,400,0.0012,8000
+session-001,claude-3.5-sonnet,code-generation,Generate TypeScript interface for user profile,2026-02-12T23:52:22.463Z,2026-02-12T23:52:32.464Z,success,claude-3-5-sonnet,250,180,0.0034,10000
+session-002,gpt-4-turbo,data-analysis,Analyze customer feedback data and generate insights,2026-02-12T22:52:22.464Z,2026-02-12T22:52:42.464Z,success,gpt-4-turbo,450,320,0.0089,20000
+session-003,claude-3.5-sonnet,refactoring,Refactor legacy JavaScript code to modern TypeScript,2026-02-12T00:52:22.464Z,2026-02-12T00:52:42.464Z,failed,claude-3-5-sonnet,800,0,0.0045,20000

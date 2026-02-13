@@ -17,7 +17,8 @@
   },
   "bin": {
     "dcyfr-ai": "./bin/dcyfr-ai.js",
-    "dcyfr-ai-tui": "./bin/tui.js"
+    "dcyfr-ai-tui": "./bin/tui.js",
+    "dcyfr": "./dist/ai/cli/telemetry-dashboard.js"
   },
   "scripts": {
     "build": "tsc",
@@ -69,11 +70,13 @@
     "axios": ">=1.13.5",
     "chalk": "^4.1.2",
     "cli-table3": "^0.6.5",
+    "commander": "^12.0.0",
     "fastmcp": "^3.30.1",
     "gray-matter": "^4.0.3",
     "inquirer": "^13.2.2",
     "mem0ai": "^2.2.2",
     "ora": "^9.1.0",
+    "sqlite3": "^5.1.6",
     "yaml": "^2.3.4",
     "zod": "^3.22.4"
   },

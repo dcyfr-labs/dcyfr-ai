@@ -1,5 +1,55 @@
 # Changelog
 
+## [1.0.4] - 2026-02-12
+
+### Added
+
+#### Version Compatibility Protection
+
+- **Version Skew Protection**: AgentRuntime now performs automatic version compatibility checking during initialization
+- **Version Mismatch Warnings**: Clear warning logs when @dcyfr/ai and @dcyfr/ai-agents versions may be incompatible
+- **Compatibility Rules**: 
+  - Major versions must match (1.x.x with 1.x.x)
+  - Runtime can be newer minor version than agents
+  - Warnings for agents more than 2 minor versions ahead of runtime
+
+#### Upgrade Paths
+
+When upgrading from older versions, follow these compatibility guidelines:
+
+**Same Major Version (Recommended)**
+```bash
+# For @dcyfr/ai-agents v1.0.x projects
+npm install @dcyfr/ai@^1.0.4
+
+# Check compatibility
+npm list @dcyfr/ai @dcyfr/ai-agents
+```
+
+**Version Mismatch Resolution**
+- If you see "Version Mismatch Warning" logs, upgrade both packages to latest:
+  ```bash
+  npm install @dcyfr/ai@latest @dcyfr/ai-agents@latest
+  ```
+- For major version differences, check migration guides in documentation
+
+**Enterprise Environments**
+- Pin exact versions in package-lock.json for consistent deployments
+- Test version combinations in staging before production deployment
+- Monitor AgentRuntime initialization logs for version warnings
+
+### Breaking Changes
+
+None. This release maintains full backward compatibility.
+
+### Migration Guide
+
+No migration required. Version checking is automatic and non-breaking.
+If you encounter version warnings:
+1. Update both @dcyfr/ai and @dcyfr/ai-agents to latest versions
+2. Test your agents with the new versions
+3. Update peer dependency constraints if needed
+
 ## 1.0.3
 
 ### Patch Changes

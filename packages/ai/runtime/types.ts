@@ -104,6 +104,12 @@ export interface RuntimeConfig {
   /** Enable working memory cache (default: true) */
   workingMemoryEnabled?: boolean;
   
+  /** Persist working memory after task completion (default: false) */
+  persistWorkingMemory?: boolean;
+  
+  /** Enable debug logging for working memory state (default: false) */
+  debugWorkingMemory?: boolean;
+  
   /** System prompt override (if not provided, uses agent's default) */
   systemPrompt?: string;
 }
@@ -218,4 +224,72 @@ export interface DelegationContext {
   
   /** Parent agent name */
   parentAgent: string;
+}
+
+/**
+ * Hook context provided to before/after execution hooks
+ */
+export interface HookContext {
+  /** Agent name */
+  agentName: string;
+  
+  /** Task being executed */
+  task: string;
+  
+  /** User ID (if provided) */
+  userId?: string;
+  
+  /** Session ID */
+  sessionId?: string;
+  
+  /** Hook execution timestamp */
+  timestamp: number;
+}
+
+/**
+ * Before-execution hook signature
+ * 
+ * Called before task execution begins. Can reject execution by throwing PermissionDeniedError.
+ * 
+ * @param context - Hook context with task details
+ * @returns Promise<void> to allow execution, or throws PermissionDeniedError to reject
+ * 
+ * @example
+ * ```typescript
+ * runtime.beforeExecute(async (context) => {
+ *   if (context.task.includes('delete')) {
+ *     throw new PermissionDeniedError('Delete operations require approval');
+ *   }
+ * });
+ * ```
+ */
+export type BeforeExecuteHook = (context: HookContext) => Promise<void>;
+
+/**
+ * After-execution hook signature
+ * 
+ * Called after task execution completes (success or failure).
+ * 
+ * @param context - Hook context with task details
+ * @param result - Execution result
+ * @returns Promise<void>
+ * 
+ * @example
+ * ```typescript
+ * runtime.afterExecute(async (context, result) => {
+ *   console.log(`Task completed: ${result.success ? 'success' : 'failed'}`);
+ *   await logToDatabase(context, result);
+ * });
+ * ```
+ */
+export type AfterExecuteHook = (context: HookContext, result: AgentExecutionResult) => Promise<void>;
+
+/**
+ * Permission denied error thrown by beforeExecute hooks
+ */
+export class PermissionDeniedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'PermissionDeniedError';
+  }
 }

@@ -11,7 +11,65 @@ import type {
   Decision,
   Observation,
   ToolExecutionContext,
+  HookContext,
+  BeforeExecuteHook,
+  AfterExecuteHook,
 } from './types.js';
+import { PermissionDeniedError } from './types.js';
+
+/**
+ * Version compatibility checking utilities
+ */
+interface VersionInfo {
+  major: number;
+  minor: number;
+  patch: number;
+}
+
+function parseVersion(version: string): VersionInfo {
+  const parts = version.replace(/^[^\d]*/, '').split('.').map(Number);
+  return {
+    major: parts[0] || 0,
+    minor: parts[1] || 0,
+    patch: parts[2] || 0,
+  };
+}
+
+function checkVersionCompatibility(runtimeVersion: string, agentsVersion?: string): void {
+  // Current @dcyfr/ai version
+  const runtime = parseVersion(runtimeVersion);
+  
+  if (!agentsVersion) {
+    console.warn(
+      '[AgentRuntime] Warning: Unable to detect @dcyfr/ai-agents version. ' +
+      'Ensure versions are compatible. Current runtime: v' + runtimeVersion
+    );
+    return;
+  }
+  
+  const agents = parseVersion(agentsVersion);
+  
+  // Version compatibility rules:
+  // - Major version must match (1.x.x with 1.x.x)
+  // - Runtime can be newer minor version than agents
+  // - Agents should not be more than 1 major version ahead
+  
+  if (runtime.major !== agents.major) {
+    console.warn(
+      '[AgentRuntime] Version Mismatch Warning: ' +
+      `Runtime v${runtimeVersion} (major ${runtime.major}) ` +
+      `with Agents v${agentsVersion} (major ${agents.major}). ` +
+      'Different major versions may cause compatibility issues. ' +
+      'Consider upgrading to matching versions.'
+    );
+  } else if (agents.minor > runtime.minor + 2) {
+    console.warn(
+      '[AgentRuntime] Version Skew Warning: ' +
+      `Agents v${agentsVersion} is significantly ahead of runtime v${runtimeVersion}. ` +
+      'Consider upgrading @dcyfr/ai for latest features and compatibility.'
+    );
+  }
+}
 
 /**
  * AgentRuntime - Executes multi-step tasks with LLM integration
@@ -42,6 +100,8 @@ export class AgentRuntime {
   private memory: DCYFRMemory;
   private telemetry: TelemetryEngine;
   private config: Required<RuntimeConfig>;
+  private beforeExecuteHooks: BeforeExecuteHook[] = [];
+  private afterExecuteHooks: AfterExecuteHook[] = [];
 
   constructor(
     agentName: string,
@@ -50,6 +110,9 @@ export class AgentRuntime {
     telemetry: TelemetryEngine,
     config?: RuntimeConfig
   ) {
+    // Version compatibility check
+    this.performVersionCheck();
+    
     this.agentName = agentName;
     this.providerRegistry = providerRegistry;
     this.memory = memory;
@@ -65,8 +128,86 @@ export class AgentRuntime {
       summarizationEnabled: config?.summarizationEnabled ?? true,
       summarizationInterval: config?.summarizationInterval ?? 5,
       workingMemoryEnabled: config?.workingMemoryEnabled ?? true,
+      persistWorkingMemory: config?.persistWorkingMemory ?? false,
+      debugWorkingMemory: config?.debugWorkingMemory ?? false,
       systemPrompt: config?.systemPrompt ?? this.getDefaultSystemPrompt(),
     };
+  }
+
+  /**
+   * Check version compatibility between @dcyfr/ai and @dcyfr/ai-agents
+   * Logs warnings if version mismatches could cause issues
+   */
+  private performVersionCheck(): void {
+    try {
+      // Get current runtime version from package.json
+      const runtimeVersion = '1.0.4'; // This should be dynamically imported in production
+      
+      // Try to detect agents package version
+      let agentsVersion: string | undefined;
+      
+      try {
+        // This is a best-effort detection - in practice, the calling package
+        // would need to provide this information
+        const process = globalThis.process;
+        if (process?.versions) {
+          // Check environment for version info
+          agentsVersion = process.env.DCYFR_AGENTS_VERSION;
+        }
+      } catch {
+        // Ignore errors in version detection
+      }
+      
+      checkVersionCompatibility(runtimeVersion, agentsVersion);
+    } catch (error) {
+      // Don't fail initialization due to version checking issues
+      console.warn('[AgentRuntime] Version check failed:', error);
+    }
+  }
+
+  /**
+   * Register a before-execution hook
+   * 
+   * Hooks are called before task execution begins.
+   * A hook can reject execution by throwing PermissionDeniedError.
+   * 
+   * @param hook - Function to call before execution
+   * 
+   * @example
+   * ```typescript
+   * runtime.beforeExecute(async (context) => {
+   *   if (!hasPermission(context.userId, 'execute')) {
+   *     throw new PermissionDeniedError('User lacks execute permission');
+   *   }
+   * });
+   * ```
+   */
+  beforeExecute(hook: BeforeExecuteHook): void {
+    this.beforeExecuteHooks.push(hook);
+  }
+
+  /**
+   * Register an after-execution hook
+   * 
+   * Hooks are called after task execution completes (success or failure).
+   * Useful for logging, auditing, or cleanup operations.
+   * 
+   * @param hook - Function to call after execution
+   * 
+   * @example
+   * ```typescript
+   * runtime.afterExecute(async (context, result) => {
+   *   await auditLog.record({
+   *     agent: context.agentName,
+   *     task: context.task,
+   *     success: result.success,
+   *     cost: result.cost,
+   *   });
+   * });
+   * ```
+   */
+  afterExecute(hook: AfterExecuteHook): void {
+    this.afterExecuteHooks.push(hook);
   }
 
   /**
@@ -82,6 +223,44 @@ export class AgentRuntime {
     let memoryWriteFailed = false;
 
     try {
+      // Create hook context
+      const hookContext: HookContext = {
+        agentName: this.agentName,
+        task: context.task,
+        userId: context.userId,
+        sessionId: context.sessionId,
+        timestamp: Date.now(),
+      };
+
+      // Run before-execution hooks
+      for (const hook of this.beforeExecuteHooks) {
+        try {
+          await hook(hookContext);
+        } catch (error) {
+          // Check if permission was denied
+          if (error instanceof PermissionDeniedError) {
+            const executionTime = Date.now() - startTime;
+            const result: AgentExecutionResult = {
+              success: false,
+              error: error.message,
+              outcome: 'error',
+              executionTime,
+              cost: 0,
+              iterations: 0,
+            };
+
+            // Run after-execution hooks even on permission denial
+            await this.runAfterExecuteHooks(hookContext, result);
+
+            return result;
+          }
+          // Mark as hook error and re-throw
+          const hookError = error instanceof Error ? error : new Error(String(error));
+          (hookError as any).isHookError = true;
+          throw hookError;
+        }
+      }
+
       // Create telemetry session
       // Note: startSession expects AgentType, but we have agentName as string
       // For now, we'll use 'claude' as default - this should be configurable
@@ -118,6 +297,23 @@ export class AgentRuntime {
         }
       }
 
+      // Debug log working memory state
+      if (this.config.debugWorkingMemory && state.workingMemory.size > 0) {
+        const memorySnapshot: Record<string, unknown> = {};
+        state.workingMemory.forEach((value, key) => {
+          memorySnapshot[key] = value;
+        });
+        console.log('[WorkingMemory] Final state:', JSON.stringify(memorySnapshot, null, 2));
+      }
+
+      // Clear working memory unless persistence is enabled
+      if (!this.config.persistWorkingMemory) {
+        if (this.config.debugWorkingMemory) {
+          console.log('[WorkingMemory] Clearing ephemeral state');
+        }
+        state.workingMemory.clear();
+      }
+
       // End telemetry session
       if (sessionManager) {
         await sessionManager.end(result.success ? 'success' : 'failed');
@@ -133,12 +329,29 @@ export class AgentRuntime {
         error: result.error,
       });
 
-      return {
+      const finalResult = {
         ...result,
         sessionId,
         memoryWriteFailed: memoryWriteFailed || undefined,
       };
+
+      // Run after-execution hooks
+      const finalHookContext: HookContext = {
+        agentName: this.agentName,
+        task: context.task,
+        userId: context.userId,
+        sessionId: context.sessionId,
+        timestamp: Date.now(),
+      };
+      await this.runAfterExecuteHooks(finalHookContext, finalResult);
+
+      return finalResult;
     } catch (error) {
+      // Re-throw hook errors to propagate them properly
+      if (error && typeof error === 'object' && (error as any).isHookError) {
+        throw error;
+      }
+
       const executionTime = Date.now() - startTime;
       const errorMessage = error instanceof Error ? error.message : String(error);
 
@@ -155,7 +368,7 @@ export class AgentRuntime {
         timestamp: Date.now(),
       });
 
-      return {
+      const result: AgentExecutionResult = {
         success: false,
         error: errorMessage,
         outcome: 'error',
@@ -164,6 +377,36 @@ export class AgentRuntime {
         iterations: 0,
         sessionId,
       };
+
+      // Run after-execution hooks even on error
+      const errorHookContext: HookContext = {
+        agentName: this.agentName,
+        task: context.task,
+        userId: context.userId,
+        sessionId: context.sessionId,
+        timestamp: Date.now(),
+      };
+      await this.runAfterExecuteHooks(errorHookContext, result);
+
+      return result;
+    }
+  }
+
+  /**
+   * Run all after-execution hooks
+   * @private
+   */
+  private async runAfterExecuteHooks(
+    hookContext: HookContext,
+    result: AgentExecutionResult
+  ): Promise<void> {
+    for (const hook of this.afterExecuteHooks) {
+      try {
+        await hook(hookContext, result);
+      } catch (error) {
+        // Log hook errors but don't fail execution
+        console.warn('[AgentRuntime] After-execute hook failed:', error);
+      }
     }
   }
 
@@ -265,6 +508,15 @@ export class AgentRuntime {
         action: decision.action,
         timestamp: Date.now(),
       });
+
+      // Debug log working memory state after each step
+      if (this.config.debugWorkingMemory && state.workingMemory.size > 0) {
+        const memorySnapshot: Record<string, unknown> = {};
+        state.workingMemory.forEach((value, key) => {
+          memorySnapshot[key] = value;
+        });
+        console.log(`[WorkingMemory Step ${state.iteration}]`, JSON.stringify(memorySnapshot, null, 2));
+      }
 
       // Emit step event
       this.emitEvent({
@@ -697,6 +949,8 @@ export class AgentRuntime {
    * Retrieve relevant context from DCYFRMemory
    */
   private async retrieveContext(context: TaskContext): Promise<string> {
+    const startTime = Date.now();
+    
     try {
       let memories: MemorySearchResult[] = [];
       
@@ -740,12 +994,37 @@ export class AgentRuntime {
         (m: MemorySearchResult) => m.relevance > this.config.memoryRelevanceThreshold
       );
 
+      // Emit memory retrieval telemetry event
+      this.emitEvent({
+        type: 'memory_retrieval',
+        agentName: this.agentName,
+        query: context.task,
+        memoriesFound: memories.length,
+        memoriesRelevant: relevant.length,
+        threshold: this.config.memoryRelevanceThreshold,
+        duration: Date.now() - startTime,
+        timestamp: Date.now(),
+      });
+
       if (relevant.length === 0) {
         return '';
       }
 
       return relevant.map((m: MemorySearchResult) => `- ${m.content}`).join('\n');
     } catch (error) {
+      // Emit error event
+      this.emitEvent({
+        type: 'memory_retrieval',
+        agentName: this.agentName,
+        query: context.task,
+        memoriesFound: 0,
+        memoriesRelevant: 0,
+        threshold: this.config.memoryRelevanceThreshold,
+        duration: Date.now() - startTime,
+        error: error instanceof Error ? error.message : String(error),
+        timestamp: Date.now(),
+      });
+      
       console.warn('[AgentRuntime] Memory search failed:', error);
       return '';
     }

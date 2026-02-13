@@ -16,3 +16,28 @@ export type {
   ToolExecutionContext,
   DelegationContext,
 } from './types.js';
+
+export {
+  calculateLLMCost,
+  aggregateCosts,
+  formatCost,
+  calculateExecutionMetrics,
+  LLM_PRICING,
+} from './telemetry-schema.js';
+
+export type {
+  ExecutionEvent,
+  ExecutionEventType,
+  TaskStartEvent,
+  TaskFinishEvent,
+  MemoryRetrievalEvent,
+  LLMCallEvent,
+  ToolExecutionEvent,
+  ErrorEvent,
+  TimeoutEvent,
+  SummarizationEvent,
+  AnyExecutionEvent,
+  CostBreakdown,
+  LLMPricing,
+  ExecutionMetrics,
+} from './telemetry-schema.js';

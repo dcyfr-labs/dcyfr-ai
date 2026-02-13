@@ -46,7 +46,8 @@ Portable AI agent framework with plugin architecture for managing multiple AI pr
 ## Features
 
 - 🔌 **Plugin Architecture** - Extensible validation system with custom agents
-- 🔄 **Multi-Provider Support** - Claude, Copilot, Groq, Ollama, OpenAI, Anthropic
+- 🔄 **Multi-Provider Support** - OpenAI, Anthropic, Ollama, Msty Vibe CLI Proxy, GitHub Copilot
+- 🎯 **Msty Vibe Integration** - Unified multi-model routing with local OpenAI-compatible endpoint
 - ⚙️ **Configuration System** - YAML/JSON config with three-layer merge
 - 📊 **Comprehensive Telemetry** - Track usage, costs, quality metrics, performance
 - ✅ **Validation Framework** - Quality gates with parallel/serial execution
@@ -121,6 +122,268 @@ npx @dcyfr/ai config:validate
 # Show full configuration
 npx @dcyfr/ai config:validate --verbose
 ```
+
+---
+
+## Getting Started with AgentRuntime (Phase 0 Autonomous Operations)
+
+### Prerequisites
+
+```bash
+# Node.js 18+ required
+node --version
+
+# Install @dcyfr/ai
+npm install @dcyfr/ai
+
+# Optional: Configure LLM providers
+export OPENAI_API_KEY=your_openai_key
+export ANTHROPIC_API_KEY=your_anthropic_key
+```
+
+### 1. Basic AgentRuntime Setup
+
+```typescript
+import { 
+  AgentRuntime, 
+  ProviderRegistry, 
+  TelemetryEngine, 
+  DCYFRMemory 
+} from '@dcyfr/ai';
+
+// Initialize components
+const providerRegistry = new ProviderRegistry();
+const telemetryEngine = new TelemetryEngine({ storage: 'sqlite' });
+const memory = new DCYFRMemory({ storage: 'memory' });
+
+// Create runtime
+const runtime = new AgentRuntime({
+  providerRegistry,
+  memory,
+  telemetry: telemetryEngine
+});
+
+// Verify setup
+console.log(`Runtime ready: ${runtime.isReady()}`);
+```
+
+### 2. Execute Autonomous Tasks
+
+```typescript
+// Simple task execution
+const result = await runtime.executeTask('Explain quantum computing briefly');
+
+if (result.success) {
+  console.log('Output:', result.output);
+  console.log('Memory used:', result.memoryRetrievalUsed);
+} else {
+  console.error('Error:', result.error);
+}
+```
+
+### 3. Memory-Enhanced Execution
+
+```typescript
+// Task with memory context
+const result = await runtime.executeTask('Continue the quantum computing explanation', {
+  timeout: 30000,
+  memoryConfig: {
+    maxResults: 10,    // Maximum context entries
+    minScore: 0.7      // Relevance threshold (0.0-1.0)
+  }
+});
+
+// Memory is automatically retrieved, injected, and persisted
+console.log('Previous context used:', result.memoryRetrievalUsed);
+```
+
+### 4. Working Memory for Multi-Step Tasks
+
+```typescript
+// Access working memory for ephemeral state
+const workingMemory = runtime.getWorkingMemory();
+
+// Step 1: Research overview
+workingMemory.set('research-topic', 'AI ethics');
+const overviewResult = await runtime.executeTask(
+  'Provide overview of AI ethics and key considerations'
+);
+
+// Step 2: Deep dive (with context from step 1)  
+workingMemory.set('overview-complete', overviewResult.output);
+const deepDiveResult = await runtime.executeTask(
+  'Analyze specific ethical challenges in AI deployment'
+);
+
+console.log('Working memory keys:', Array.from(workingMemory.keys()));
+```
+
+### 5. Hook System for Extensions
+
+```typescript
+// Add before-execution hook
+runtime.addHook('beforeExecute', async (task: string) => {
+  console.log(`🚀 Starting task: ${task}`);
+  
+  // Custom validation
+  if (task.includes('sensitive')) {
+    return { approved: false, reason: 'Sensitive content detected' };
+  }
+  
+  return { approved: true };
+});
+
+// Add after-execution hook
+runtime.addHook('afterExecute', async (task, result, success) => {
+  console.log(`✅ Task completed: ${success ? 'SUCCESS' : 'FAILED'}`);
+  
+  // Custom telemetry
+  if (success) {
+    await customAnalytics.track({
+      task: task.substring(0, 50),
+      duration: result.duration,
+      memoryUsed: result.memoryRetrievalUsed
+    });
+  }
+});
+```
+
+### 6. Provider Configuration & Fallback
+
+```typescript
+// Multi-provider setup with fallback
+const runtime = new AgentRuntime({
+  providerRegistry: new ProviderRegistry(),
+  memory,
+  telemetry
+});
+
+// Providers automatically fallback: OpenAI → Anthropic → Ollama
+const result = await runtime.executeTask('Analyze market trends');
+
+// Check which provider was used
+const events = await telemetryEngine.getEvents();
+const lastExecution = events.filter(e => e.type === 'start').pop();
+console.log('Provider used:', lastExecution?.provider);
+```
+
+### 7. Telemetry Monitoring & Analysis
+
+```typescript
+// Get telemetry engine for analytics
+const telemetry = runtime.getTelemetryEngine();
+
+// Get recent events
+const events = await telemetry.getEvents();
+console.log(`Total events: ${events.length}`);
+
+// Filter memory events
+const memoryEvents = events.filter(e => e.type === 'memory_retrieval');
+const hitRate = memoryEvents.length > 0 
+  ? memoryEvents.filter(e => e.memoriesRelevant > 0).length / memoryEvents.length
+  : 0;
+console.log(`Memory hit rate: ${(hitRate * 100).toFixed(1)}%`);
+```
+
+### 8. CLI Dashboard Commands
+
+```bash
+# View telemetry dashboard
+npx @dcyfr/ai telemetry
+
+# Show recent activity
+npx @dcyfr/ai telemetry --recent 20
+
+# Cost analysis
+npx @dcyfr/ai telemetry --costs
+
+# Provider summary
+npx @dcyfr/ai telemetry --providers
+
+# Runtime validation
+npx @dcyfr/ai validate-runtime
+
+# Export data
+npx @dcyfr/ai telemetry --export usage_data.csv
+```
+
+### 9. Provider Setup
+
+**OpenAI:**
+```bash
+export OPENAI_API_KEY=sk-your-key-here
+# Supports: gpt-4, gpt-4o, gpt-3.5-turbo
+```
+
+**Anthropic:**
+```bash
+export ANTHROPIC_API_KEY=sk-ant-your-key-here  
+# Supports: claude-3-5-sonnet, claude-3-haiku, claude-3-opus
+```
+
+**Ollama (Local):**
+```bash
+# Install Ollama
+curl -fsSL https://ollama.ai/install.sh | sh
+
+# Install a model
+ollama pull llama2
+# OR: ollama pull codellama, qwen2.5, etc.
+
+# Optional: Custom host
+export OLLAMA_HOST=localhost:11434
+```
+
+### 10. Configuration Examples
+
+**Development:**
+```typescript
+const devConfig = {
+  providerRegistry: new ProviderRegistry(),
+  memory: new DCYFRMemory({ 
+    storage: 'memory',
+    maxEntries: 100 
+  }),
+  telemetry: new TelemetryEngine({ 
+    storage: 'memory' // No persistence for dev
+  })
+};
+```
+
+**Production:**
+```typescript  
+const prodConfig = {
+  providerRegistry: new ProviderRegistry(),
+  memory: new DCYFRMemory({ 
+    storage: 'file',
+    filePath: './data/memory.json'
+  }),
+  telemetry: new TelemetryEngine({ 
+    storage: 'sqlite',
+    dbPath: './data/telemetry.db'
+  })
+};
+```
+
+### 11. Real-World Example
+
+See our comprehensive example: **[Autonomous Research Agent](../dcyfr-ai-agents/examples/autonomous-research-agent/)**
+
+```bash
+cd dcyfr-ai-agents/examples/autonomous-research-agent
+npm run demo -- --topic "quantum computing applications"
+```
+
+This example demonstrates:
+- 5-step autonomous research pipeline
+- Memory context integration
+- Working memory coordination
+- Hook system extensions  
+- Telemetry monitoring
+- Provider fallback handling
+- Configuration management
+
+---
 
 ## Architecture
 
@@ -261,10 +524,12 @@ See [examples/](./examples/) directory:
 
 ## Documentation
 
-- [Getting Started](./docs/getting-started.md)
-- [Configuration Guide](./docs/configuration.md)
-- [Plugin Development](./docs/plugins.md)
-- [API Reference](./docs/api.md)
+- [Getting Started](./docs/GETTING-STARTED.md)
+- [Provider Integrations](./docs/PROVIDER_INTEGRATIONS.md) - **OpenAI, Anthropic, Ollama, Msty Vibe CLI Proxy**
+- [Memory Setup](./docs/MEMORY_SETUP.md) - Vector database and memory configuration
+- [Plugin Development](./docs/PLUGINS.md)
+- [API Reference](./docs/API.md)
+- [TUI Dashboard](./docs/TUI.md)
 - [Release Management](./docs/RELEASE_MANAGEMENT.md) - Publishing and versioning
 - [Quick Release Guide](./docs/RELEASE_QUICK_START.md) - TL;DR for releases
 

@@ -244,5 +244,18 @@ export {
   builtinAgentsByName,
 } from './agents-builtin';
 
+// Runtime exports
+export {
+  AgentRuntime,
+  type RuntimeState,
+  type RuntimeConfig,
+  type TaskContext as RuntimeTaskContext,
+  type AgentExecutionResult as RuntimeAgentExecutionResult,
+  type Decision,
+  type Observation,
+  type ToolExecutionContext,
+  type DelegationContext,
+} from './runtime';
+
 // Version
 export const VERSION = '1.0.0';
