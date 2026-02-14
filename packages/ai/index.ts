@@ -257,5 +257,28 @@ export {
   type DelegationContext,
 } from './runtime';
 
+// Delegation system exports
+export { ContractManager } from './delegation/contract-manager';
+export type { ContractManagerConfig, ContractQuery, ContractUpdate } from './delegation/contract-manager';
+
+export type {
+  DelegationContract,
+  DelegationContractStatus,
+  VerificationResult,
+  DelegationAgent,
+  SuccessCriteria,
+  VerificationPolicy,
+} from './types/delegation-contracts';
+
+// Reputation system exports
+export { ReputationEngine } from './reputation/reputation-engine';
+export type {
+  ReputationEngineConfig,
+  ReputationProfile,
+  ReputationUpdate,
+  ReputationQuery,
+  ReputationDimension,
+} from './reputation/reputation-engine';
+
 // Version
 export const VERSION = '1.0.0';

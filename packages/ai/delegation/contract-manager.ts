@@ -1,159 +1,170 @@
 /**
- * DCYFR Delegation Contract Manager
- * TLP:AMBER - Internal Use Only
+ * Delegation Contract Manager
+ * TLP:CLEAR
  * 
- * Manages delegation contract lifecycle: create, read, update, delete operations.
- * Integrates with SQLite reputation database for persistent storage.
+ * Manages CRUD operations for delegation contracts with status tracking,
+ * validation, and telemetry integration.
  * 
  * @module delegation/contract-manager
  * @version 1.0.0
  * @date 2026-02-13
  */
 
-import Database from 'better-sqlite3';
-import { randomUUID } from 'crypto';
+import { EventEmitter } from 'events';
 import type {
   DelegationContract,
   DelegationContractStatus,
-  CreateDelegationContractRequest,
-  UpdateDelegationContractRequest,
-  DelegationContractQuery,
   VerificationResult,
-  DelegationAgent,
 } from '../types/delegation-contracts';
 
 /**
- * Contract Manager Configuration
+ * Contract manager configuration
  */
 export interface ContractManagerConfig {
-  /** Path to SQLite database */
-  databasePath: string;
+  /** Whether to enable automatic contract cleanup */
+  auto_cleanup?: boolean;
   
-  /** Maximum delegation depth allowed */
-  maxDelegationDepth?: number;
+  /** Time to retain completed contracts (milliseconds) */
+  retention_period_ms?: number;
   
-  /** Enable debug logging */
-  debug?: boolean;
+  /** Maximum number of contracts to keep in memory */
+  max_contracts?: number;
+  
+  /** Enable telemetry integration */
+  enable_telemetry?: boolean;
+}
+
+/**
+ * Contract query filters
+ */
+export interface ContractQuery {
+  /** Filter by contract IDs */
+  contract_ids?: string[];
+  
+  /** Filter by task ID */
+  task_id?: string;
+  
+  /** Filter by delegator agent */
+  delegator_agent_id?: string;
+  
+  /** Filter by delegatee agent */
+  delegatee_agent_id?: string;
+  
+  /** Filter by contract status */
+  status?: DelegationContractStatus | DelegationContractStatus[];
+  
+  /** Filter by parent contract ID (for chain tracking) */
+  parent_contract_id?: string;
+  
+  /** Filter by TLP classification */
+  tlp_classification?: string;
+  
+  /** Filter by creation time range */
+  created_after?: string;
+  created_before?: string;
+  
+  /** Limit number of results */
+  limit?: number;
+  
+  /** Sort by field */
+  sort_by?: 'created_at' | 'priority' | 'timeout_ms';
+  
+  /** Sort order */
+  sort_order?: 'asc' | 'desc';
+}
+
+/**
+ * Contract update data
+ */
+export interface ContractUpdate {
+  /** Update contract status */
+  status?: DelegationContractStatus;
+  
+  /** Update verification result */
+  verification_result?: VerificationResult;
+  
+  /** Update metadata */
+  metadata?: Record<string, unknown>;
+  
+  /** Update completion timestamp */
+  completed_at?: string;
+  
+  /** Update activation timestamp */
+  activated_at?: string;
 }
 
 /**
  * Delegation Contract Manager
  * 
- * Provides CRUD operations for delegation contracts with SQLite persistence.
+ * Provides comprehensive contract lifecycle management including creation,
+ * updates, queries, and validation. Integrates with telemetry system for
+ * monitoring and provides event-driven notifications.
  */
-export class DelegationContractManager {
-  private db: Database.Database;
-  private config: ContractManagerConfig;
+export class ContractManager extends EventEmitter {
+  private contracts: Map<string, DelegationContract>;
+  private config: Required<ContractManagerConfig>;
   
-  constructor(config: ContractManagerConfig) {
+  constructor(config: ContractManagerConfig = {}) {
+    super();
+    
     this.config = {
-      maxDelegationDepth: 5,
-      debug: false,
-      ...config,
+      auto_cleanup: config.auto_cleanup ?? false,
+      retention_period_ms: config.retention_period_ms ?? 7 * 24 * 60 * 60 * 1000, // 7 days
+      max_contracts: config.max_contracts ?? 10000,
+      enable_telemetry: config.enable_telemetry ?? true,
     };
     
-    this.db = new Database(this.config.databasePath);
-    this.db.pragma('journal_mode = WAL');
-    this.ensureTables();
-  }
-  
-  /**
-   * Ensure database tables exist
-   */
-  private ensureTables(): void {
-    // Tables are created by schema.sql during database initialization
-    // This method validates they exist
-    const tables = this.db.prepare(`
-      SELECT name FROM sqlite_master 
-      WHERE type='table' AND name IN ('delegation_contracts', 'reputation_audit_log')
-    `).all();
+    this.contracts = new Map();
     
-    if (tables.length < 2) {
-      throw new Error('Database schema incomplete. Run delegation-reputation.schema.sql first.');
+    // Set up automatic cleanup if enabled
+    if (this.config.auto_cleanup) {
+      this.scheduleCleanup();
     }
   }
   
   /**
    * Create a new delegation contract
    */
-  async createContract(request: CreateDelegationContractRequest): Promise<DelegationContract> {
-    const now = new Date().toISOString();
-    const contractId = randomUUID();
+  async createContract(
+    partialContract: Omit<DelegationContract, 'contract_id' | 'created_at' | 'status'>
+  ): Promise<DelegationContract> {
+    // Generate contract ID
+    const contract_id = `contract_${Date.now()}_${Math.random().toString(36).substring(7)}`;
     
-    // Calculate delegation depth
-    let delegationDepth = 0;
-    if (request.parent_contract_id) {
-      const parent = await this.getContract(request.parent_contract_id);
-      if (!parent) {
-        throw new Error(`Parent contract not found: ${request.parent_contract_id}`);
-      }
-      delegationDepth = parent.delegation_depth + 1;
-      
-      if (delegationDepth >= (this.config.maxDelegationDepth ?? 5)) {
-        throw new Error(`Maximum delegation depth exceeded: ${delegationDepth}`);
-      }
-    }
-    
+    // Build complete contract
     const contract: DelegationContract = {
-      contract_id: contractId,
-      delegator: request.delegator,
-      delegatee: request.delegatee,
-      task_id: request.task_id,
-      task_description: request.task_description,
-      verification_policy: request.verification_policy,
-      success_criteria: request.success_criteria,
-      timeout_ms: request.timeout_ms,
-      permission_tokens: request.permission_tokens,
+      ...partialContract,
+      contract_id,
+      created_at: new Date().toISOString(),
       status: 'pending',
-      created_at: now,
-      delegation_depth: delegationDepth,
-      parent_contract_id: request.parent_contract_id,
-      tlp_classification: request.tlp_classification,
-      metadata: request.metadata,
     };
     
-    // Insert into database
-    const stmt = this.db.prepare(`
-      INSERT INTO delegation_contracts (
-        contract_id, delegator_agent_id, delegatee_agent_id,
-        task_id, task_description, verification_policy,
-        success_criteria, timeout_ms, permission_tokens,
-        status, created_at, delegation_depth, parent_contract_id, tlp_classification
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
+    // Validate contract
+    this.validateContract(contract);
     
-    stmt.run(
-      contract.contract_id,
-      contract.delegator.agent_id,
-      contract.delegatee.agent_id,
-      contract.task_id,
-      contract.task_description,
-      contract.verification_policy,
-      JSON.stringify(contract.success_criteria),
-      contract.timeout_ms,
-      contract.permission_tokens ? JSON.stringify(contract.permission_tokens) : null,
-      contract.status,
-      contract.created_at,
-      contract.delegation_depth,
-      contract.parent_contract_id ?? null,
-      contract.tlp_classification ?? null
-    );
+    // Check capacity
+    if (this.contracts.size >= this.config.max_contracts) {
+      throw new Error(
+        `Contract manager at capacity: ${this.config.max_contracts} contracts`
+      );
+    }
     
-    // Log audit event
-    await this.logAuditEvent({
-      event_type: 'delegation_created',
-      agent_id: contract.delegator.agent_id,
-      agent_name: contract.delegator.agent_name,
-      event_data: {
-        contract_id: contract.contract_id,
-        delegatee: contract.delegatee.agent_id,
+    // Store contract
+    this.contracts.set(contract_id, contract);
+    
+    // Emit events
+    this.emit('contract:created', contract);
+    
+    if (this.config.enable_telemetry) {
+      this.emit('telemetry:contract_created', {
+        contract_id,
         task_id: contract.task_id,
-      },
-      delegation_contract_id: contract.contract_id,
-    });
-    
-    if (this.config.debug) {
-      console.log(`[ContractManager] Created contract: ${contract.contract_id}`);
+        delegator: contract.delegator.agent_id,
+        delegatee: contract.delegatee.agent_id,
+        tlp: contract.tlp_classification,
+        verification_policy: contract.verification_policy,
+        timestamp: contract.created_at,
+      });
     }
     
     return contract;
@@ -162,317 +173,343 @@ export class DelegationContractManager {
   /**
    * Get a contract by ID
    */
-  async getContract(contractId: string): Promise<DelegationContract | null> {
-    const row = this.db.prepare(`
-      SELECT * FROM delegation_contracts WHERE contract_id = ?
-    `).get(contractId) as any;
+  getContract(contract_id: string): DelegationContract | undefined {
+    return this.contracts.get(contract_id);
+  }
+  
+  /**
+   * Query contracts with filters
+   */
+  queryContracts(query: ContractQuery = {}): DelegationContract[] {
+    let results = Array.from(this.contracts.values());
     
-    if (!row) {
-      return null;
+    // Apply filters
+    if (query.contract_ids) {
+      const idSet = new Set(query.contract_ids);
+      results = results.filter((c) => idSet.has(c.contract_id));
     }
     
-    return this.rowToContract(row);
+    if (query.task_id) {
+      results = results.filter((c) => c.task_id === query.task_id);
+    }
+    
+    if (query.delegator_agent_id) {
+      results = results.filter((c) => c.delegator.agent_id === query.delegator_agent_id);
+    }
+    
+    if (query.delegatee_agent_id) {
+      results = results.filter((c) => c.delegatee.agent_id === query.delegatee_agent_id);
+    }
+    
+    if (query.status) {
+      const statuses = Array.isArray(query.status) ? query.status : [query.status];
+      results = results.filter((c) => statuses.includes(c.status));
+    }
+    
+    if (query.tlp_classification) {
+      results = results.filter((c) => c.tlp_classification === query.tlp_classification);
+    }
+    
+    if (query.parent_contract_id) {
+      results = results.filter((c) => c.parent_contract_id === query.parent_contract_id);
+    }
+    
+    if (query.created_after) {
+      results = results.filter((c) => c.created_at >= query.created_after!);
+    }
+    
+    if (query.created_before) {
+      results = results.filter((c) => c.created_at <= query.created_before!);
+    }
+    
+    // Apply sorting
+    if (query.sort_by) {
+      const sortOrder = query.sort_order === 'desc' ? -1 : 1;
+      
+      results.sort((a, b) => {
+        const field = query.sort_by!;
+        const aVal = field === 'created_at' ? a.created_at : 
+                    (a.timeout_ms ?? Infinity);
+        const bVal = field === 'created_at' ? b.created_at :
+                    (b.timeout_ms ?? Infinity);
+        
+        return aVal < bVal ? -sortOrder : aVal > bVal ? sortOrder : 0;
+      });
+    }
+    
+    // Apply limit
+    if (query.limit && query.limit > 0) {
+      results = results.slice(0, query.limit);
+    }
+    
+    return results;
   }
   
   /**
    * Update a contract
    */
-  async updateContract(request: UpdateDelegationContractRequest): Promise<DelegationContract> {
-    const existing = await this.getContract(request.contract_id);
-    if (!existing) {
-      throw new Error(`Contract not found: ${request.contract_id}`);
-    }
+  async updateContract(
+    contract_id: string,
+    update: ContractUpdate
+  ): Promise<DelegationContract> {
+    const contract = this.contracts.get(contract_id);
     
-    const now = new Date().toISOString();
-    const updates: string[] = [];
-    const values: any[] = [];
-    
-    if (request.status) {
-      updates.push('status = ?');
-      values.push(request.status);
-      
-      // Handle status-specific timestamps
-      if (request.status === 'active' && !existing.activated_at) {
-        updates.push('activated_at = ?');
-        values.push(now);
-      } else if (['completed', 'failed', 'timeout', 'revoked'].includes(request.status)) {
-        updates.push('completed_at = ?');
-        values.push(now);
-      }
-    }
-    
-    if (request.verification_result) {
-      updates.push('verification_result = ?');
-      values.push(JSON.stringify(request.verification_result));
-    }
-    
-    if (updates.length === 0) {
-      return existing; // No changes
-    }
-    
-    values.push(request.contract_id);
-    
-    const stmt = this.db.prepare(`
-      UPDATE delegation_contracts 
-      SET ${updates.join(', ')}
-      WHERE contract_id = ?
-    `);
-    
-    stmt.run(...values);
-    
-    // Log audit event
-    await this.logAuditEvent({
-      event_type: 'delegation_verified',
-      agent_id: existing.delegatee.agent_id,
-      agent_name: existing.delegatee.agent_name,
-      event_data: {
-        contract_id: request.contract_id,
-        old_status: existing.status,
-        new_status: request.status,
-        verification_result: request.verification_result,
-      },
-      delegation_contract_id: request.contract_id,
-    });
-    
-    if (this.config.debug) {
-      console.log(`[ContractManager] Updated contract: ${request.contract_id}`);
-    }
-    
-    return await this.getContract(request.contract_id) as DelegationContract;
-  }
-  
-  /**
-   * Query contracts with filtering
-   */
-  async queryContracts(query: DelegationContractQuery): Promise<DelegationContract[]> {
-    const conditions: string[] = [];
-    const values: any[] = [];
-    
-    if (query.delegator_id) {
-      conditions.push('delegator_agent_id = ?');
-      values.push(query.delegator_id);
-    }
-    
-    if (query.delegatee_id) {
-      conditions.push('delegatee_agent_id = ?');
-      values.push(query.delegatee_id);
-    }
-    
-    if (query.task_id) {
-      conditions.push('task_id = ?');
-      values.push(query.task_id);
-    }
-    
-    if (query.status) {
-      if (Array.isArray(query.status)) {
-        conditions.push(`status IN (${query.status.map(() => '?').join(', ')})`);
-        values.push(...query.status);
-      } else {
-        conditions.push('status = ?');
-        values.push(query.status);
-      }
-    }
-    
-    if (query.delegation_depth !== undefined) {
-      conditions.push('delegation_depth = ?');
-      values.push(query.delegation_depth);
-    }
-    
-    if (query.parent_contract_id) {
-      conditions.push('parent_contract_id = ?');
-      values.push(query.parent_contract_id);
-    }
-    
-    let sql = 'SELECT * FROM delegation_contracts';
-    if (conditions.length > 0) {
-      sql += ' WHERE ' + conditions.join(' AND ');
-    }
-    
-    // Sorting
-    const sortBy = query.sort_by ?? 'created_at';
-    const sortOrder = query.sort_order ?? 'desc';
-    sql += ` ORDER BY ${sortBy} ${sortOrder.toUpperCase()}`;
-    
-    // Pagination - OFFSET requires LIMIT in SQLite
-    if (query.limit || query.offset) {
-      sql += ' LIMIT ?';
-      values.push(query.limit ?? 999999); // Large default limit if only offset is specified
-      
-      if (query.offset) {
-        sql += ' OFFSET ?';
-        values.push(query.offset);
-      }
-    }
-    
-    const rows = this.db.prepare(sql).all(...values) as any[];
-    return rows.map(row => this.rowToContract(row));
-  }
-  
-  /**
-   * Delete a contract (soft delete by marking as revoked)
-   */
-  async deleteContract(contractId: string, reason?: string): Promise<void> {
-    const contract = await this.getContract(contractId);
     if (!contract) {
-      throw new Error(`Contract not found: ${contractId}`);
+      throw new Error(`Contract not found: ${contract_id}`);
     }
     
-    const now = new Date().toISOString();
-    
-    this.db.prepare(`
-      UPDATE delegation_contracts 
-      SET status = 'revoked', completed_at = ?
-      WHERE contract_id = ?
-    `).run(now, contractId);
-    
-    // Log audit event
-    await this.logAuditEvent({
-      event_type: 'delegation_verified',
-      agent_id: contract.delegator.agent_id,
-      agent_name: contract.delegator.agent_name,
-      event_data: {
-        contract_id: contractId,
-        reason: reason ?? 'Contract revoked',
-        old_status: contract.status,
-        new_status: 'revoked',
-      },
-      delegation_contract_id: contractId,
-    });
-    
-    if (this.config.debug) {
-      console.log(`[ContractManager] Deleted contract: ${contractId}`);
+    // Apply updates
+    if (update.status) {
+      contract.status = update.status;
     }
+    
+    if (update.verification_result) {
+      contract.verification_result = update.verification_result;
+    }
+    
+    if (update.completed_at) {
+      contract.completed_at = update.completed_at;
+    }
+    
+    if (update.activated_at) {
+      contract.activated_at = update.activated_at;
+    }
+    
+    if (update.metadata) {
+      contract.metadata = { ...contract.metadata, ...update.metadata };
+    }
+    
+    // Update stored contract
+    this.contracts.set(contract_id, contract);
+    
+    // Emit events
+    this.emit('contract:updated', contract);
+    
+    if (this.config.enable_telemetry) {
+      this.emit('telemetry:contract_updated', {
+        contract_id,
+        status: contract.status,
+        update_type: Object.keys(update),
+        timestamp: new Date().toISOString(),
+      });
+    }
+    
+    return contract;
   }
   
   /**
-   * Get active contracts for an agent
+   * Update contract status
    */
-  async getActiveContracts(agentId: string): Promise<DelegationContract[]> {
-    return this.queryContracts({
-      delegatee_id: agentId,
-      status: ['pending', 'active'],
+  async updateStatus(
+    contract_id: string,
+    status: DelegationContractStatus
+  ): Promise<DelegationContract> {
+    return this.updateContract(contract_id, { status });
+  }
+  
+  /**
+   * Mark contract as completed
+   */
+  async completeContract(
+    contract_id: string,
+    result: unknown,
+    verification?: VerificationResult
+  ): Promise<DelegationContract> {
+    const contract = this.contracts.get(contract_id);
+    
+    if (!contract) {
+      throw new Error(`Contract not found: ${contract_id}`);
+    }
+    
+    const completed_at = new Date().toISOString();
+    const verification_result = verification ? {
+      ...verification,
+      verified_at: completed_at,
+      verified: true,
+    } : undefined;
+    
+    return this.updateContract(contract_id, {
+      status: 'completed',
+      completed_at,
+      verification_result,
     });
+  }
+  
+  /**
+   * Mark contract as failed
+   */
+  async failContract(
+    contract_id: string,
+    error: { error_type: string; error_message: string; error_details?: Record<string, unknown> }
+  ): Promise<DelegationContract> {
+    const contract = this.contracts.get(contract_id);
+    
+    if (!contract) {
+      throw new Error(`Contract not found: ${contract_id}`);
+    }
+    
+    const completed_at = new Date().toISOString();
+    const verification_result: VerificationResult = {
+      verified: false,
+      verified_at: completed_at,
+      verified_by: 'system',
+      verification_method: 'direct_inspection',
+      findings: {
+        failed_checks: [error.error_message],
+      },
+      metadata: {
+        error_type: error.error_type,
+        error_details: error.error_details,
+      },
+    };
+    
+    return this.updateContract(contract_id, {
+      status: 'failed',
+      completed_at,
+      verification_result,
+    });
+  }
+  
+  /**
+   * Delete a contract
+   */
+  async deleteContract(contract_id: string): Promise<boolean> {
+    const deleted = this.contracts.delete(contract_id);
+    
+    if (deleted) {
+      this.emit('contract:deleted', { contract_id });
+      
+      if (this.config.enable_telemetry) {
+        this.emit('telemetry:contract_deleted', {
+          contract_id,
+          timestamp: new Date().toISOString(),
+        });
+      }
+    }
+    
+    return deleted;
   }
   
   /**
    * Get contract statistics
    */
-  async getStatistics(agentId?: string): Promise<ContractStatistics> {
-    let sql = `
-      SELECT 
-        COUNT(*) as total,
-        SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
-        SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active,
-        SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
-        SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed,
-        SUM(CASE WHEN status = 'timeout' THEN 1 ELSE 0 END) as timeout,
-        SUM(CASE WHEN status = 'revoked' THEN 1 ELSE 0 END) as revoked
-      FROM delegation_contracts
-    `;
+  getStats(): {
+    total: number;
+    by_status: Record<DelegationContractStatus, number>;
+    by_tlp: Record<string, number>;
+    memory_usage_bytes: number;
+  } {
+    const stats = {
+      total: this.contracts.size,
+      by_status: {} as Record<DelegationContractStatus, number>,
+      by_tlp: {} as Record<string, number>,
+      memory_usage_bytes: 0,
+    };
     
-    const values: any[] = [];
-    if (agentId) {
-      sql += ' WHERE delegatee_agent_id = ?';
-      values.push(agentId);
+    // Count by status and TLP
+    for (const contract of this.contracts.values()) {
+      // Status counts
+      stats.by_status[contract.status] = (stats.by_status[contract.status] || 0) + 1;
+      
+      // TLP counts
+      const tlp = contract.tlp_classification || 'unknown';
+      stats.by_tlp[tlp] = (stats.by_tlp[tlp] || 0) + 1;
+      
+      // Rough memory estimate
+      stats.memory_usage_bytes += JSON.stringify(contract).length;
     }
     
-    const row = this.db.prepare(sql).get(...values) as any;
-    
-    return {
-      total: row.total,
-      pending: row.pending,
-      active: row.active,
-      completed: row.completed,
-      failed: row.failed,
-      timeout: row.timeout,
-      revoked: row.revoked,
-      success_rate: row.completed > 0 ? row.completed / (row.completed + row.failed + row.timeout) : 0,
-    };
+    return stats;
   }
   
   /**
-   * Log audit event
+   * Clean up old completed contracts
    */
-  private async logAuditEvent(event: {
-    event_type: string;
-    agent_id: string;
-    agent_name: string;
-    event_data: Record<string, any>;
-    delegation_contract_id?: string;
-  }): Promise<void> {
-    const now = new Date().toISOString();
-    const eventId = randomUUID();
+  cleanup(): number {
+    const cutoffTime = Date.now() - this.config.retention_period_ms;
+    const cutoffDate = new Date(cutoffTime).toISOString();
     
-    this.db.prepare(`
-      INSERT INTO reputation_audit_log (
-        event_id, event_type, timestamp, agent_id, agent_name,
-        event_data, delegation_contract_id, source_system
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      eventId,
-      event.event_type,
-      now,
-      event.agent_id,
-      event.agent_name,
-      JSON.stringify(event.event_data),
-      event.delegation_contract_id ?? null,
-      'dcyfr-ai'
-    );
+    let deletedCount = 0;
+    
+    for (const [contract_id, contract] of this.contracts.entries()) {
+      // Only clean up completed or failed contracts
+      if ((contract.status === 'completed' || contract.status === 'failed') &&
+          contract.completed_at &&
+          contract.completed_at < cutoffDate) {
+        this.contracts.delete(contract_id);
+        deletedCount++;
+      }
+    }
+    
+    if (deletedCount > 0) {
+      this.emit('contracts:cleaned', { deleted_count: deletedCount });
+    }
+    
+    return deletedCount;
   }
   
   /**
-   * Convert database row to DelegationContract
+   * Validate contract data
    */
-  private rowToContract(row: any): DelegationContract {
-    const delegator: DelegationAgent = {
-      agent_id: row.delegator_agent_id,
-      agent_name: row.delegator_agent_id, // TODO: Fetch from agent registry
-    };
+  private validateContract(contract: DelegationContract): void {
+    // Required fields
+    if (!contract.task_id) {
+      throw new Error('Contract must have task_id');
+    }
     
-    const delegatee: DelegationAgent = {
-      agent_id: row.delegatee_agent_id,
-      agent_name: row.delegatee_agent_id, // TODO: Fetch from agent registry
-    };
+    if (!contract.delegator || !contract.delegator.agent_id) {
+      throw new Error('Contract must have delegator with valid agent_id');
+    }
     
-    return {
-      contract_id: row.contract_id,
-      delegator,
-      delegatee,
-      task_id: row.task_id,
-      task_description: row.task_description,
-      verification_policy: row.verification_policy,
-      success_criteria: JSON.parse(row.success_criteria),
-      timeout_ms: row.timeout_ms,
-      permission_tokens: row.permission_tokens ? JSON.parse(row.permission_tokens) : undefined,
-      status: row.status,
-      created_at: row.created_at,
-      activated_at: row.activated_at ?? undefined,
-      completed_at: row.completed_at ?? undefined,
-      verification_result: row.verification_result ? JSON.parse(row.verification_result) : undefined,
-      parent_contract_id: row.parent_contract_id ?? undefined,
-      delegation_depth: row.delegation_depth,
-      tlp_classification: row.tlp_classification ?? undefined,
-    };
+    if (!contract.delegatee || !contract.delegatee.agent_id) {
+      throw new Error('Contract must have delegatee with valid agent_id');
+    }
+    
+    if (!contract.verification_policy) {
+      throw new Error('Contract must have verification_policy');
+    }
+    
+    if (!contract.success_criteria) {
+      throw new Error('Contract must have success_criteria');
+    }
+    
+    // Validate timeout
+    if (contract.timeout_ms !== undefined && contract.timeout_ms <= 0) {
+      throw new Error('Contract timeout_ms must be positive');
+    }
   }
   
   /**
-   * Close database connection
+   * Schedule periodic cleanup
    */
-  close(): void {
-    this.db.close();
+  private scheduleCleanup(): void {
+    // Run cleanup every hour
+    setInterval(() => {
+      this.cleanup();
+    }, 60 * 60 * 1000);
+  }
+  
+  /**
+   * Get all contracts (for debugging/testing)
+   */
+  getAllContracts(): DelegationContract[] {
+    return Array.from(this.contracts.values());
+  }
+  
+  /**
+   * Clear all contracts (for testing)
+   */
+  clearAll(): void {
+    this.contracts.clear();
+    this.emit('contracts:cleared');
+  }
+  
+  /**
+   * Get contract count
+   */
+  getContractCount(): number {
+    return this.contracts.size;
   }
 }
 
-/**
- * Contract statistics
- */
-export interface ContractStatistics {
-  total: number;
-  pending: number;
-  active: number;
-  completed: number;
-  failed: number;
-  timeout: number;
-  revoked: number;
-  success_rate: number;
-}
+export default ContractManager;

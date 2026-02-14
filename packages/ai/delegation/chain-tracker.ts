@@ -11,7 +11,7 @@
  */
 
 import type { DelegationContract, DelegationChain } from '../types/delegation-contracts';
-import type { DelegationContractManager } from './contract-manager';
+import type { ContractManager } from './contract-manager';
 
 /**
  * Chain tracker configuration
@@ -74,9 +74,9 @@ export interface ChainLoop {
  */
 export class DelegationChainTracker {
   private config: ChainTrackerConfig;
-  private contractManager: DelegationContractManager;
+  private contractManager: ContractManager;
   
-  constructor(contractManager: DelegationContractManager, config: ChainTrackerConfig = {}) {
+  constructor(contractManager: ContractManager, config: ChainTrackerConfig = {}) {
     this.contractManager = contractManager;
     this.config = {
       maxChainDepth: 10,
@@ -348,7 +348,7 @@ export class DelegationChainTracker {
       });
       
       descendants.push(...children);
-      queue.push(...children.map(c => c.contract_id));
+      queue.push(...children.map((c: DelegationContract) => c.contract_id));
     }
     
     return descendants;
