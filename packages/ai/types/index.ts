@@ -204,3 +204,6 @@ export interface CostEstimate {
  * Re-export all types as a namespace
  */
 export * from './telemetry';
+export * from './delegation-contracts';
+export * from './agent-capabilities';
+export * from './permission-tokens';
