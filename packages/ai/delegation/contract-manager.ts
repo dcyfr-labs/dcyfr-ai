@@ -15,7 +15,7 @@ import type {
   DelegationContract,
   DelegationContractStatus,
   VerificationResult,
-} from '../types/delegation-contracts';
+} from '../src/types/delegation-contracts.js';
 import { TLPEnforcementEngine } from '../src/delegation/tlp-enforcement.js';
 import { SecurityThreatValidator } from '../src/delegation/security-threat-model.js';
 import type { ThreatDetectionResult } from '../src/delegation/security-threat-model.js';
@@ -257,7 +257,7 @@ export class ContractManager extends EventEmitter {
     }
     
     if (query.parent_contract_id) {
-      results = results.filter((c) => c.parent_contract_id === query.parent_contract_id);
+      results = results.filter((c) => c.metadata?.parent_contract_id === query.parent_contract_id);
     }
     
     if (query.created_after) {
@@ -400,13 +400,11 @@ export class ContractManager extends EventEmitter {
       verified_at: completed_at,
       verified_by: 'system',
       verification_method: 'direct_inspection',
-      findings: {
-        failed_checks: [error.error_message],
-      },
-      metadata: {
+      findings: [error.error_message],
+      verification_details: JSON.stringify({
         error_type: error.error_type,
         error_details: error.error_details,
-      },
+      }),
     };
     
     return this.updateContract(contract_id, {
@@ -609,11 +607,11 @@ export class ContractManager extends EventEmitter {
       contract.delegator.agent_id,
       contract.delegatee.agent_id, 
       {
-        delegation_depth: contract.metadata?.delegation_depth || 1,
-        estimated_value: contract.metadata?.estimated_value || 0, 
-        involves_critical_systems: contract.metadata?.involves_critical_systems || false,
-        is_external_delegation: contract.metadata?.is_external_delegation || false,
-        chain_agents: contract.metadata?.chain_agents || [contract.delegator.agent_id, contract.delegatee.agent_id],
+        delegation_depth: (contract.metadata?.delegation_depth as number) || 1,
+        estimated_value: (contract.metadata?.estimated_value as number) || 0,
+        involves_critical_systems: (contract.metadata?.involves_critical_systems as boolean) || false,
+        is_external_delegation: (contract.metadata?.is_external_delegation as boolean) || false,
+        chain_agents: (contract.metadata?.chain_agents as string[]) || [contract.delegator.agent_id, contract.delegatee.agent_id],
       }
     );
     
@@ -664,14 +662,6 @@ export class ContractManager extends EventEmitter {
    */
   getAllContracts(): DelegationContract[] {
     return Array.from(this.contracts.values());
-  }
-  
-  /**
-   * Clear all contracts (for testing)
-   */
-  clearAll(): void {
-    this.contracts.clear();
-    this.emit('contracts:cleared');
   }
   
   /**
@@ -778,7 +768,14 @@ export class ContractManager extends EventEmitter {
    * Request manual override for a blocked contract due to firebreak violations
    */
   async requestFirebreakOverride(overrideRequest: OverrideRequest): Promise<any> {
-    const overrideResult = await this.firebreakEnforcer.requestOverride(overrideRequest);
+    const overrideResult = await this.firebreakEnforcer.requestOverride(
+      overrideRequest.contract_id || 'unknown_contract',
+      overrideRequest.requesting_agent_id || overrideRequest.requesting_agent || 'unknown_agent',
+      overrideRequest.authority || overrideRequest.authority_level || 'supervisor',
+      overrideRequest.justification || overrideRequest.reason || 'Manual override requested',
+      overrideRequest.business_impact || 'medium',
+      overrideRequest.urgency || 'routine'
+    );
     
     // Emit override request event for monitoring
     this.emit('firebreak_override_requested', {
@@ -842,7 +839,6 @@ export class ContractManager extends EventEmitter {
         threats_detected: threatStats.threats_detected,
         firebreaks_blocked: firebreakStats.firebreaks_blocked || 0,
         manual_overrides_pending: firebreakStats.pending_overrides || 0,
-        emergency_escalations: firebreakStats.emergency_escalations || 0,
         threat_detection_rate: threatStats.total_validations > 0 
           ? (threatStats.threats_detected / threatStats.total_validations * 100).toFixed(1) + '%'
           : '0%',
@@ -889,7 +885,7 @@ export class ContractManager extends EventEmitter {
     } else if (status === 'completed') {
       updates.completed_at = now;
     } else if (status === 'failed') {
-      updates.failed_at = now;
+      updates.completed_at = now;
     }
     
     // Merge additional options (like verification_result, etc.)
@@ -926,7 +922,7 @@ export class ContractManager extends EventEmitter {
     const cancelled_at = new Date().toISOString();
     
     return this.updateContract(contract_id, {
-      status: 'cancelled',
+      status: 'failed',
       completed_at: cancelled_at,
       metadata: {
         ...contract.metadata,

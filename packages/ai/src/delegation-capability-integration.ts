@@ -17,8 +17,8 @@ import { ContractManager } from '../delegation/contract-manager.js';
 import { DelegationChainTracker } from '../delegation/chain-tracker.js';
 
 import type { AgentSource, BootstrapResult, CapabilityDetectionConfig } from './capability-bootstrap.js';
-import type { AgentCapabilityManifest, DelegationCapability } from './types/agent-capabilities.js';
-import type { DelegationContract } from './types/delegation-contracts.js';
+import type { AgentCapabilityManifest, DelegationCapability, DelegationRecommendation } from './types/agent-capabilities.js';
+import type { DelegationContract, SuccessCriteria } from './types/delegation-contracts.js';
 
 /**
  * Integration configuration
@@ -88,43 +88,6 @@ export interface AgentOnboardingResult {
 /**
  * Delegation recommendation result
  */
-export interface DelegationRecommendation {
-  /**
-   * Recommended agent ID for delegation
-   */
-  agentId: string;
-  
-  /**
-   * Agent name
-   */
-  agentName: string;
-  
-  /**
-   * Match confidence (0-1)
-   */
-  matchConfidence: number;
-  
-  /**
-   * Matching capabilities
-   */
-  matchingCapabilities: string[];
-  
-  /**
-   * Estimated completion time (milliseconds)
-   */
-  estimatedCompletionTime: number;
-  
-  /**
-   * Current workload factor (0-1, higher = busier)
-   */
-  workloadFactor: number;
-  
-  /**
-   * Reasons for recommendation
-   */
-  reasons: string[];
-}
-
 /**
  * Delegation and Capability Integration System
  * 
@@ -214,13 +177,13 @@ export class DelegationCapabilityIntegration extends EventEmitter {
             detectedCapabilities: bootstrapResult.detectedCapabilities,
           });
         } catch (error) {
-          result.errors = [`Registration failed: ${error.message}`];
+          result.errors = [`Registration failed: ${error instanceof Error ? error.message : String(error)}`];
         }
       }
 
       return result;
     } catch (error) {
-      throw new Error(`Agent onboarding failed: ${error.message}`);
+      throw new Error(`Agent onboarding failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -229,8 +192,7 @@ export class DelegationCapabilityIntegration extends EventEmitter {
    */
   async findOptimalAgent(requiredCapabilities: DelegationCapability[]): Promise<DelegationRecommendation[]> {
     const matches = await this.registry.findMatches({
-      capabilities: requiredCapabilities,
-      require_all: false,
+      required_capabilities: requiredCapabilities.map(cap => cap.capability_id),
       min_confidence: this.config.minimumDelegationConfidence,
     });
 
@@ -248,28 +210,23 @@ export class DelegationCapabilityIntegration extends EventEmitter {
       const workloadFactor = Math.min(1, activeContracts.length / 5); // Assume 5 is max capacity
 
       // Estimate completion time based on capability estimates
-      const estimatedTime = match.matching_capabilities.reduce((total, cap) => {
-        const capability = manifest.capabilities.find(c => c.capability_id === cap.capability_id);
-        return total + (capability?.completion_time_estimate_ms || 60000);
-      }, 0);
+      const estimatedTime = match.estimated_completion_time_ms;
 
       recommendations.push({
-        agentId: match.agent_id,
-        agentName: manifest.agent_name,
-        matchConfidence: match.total_score,
-        matchingCapabilities: match.matching_capabilities.map(c => c.capability_id),
-        estimatedCompletionTime: estimatedTime,
-        workloadFactor,
-        reasons: this.generateRecommendationReasons(match, manifest),
+        agent_id: match.agent_id,
+        agent_name: manifest.agent_name,
+        matched_capabilities: [match],
+        recommendation_score: match.match_score,
+        recommendation_reasons: match.match_reasons,
+        estimated_completion_time_ms: estimatedTime,
+        availability: match.availability,
+        warnings: match.warnings,
+        confidence: match.match_score,
       });
     }
 
-    // Sort by match confidence and workload
-    return recommendations.sort((a, b) => {
-      const scoreA = a.matchConfidence * (1 - a.workloadFactor * 0.3);
-      const scoreB = b.matchConfidence * (1 - b.workloadFactor * 0.3);
-      return scoreB - scoreA;
-    });
+    // Sort by recommendation score
+    return recommendations.sort((a, b) => b.recommendation_score - a.recommendation_score);
   }
 
   /**
@@ -298,37 +255,53 @@ export class DelegationCapabilityIntegration extends EventEmitter {
     // Step 2: Create delegation contract
     const contract: Omit<DelegationContract, 'contract_id' | 'created_at'> = {
       task_id: `task-${Date.now()}`,
+      delegator: {
+        agent_id: delegatorAgentId,
+        agent_name: delegatorAgentId, // TODO: Get actual name from registry
+      },
+      delegatee: {
+        agent_id: bestAgent.agent_id,
+        agent_name: bestAgent.agent_name,
+      },
       delegator_agent_id: delegatorAgentId,
-      delegatee_agent_id: bestAgent.agentId,
+      delegatee_agent_id: bestAgent.agent_id,
       task_description: taskDescription,
-      required_capabilities: requiredCapabilities,
+      verification_policy: 'direct_inspection',
+      tlp_classification: (options.tlp_classification as any) || 'TLP:CLEAR',
+      success_criteria: {
+        completeness_percentage: 95,
+        quality_threshold: 0.8,
+        verification_required: true,
+      },
+      required_capabilities: requiredCapabilities.map(cap => ({
+        capability_id: cap.capability_id,
+        min_confidence: cap.min_confidence || 0.7,
+      })),
       priority: options.priority || 5,
-      timeout_ms: options.timeout_ms || bestAgent.estimatedCompletionTime * 1.5,
-      max_chain_depth: options.max_chart_depth || this.config.maxChainDepth,
-      tlp_classification: options.tlp_classification || 'TLP:CLEAR',
+      timeout_ms: options.timeout_ms || bestAgent.estimated_completion_time_ms * 1.5,
       status: 'pending',
       metadata: {
+        delegation_depth: options.max_chart_depth || 1,
         agent_selection: {
-          match_confidence: bestAgent.matchConfidence,
-          workload_factor: bestAgent.workloadFactor,
-          estimated_completion: bestAgent.estimatedCompletionTime,
+          match_confidence: bestAgent.match_score,
+          estimated_completion: bestAgent.estimated_completion_time_ms,
           selection_time: new Date().toISOString(),
         },
       },
     };
 
-    const contractId = await this.contractManager.createContract(contract);
+    const createdContract = await this.contractManager.createContract(contract);
 
     this.emit('delegation_contract_created', {
-      contractId,
-      assignedAgent: bestAgent.agentId,
+      contractId: createdContract.contract_id,
+      assignedAgent: bestAgent.agent_id,
       requiredCapabilities,
       recommendation: bestAgent,
     });
 
     return {
-      contractId,
-      assignedAgent: bestAgent.agentId,
+      contractId: createdContract.contract_id,
+      assignedAgent: bestAgent.agent_id,
       recommendation: bestAgent,
     };
   }

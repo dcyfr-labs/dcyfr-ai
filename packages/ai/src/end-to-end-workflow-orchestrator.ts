@@ -24,6 +24,10 @@ import type { AgentSource } from './capability-bootstrap.js';
 import type { AgentCapabilityManifest, DelegationCapability } from './types/agent-capabilities.js';
 import type { DelegationContract } from './types/delegation-contracts.js';
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 /**
  * Workflow orchestrator configuration
  */
@@ -505,8 +509,18 @@ export class EndToEndWorkflowOrchestrator extends EventEmitter {
               const cached = this.cacheManager.get(cacheKey);
               
               if (cached) {
-                detectionResult = cached.detectionResult;
-                onboardingResult = cached.onboardingResult;
+                const cachedResult = cached as {
+                  detectionResult: {
+                    bootstrapResult?: { detectedCapabilities?: unknown[] };
+                    mcpRecommendations?: unknown[];
+                  };
+                  onboardingResult: {
+                    agentId: string;
+                    registered: boolean;
+                  };
+                };
+                detectionResult = cachedResult.detectionResult;
+                onboardingResult = cachedResult.onboardingResult;
                 this.log(`Cache hit for agent ${agentDef.agentId || 'unknown'}`);
               } else {
                 // Step 2.1: Capability Detection & Registration
@@ -554,7 +568,7 @@ export class EndToEndWorkflowOrchestrator extends EventEmitter {
             this.log(`Agent ${onboardingResult.agentId}: Onboarded successfully`);
             
           } catch (error) {
-            const errorMsg = `Agent onboarding failed: ${error.message}`;
+            const errorMsg = `Agent onboarding failed: ${getErrorMessage(error)}`;
             result.errors.push(errorMsg);
             this.log(errorMsg, 'error');
             
@@ -593,7 +607,7 @@ export class EndToEndWorkflowOrchestrator extends EventEmitter {
         }
 
       } catch (error) {
-        const errorMsg = `MCP auto-configuration failed: ${error.message}`;
+        const errorMsg = `MCP auto-configuration failed: ${getErrorMessage(error)}`;
         result.errors.push(errorMsg);
         result.warnings.push('Continuing workflow without optimal MCP configuration');
         this.log(errorMsg, 'error');
@@ -659,7 +673,7 @@ export class EndToEndWorkflowOrchestrator extends EventEmitter {
 
         } catch (error) {
           const taskExecutionTime = Date.now() - taskStart;
-          const errorMsg = `Task ${task.taskId} failed: ${error.message}`;
+          const errorMsg = `Task ${task.taskId} failed: ${getErrorMessage(error)}`;
           
           result.errors.push(errorMsg);
           this.log(errorMsg, 'error');
@@ -720,7 +734,7 @@ export class EndToEndWorkflowOrchestrator extends EventEmitter {
         };
 
       } catch (error) {
-        result.warnings.push(`System health collection failed: ${error.message}`);
+        result.warnings.push(`System health collection failed: ${getErrorMessage(error)}`);
       }
 
       // Stage 7: Post-Workflow Validation (if enabled)
@@ -737,7 +751,7 @@ export class EndToEndWorkflowOrchestrator extends EventEmitter {
           }
 
         } catch (error) {
-          result.warnings.push(`Post-validation failed: ${error.message}`);
+          result.warnings.push(`Post-validation failed: ${getErrorMessage(error)}`);
         }
       }
 
@@ -758,11 +772,11 @@ export class EndToEndWorkflowOrchestrator extends EventEmitter {
 
     } catch (error) {
       result.status = 'failed';
-      result.errors.push(`Workflow execution failed: ${error.message}`);
+      result.errors.push(`Workflow execution failed: ${getErrorMessage(error)}`);
       result.performanceMetrics.totalExecutionTime = Date.now() - startTime;
       
-      this.log(`Workflow ${workflowId} failed: ${error.message}`, 'error');
-      this.emit('workflow_failed', { workflowId, error: error.message });
+      this.log(`Workflow ${workflowId} failed: ${getErrorMessage(error)}`, 'error');
+      this.emit('workflow_failed', { workflowId, error: getErrorMessage(error) });
     } finally {
       // End workflow profiling
       if (workflowTimerId) {
@@ -904,7 +918,7 @@ threat detection, and vulnerability assessment for applications.
       return {
         status: 'completed',
         assignedAgent: contractResult.assignedAgent,
-        confidence: contractResult.recommendation.matchConfidence,
+        confidence: contractResult.recommendation.confidence,
       };
 
     } catch (error) {
@@ -912,7 +926,7 @@ threat detection, and vulnerability assessment for applications.
         status: 'failed',
         assignedAgent: 'none',
         confidence: 0,
-        error: error.message,
+        error: getErrorMessage(error),
       };
     }
   }

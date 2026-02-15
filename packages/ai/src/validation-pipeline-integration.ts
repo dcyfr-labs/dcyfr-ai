@@ -20,6 +20,10 @@ import type { AgentSource } from './capability-bootstrap.js';
 import type { AgentCapabilityManifest, DelegationCapability } from './types/agent-capabilities.js';
 import type { DelegationContract } from './types/delegation-contracts.js';
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 /**
  * Validation pipeline configuration
  */
@@ -407,10 +411,11 @@ export class ValidationPipelineIntegration extends EventEmitter {
     } catch (error) {
       const endTime = Date.now();
       const validationDuration = endTime - startTime;
+      const errorMessage = getErrorMessage(error);
 
-      errors.push(`Validation failed with error: ${error.message}`);
+      errors.push(`Validation failed with error: ${errorMessage}`);
 
-      this.emit('validation_failed', { error: error.message });
+      this.emit('validation_failed', { error: errorMessage });
 
       return {
         overallStatus: 'failed',
@@ -473,7 +478,7 @@ It ensures 95%+ design token adherence and maintains 99% test pass rates.
         description: 'Validates that capability detection correctly identifies agent capabilities from content',
         executionTime: Date.now() - startTime1,
         category: 'capability',
-        errorMessage: error.message,
+        errorMessage: getErrorMessage(error),
       });
     }
 
@@ -499,7 +504,7 @@ It ensures 95%+ design token adherence and maintains 99% test pass rates.
         description: 'Validates that performance tracking is initialized for detected capabilities',
         executionTime: Date.now() - startTime2,
         category: 'capability',
-        errorMessage: error.message,
+        errorMessage: getErrorMessage(error),
       });
     }
 
@@ -542,7 +547,7 @@ It ensures 95%+ design token adherence and maintains 99% test pass rates.
         description: 'Validates that agents are properly onboarded into delegation system',
         executionTime: Date.now() - startTime1,
         category: 'delegation',
-        errorMessage: error.message,
+        errorMessage: getErrorMessage(error),
       });
     }
 
@@ -576,7 +581,7 @@ It ensures 95%+ design token adherence and maintains 99% test pass rates.
         description: 'Validates that appropriate agents are selected for delegation tasks',
         executionTime: Date.now() - startTime2,
         category: 'delegation',
-        errorMessage: error.message,
+        errorMessage: getErrorMessage(error),
       });
     }
 
@@ -610,7 +615,7 @@ It ensures 95%+ design token adherence and maintains 99% test pass rates.
         description: 'Validates that MCP servers are properly configured based on agent capabilities',
         executionTime: Date.now() - startTime1,
         category: 'mcp',
-        errorMessage: error.message,
+        errorMessage: getErrorMessage(error),
       });
     }
 
@@ -637,7 +642,7 @@ It ensures 95%+ design token adherence and maintains 99% test pass rates.
         description: 'Validates that MCP server health monitoring is working correctly',
         executionTime: Date.now() - startTime2,
         category: 'mcp',
-        errorMessage: error.message,
+        errorMessage: getErrorMessage(error),
       });
     }
 
@@ -716,7 +721,7 @@ This agent handles design token validation and security scanning.
         description: 'Validates complete integration workflow from onboarding to delegation',
         executionTime: Date.now() - startTime,
         category: 'integration',
-        errorMessage: error.message,
+        errorMessage: getErrorMessage(error),
       });
     }
 
@@ -754,7 +759,7 @@ This agent handles design token validation and security scanning.
         description: 'Validates that system responds within acceptable time limits',
         executionTime: Date.now() - startTime1,
         category: 'performance',
-        errorMessage: error.message,
+        errorMessage: getErrorMessage(error),
       });
     }
 
@@ -882,7 +887,7 @@ This agent handles design token validation and security scanning.
 
       this.emit('validation_report_written', { reportPath, summaryPath });
     } catch (error) {
-      this.emit('validation_report_error', { error: error.message });
+      this.emit('validation_report_error', { error: getErrorMessage(error) });
     }
   }
 
@@ -956,7 +961,7 @@ ${test.errorMessage ? `- **Error:** ${test.errorMessage}` : ''}
     // Run validation every 30 minutes
     this.monitoringTimer = setInterval(() => {
       this.validatePipeline().catch(error => {
-        this.emit('monitoring_error', { error: error.message });
+        this.emit('monitoring_error', { error: getErrorMessage(error) });
       });
     }, 30 * 60 * 1000);
 

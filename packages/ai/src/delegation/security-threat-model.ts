@@ -27,7 +27,7 @@ export interface ThreatDetectionResult {
   threat_detected: boolean;
   
   /** Type of threat identified */
-  threat_type: 'permission_escalation' | 'reputation_gaming' | 'abuse_pattern' | 'anomaly' | 'context_insufficiency' | 'none';
+  threat_type: 'permission_escalation' | 'reputation_gaming' | 'abuse_pattern' | 'anomaly' | 'context_insufficiency' | 'prompt_injection' | 'resource_exhaustion' | 'none';
   
   /** Severity level of the threat */
   severity: 'low' | 'medium' | 'high' | 'critical';
@@ -728,7 +728,9 @@ export class SecurityThreatValidator {
         agent_id: request.delegatee_agent_id,
         agent_name: request.delegatee_agent_id,
       },
-      required_capabilities: request.capabilities_required || request.required_capabilities || [],
+      delegator_agent_id: request.delegator_agent_id || 'system',
+      delegatee_agent_id: request.delegatee_agent_id,
+      required_capabilities: (request.capabilities_required || request.required_capabilities || []).map((capability_id) => ({ capability_id })),
       task_description: request.task_description,
       verification_policy: 'direct_inspection',
       success_criteria: {},
@@ -795,7 +797,7 @@ export class SecurityThreatValidator {
       };
     }
 
-    return { threat_detected: false, threat_type: 'prompt_injection', severity: 'none' };
+    return { threat_detected: false, threat_type: 'none', severity: 'low', description: 'No prompt injection detected', action: 'allow', evidence: {}, confidence: 0.1 };
   }
 
   /**
@@ -804,14 +806,15 @@ export class SecurityThreatValidator {
   private async detectResourceExhaustion(contract: DelegationContract): Promise<ThreatDetectionResult> {
     let riskScore = 0;
     const indicators: string[] = [];
+    const timeoutMs = contract.timeout_ms ?? 0;
 
     // Check timeout values
-    if (contract.timeout_ms > 600000) { // > 10 minutes
+    if (timeoutMs > 600000) { // > 10 minutes
       riskScore += 0.3;
-      indicators.push(`Excessive timeout: ${contract.timeout_ms}ms`);
+      indicators.push(`Excessive timeout: ${timeoutMs}ms`);
     }
 
-    if (contract.timeout_ms > 1800000) { // > 30 minutes
+    if (timeoutMs > 1800000) { // > 30 minutes
       riskScore += 0.4; // Additional penalty
       indicators.push('Extremely high timeout value');
     }
@@ -875,6 +878,6 @@ export class SecurityThreatValidator {
       };
     }
 
-    return { threat_detected: false, threat_type: 'resource_exhaustion', severity: 'none' };
+    return { threat_detected: false, threat_type: 'none', severity: 'low', description: 'No resource exhaustion risk detected', action: 'allow', evidence: {}, confidence: 0.1 };
   }
 }

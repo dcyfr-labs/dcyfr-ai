@@ -178,12 +178,6 @@ export interface OverrideRequest {
   
   /** Approval timestamp */
   approved_at?: string;
-  
-  /** Override expiry */
-  expires_at: string;
-  
-  /** Created at timestamp */
-  created_at: string;
 }
 
 /**
@@ -400,88 +394,6 @@ export class LiabilityFirebreakEnforcer {
   }
   
   /**
-   * Process manual override request (updated implementation)
-   */
-  async requestOverride(req: {
-    requesting_agent: string;
-    target_agent: string;
-    authority_level: OverrideAuthority;
-    reason: string;
-    context: FirebreakValidationContext;
-    justification: string;
-    expires_at: string;
-  }): Promise<any> {
-    const override_id = `override_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-    
-    // Determine required authority for the context
-    const contextRequiredAuthority = this.getAuthorityForDepth(req.context.delegation_depth);
-    
-    // Check if requesting authority is sufficient
-    const levels: OverrideAuthority[] = ['agent', 'supervisor', 'manager', 'executive', 'emergency'];
-    const requestedIndex = levels.indexOf(req.authority_level);
-    const requiredIndex = levels.indexOf(contextRequiredAuthority);
-    
-    if (requestedIndex < requiredIndex) {
-      const result = {
-        override_id,
-        status: 'rejected',
-        rejection_reason: `Insufficient authority level. Required: ${contextRequiredAuthority}, Provided: ${req.authority_level}`,
-        created_at: new Date().toISOString(),
-      };
-      
-      // Still store the rejected request
-      this.overrideRequests.set(override_id, {
-        override_id,
-        authority: req.authority_level,
-        requesting_agent_id: req.requesting_agent,
-        contract_id: 'N/A',
-        justification: req.justification,
-        business_impact: 'medium',
-        urgency: 'routine',
-        status: 'denied',
-        expires_at: req.expires_at,
-        created_at: new Date().toISOString(),
-      });
-      
-      return result;
-    }
-    
-    // Create successful override request
-    const result = {
-      override_id,
-      status: 'pending',
-      requesting_agent: req.requesting_agent,
-      target_agent: req.target_agent,
-      authority_level: req.authority_level,
-      reason: req.reason,
-      context: req.context,
-      justification: req.justification,
-      expires_at: req.expires_at,
-      created_at: new Date().toISOString(),
-      required_approvals: [contextRequiredAuthority],
-      auto_approved: false,
-    };
-    
-    // Store the override request
-    this.overrideRequests.set(override_id, {
-      override_id,
-      authority: req.authority_level,
-      requesting_agent_id: req.requesting_agent,
-      contract_id: 'N/A',
-      justification: req.justification,
-      business_impact: 'medium',
-      urgency: 'routine',
-      status: 'pending',
-      expires_at: req.expires_at,
-      created_at: new Date().toISOString(),
-    });
-    
-    console.log(`🔥 Firebreak Override Requested: ${override_id} (${req.authority_level}) - ${req.reason}`);
-    
-    return result;
-  }
-  
-  /**
    * Process emergency escalation
    */
   async processEmergencyEscalation(escalationData: any): Promise<any> {
@@ -508,42 +420,8 @@ export class LiabilityFirebreakEnforcer {
   }
   
   /**
-   * Get statistics
-   */
-  getStats(): any {
-    return {
-      total_validations: this.stats.total_validations,
-      firebreaks_passed: this.stats.firebreaks_passed,
-      firebreaks_blocked: this.stats.firebreaks_blocked,
-      block_reason_distribution: this.stats.block_reasons,
-      liability_distribution: this.stats.liability_distribution,
-      pending_overrides: this.overrideRequests.size,
-      override_requests_summary: {
-        total: this.overrideRequests.size,
-        pending: Array.from(this.overrideRequests.values()).filter(req => req.status === 'pending').length,
-        approved: Array.from(this.overrideRequests.values()).filter(req => req.status === 'approved').length,
-        rejected: Array.from(this.overrideRequests.values()).filter(req => req.status === 'rejected').length,
-      },
-    };
-  }
-  
-  /**
    * Get pending override requests
    */
-  getPendingOverrides(): any[] {
-    return Array.from(this.overrideRequests.values())
-      .filter(req => req.status === 'pending')
-      .map(req => ({
-        override_id: req.override_id || `override_${Date.now()}`,
-        status: req.status,
-        requesting_agent: req.requesting_agent_id,
-        authority_level: req.authority,
-        reason: req.justification,
-        created_at: req.created_at,
-        expires_at: req.expires_at,
-      }));
-  }
-
   /**
    * Calculate chain accountability and tracking
    */
@@ -694,6 +572,7 @@ export class LiabilityFirebreakEnforcer {
     for (const [_, override] of this.overrideRequests) {
       if (override.contract_id === contract_id && 
           override.status === 'approved' &&
+          override.expires_at &&
           new Date(override.expires_at) > new Date()) {
         return override;
       }
@@ -808,7 +687,7 @@ export class LiabilityFirebreakEnforcer {
       throw new Error(`Override request ${override_id} is not pending (current status: ${override.status})`);
     }
 
-    if (new Date(override.expires_at) <= new Date()) {
+    if (!override.expires_at || new Date(override.expires_at) <= new Date()) {
       override.status = 'expired';
       this.overrideRequests.set(override_id, override);
       throw new Error(`Override request ${override_id} has expired`);

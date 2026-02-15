@@ -674,7 +674,8 @@ export class AgentRuntime extends EventEmitter {
     
     // Check capability requirements
     if (contract.required_capabilities && contract.required_capabilities.length > 0) {
-      const capabilityCheck = this.checkCapabilityRequirements(contract.required_capabilities);
+      const capabilityIds = contract.required_capabilities.map(cap => cap.capability_id);
+      const capabilityCheck = this.checkCapabilityRequirements(capabilityIds);
       if (!capabilityCheck.canMeet) {
         return { 
           can_accept: false, 
@@ -708,28 +709,6 @@ export class AgentRuntime extends EventEmitter {
       estimated_completion_ms: estimatedTime,
       assessment
     };
-  }
-  
-  /**
-   * Shutdown the runtime gracefully
-   */
-  async shutdown(): Promise<void> {
-    if (this.config.debug) {
-      console.log(`[AgentRuntime] Shutting down agent: ${this.config.agent_id}`);
-    }
-    
-    // Wait for current tasks to complete or timeout
-    const shutdownPromises = Array.from(this.currentTasks.values()).map(async (context) => {
-      // Mark task as timeout
-      context.metadata.status = 'timeout';
-    });
-    
-    await Promise.allSettled(shutdownPromises);
-    
-    // Clear task tracking
-    this.currentTasks.clear();
-    
-    this.emit('shutdown');
   }
   
   // Private methods
@@ -949,11 +928,9 @@ export class AgentRuntime extends EventEmitter {
       verified_by: this.config.agent_id,
       verification_method: contract.verification_policy,
       quality_score: result.success ? 0.85 : 0.0,
-      findings: {
-        passed_checks: result.success ? ['output_exists', 'format_valid'] : [],
-        failed_checks: result.success ? [] : ['task_failed'],
-        warnings: [],
-      },
+      findings: result.success 
+        ? ['output_exists', 'format_valid']
+        : ['task_failed'],
     };
     
     // Generate verification output formatting if enabled
@@ -975,8 +952,11 @@ export class AgentRuntime extends EventEmitter {
         // Update verification result with compliance information
         if (verificationOutputResult.validation && !verificationOutputResult.validation.valid) {
           verificationResult.verified = false;
-          verificationResult.quality_score = Math.max(0, verificationResult.quality_score - 0.2);
-          verificationResult.findings.warnings.push(
+          verificationResult.quality_score = Math.max(0, (verificationResult.quality_score ?? 0) - 0.2);
+          if (!verificationResult.findings) {
+            verificationResult.findings = [];
+          }
+          verificationResult.findings.push(
             ...verificationOutputResult.validation.issues.map(issue => issue.message)
           );
         }
@@ -994,7 +974,10 @@ export class AgentRuntime extends EventEmitter {
       } catch (error) {
         console.error('[AgentRuntime] Failed to generate verification outputs:', error);
         // Add warning but don't fail verification
-        verificationResult.findings.warnings.push('Failed to generate verification output formatting');
+        if (!verificationResult.findings) {
+          verificationResult.findings = [];
+        }
+        verificationResult.findings.push('Failed to generate verification output formatting');
       }
     }
     
@@ -1042,11 +1025,11 @@ export class AgentRuntime extends EventEmitter {
     if (this.config.capabilities?.capabilities) {
       for (const capability of this.config.capabilities.capabilities) {
         if (this.taskMatchesCapability(result.context.task.description, capability)) {
-          capability.successful_completions += result.success ? 1 : 0;
-          capability.success_rate = this.calculateCapabilitySuccessRate(capability.capability_id);
+          capability.successful_completions = (capability.successful_completions || 0) + (result.success ? 1 : 0);
+          capability.success_rate = this.calculateCapabilitySuccessRate(capability.capability_id) || 0;
           
           if (result.metrics.execution_time_ms) {
-            capability.completion_time_estimate_ms = this.calculateAverageCompletionTime(capability.capability_id);
+            capability.completion_time_estimate_ms = this.calculateAverageCompletionTime(capability.capability_id) || 0;
           }
         }
       }
@@ -1209,7 +1192,7 @@ export class AgentRuntime extends EventEmitter {
     
     if (requirements.min_confidence_score && this.config.capabilities) {
       const avgConfidence = this.config.capabilities.overall_confidence;
-      if (avgConfidence < requirements.min_confidence_score) {
+      if (avgConfidence != null && avgConfidence < requirements.min_confidence_score) {
         return { 
           meets_requirements: false, 
           reason: `Confidence ${avgConfidence.toFixed(2)} below required ${requirements.min_confidence_score}` 
@@ -1487,7 +1470,7 @@ export class AgentRuntime extends EventEmitter {
             include_timing_data: true,
             include_resource_usage: true,
             include_error_details: true,
-            include_contract_metadata: true,
+            include_verification_artifacts: true,
           },
         },
       });
@@ -1528,7 +1511,8 @@ export class AgentRuntime extends EventEmitter {
     }
     
     // Cancel all running tasks
-    for (const [executionId, context] of this.currentTasks) {
+    const taskEntries = Array.from(this.currentTasks.entries());
+    for (const [executionId, context] of taskEntries) {
       context.metadata.status = 'failed';
       this.emit('task:failed', {
         context,
@@ -1539,8 +1523,10 @@ export class AgentRuntime extends EventEmitter {
           message: 'Runtime shutdown while task was executing',
           timestamp: new Date().toISOString(),
         },
-        confidence_score: 0,
-        execution_time_ms: Date.now() - new Date(context.metadata.started_at).getTime(),
+        metrics: {
+          execution_time_ms: Date.now() - new Date(context.metadata.started_at).getTime(),
+        },
+        completed_at: new Date().toISOString(),
       } as TaskExecutionResult);
     }
     

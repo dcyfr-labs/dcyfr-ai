@@ -10,7 +10,7 @@
  * @date 2026-02-13
  */
 
-import type { AgentRuntime, AgentRuntimeEvents } from '../runtime/agent-runtime';
+import type { AgentRuntime } from '../runtime/agent-runtime';
 import { DelegationTelemetryEngine } from './delegation-telemetry';
 import type { DelegationTelemetryConfig, DelegationPerformanceMetrics } from './delegation-telemetry';
 import type { DelegationContract } from '../types/delegation-contracts';
@@ -131,9 +131,9 @@ class TaskExecutionTracker {
   private countNetworkCalls(context: TaskExecutionContext): number {
     // Count tools that might make network calls
     const networkTools = ['web_search', 'api_call', 'fetch', 'http_request'];
-    const toolCalls = context.tool_calls || [];
+    const toolCalls = ((context.task.parameters?.tool_calls as Array<{ name?: string }> | undefined) ?? []);
     return toolCalls.filter(tool => 
-      networkTools.some(netTool => tool.name.includes(netTool))
+      networkTools.some(netTool => (tool.name || '').includes(netTool))
     ).length;
   }
 }
@@ -244,7 +244,7 @@ export class RuntimeTelemetryIntegration {
     // Listen to all runtime events and emit telemetry
     this.setupEventListeners(runtime);
     
-    console.log(`[RuntimeTelemetryIntegration] Attached to agent runtime: ${runtime.config.agent_id}`);
+    console.log(`[RuntimeTelemetryIntegration] Attached to agent runtime: ${runtime.getAgentInfo().agent_id}`);
   }
   
   /**
@@ -298,15 +298,14 @@ export class RuntimeTelemetryIntegration {
         if (this.config.track_delegation_lifecycle) {
           const contractId = this.findContractIdForContext(context);
           if (contractId) {
-            const elapsedTime = Date.now() - context.created_at.getTime();
+            const elapsedTime = Date.now() - new Date(context.metadata.started_at).getTime();
             this.telemetryEngine.logDelegationProgress(
               contractId,
               context.execution_id,
               progress * 100,
               'execution',
               elapsedTime,
-              undefined,
-              context.intermediate_results
+              undefined
             );
           }
         }
@@ -364,8 +363,8 @@ export class RuntimeTelemetryIntegration {
     if (this.config.track_delegation_lifecycle) {
       runtime.on('delegation:contract:received', async (contract: DelegationContract) => {
         // Note: We need to infer delegator/delegatee from context
-        const delegatorAgent = contract.metadata?.delegator_agent || 'unknown';
-        const delegateeAgent = runtime.config.agent_id;
+        const delegatorAgent = (contract.metadata?.delegator_agent as string) || 'unknown';
+        const delegateeAgent = runtime.getAgentInfo().agent_id;
         
         this.contractTracker.trackContractCreated(contract, delegatorAgent, delegateeAgent);
         
@@ -374,9 +373,9 @@ export class RuntimeTelemetryIntegration {
           delegatorAgent,
           delegateeAgent,
           {
-            chain_depth: contract.metadata?.chain_depth || 0,
-            root_delegation_id: contract.metadata?.root_delegation_id || contract.contract_id,
-            parent_delegation_id: contract.metadata?.parent_delegation_id,
+            chain_depth: (contract.metadata?.chain_depth as number) || 0,
+            root_delegation_id: (contract.metadata?.root_delegation_id as string) || contract.contract_id,
+            parent_delegation_id: contract.metadata?.parent_delegation_id as string | undefined,
           }
         );
       });
@@ -443,19 +442,19 @@ export class RuntimeTelemetryIntegration {
   }
   
   private findContractIdForContext(context: TaskExecutionContext): string | undefined {
-    // Try to find contract ID from context metadata
-    if (context.metadata?.contract_id) {
-      return context.metadata.contract_id;
+    // Try direct delegated contract reference
+    if (context.delegation_contract?.contract_id) {
+      return context.delegation_contract.contract_id;
     }
     
     // Try to find contract ID from task description or parameters
-    if (context.task_description) {
-      const match = context.task_description.match(/contract[_-]id[:\s]+([a-zA-Z0-9-]+)/i);
+    if (context.task.description) {
+      const match = context.task.description.match(/contract[_-]id[:\s]+([a-zA-Z0-9-]+)/i);
       if (match) return match[1];
     }
     
     // Look in all tracked contracts for matching execution context
-    for (const [contractId, contract] of this.contractTracker.getAllContracts()) {
+    for (const [contractId, contract] of Array.from(this.contractTracker.getAllContracts().entries())) {
       if (contract.execution_id === context.execution_id) {
         return contractId;
       }

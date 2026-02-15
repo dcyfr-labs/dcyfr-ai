@@ -243,3 +243,64 @@ export interface ICapabilityRegistry {
    */
   listManifests(): Promise<AgentCapabilityManifest[]>;
 }
+
+/**
+ * Delegation capability requirement for task delegation
+ */
+export interface DelegationCapability {
+  /** Capability identifier */
+  capability_id: string;
+
+  /** Human-readable capability name */
+  name?: string;
+
+  /** Capability description */
+  description?: string;
+
+  /** Relative priority weight */
+  priority?: number;
+  
+  /** Required confidence level (0-1 scale) */
+  min_confidence?: number;
+  
+  /** Maximum acceptable completion time (milliseconds) */
+  max_completion_time_ms?: number;
+  
+  /** Required success rate (0-1 scale) */
+  min_success_rate?: number;
+  
+  /** Additional requirements or constraints */
+  requirements?: Record<string, any>;
+}
+
+/**
+ * Agent recommendation for task delegation
+ */
+export interface DelegationRecommendation {
+  /** Recommended agent ID */
+  agent_id: string;
+  
+  /** Agent name */
+  agent_name: string;
+  
+  /** Matched capabilities */
+  matched_capabilities: TaskCapabilityMatch[];
+  
+  /** Overall recommendation score (0-1 scale) */
+  recommendation_score: number;
+  
+  /** Reasons for recommendation */
+  recommendation_reasons: string[];
+  
+  /** Estimated total completion time (milliseconds) */
+  estimated_completion_time_ms: number;
+  
+  /** Agent availability */
+  availability: 'available' | 'busy' | 'offline' | 'maintenance';
+  
+  /** Potential issues or warnings */
+  warnings?: string[];
+  
+  /** Confidence in recommendation (0-1 scale) */
+  confidence: number;
+}

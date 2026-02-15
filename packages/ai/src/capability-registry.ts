@@ -198,6 +198,13 @@ export class CapabilityRegistry extends EventEmitter implements ICapabilityRegis
   }
 
   /**
+   * Find capability matches for a query (alias for queryCapabilities)
+   */
+  async findMatches(query: CapabilityQuery): Promise<TaskCapabilityMatch[]> {
+    return this.queryCapabilities(query);
+  }
+
+  /**
    * List all agent manifests
    */
   async listManifests(): Promise<AgentCapabilityManifest[]> {

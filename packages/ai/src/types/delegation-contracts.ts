@@ -45,6 +45,7 @@ export type DelegationContractStatus =
 export interface DelegationAgent {
   agent_id: string;
   agent_name: string;
+  version?: string;
   reputation_score?: number;
   current_workload?: number;
   max_concurrent_tasks?: number;
@@ -184,6 +185,9 @@ export interface VerificationResult {
   /** Quality score if applicable (0-1) */
   quality_score?: number;
   
+  /** Verification findings and issues */
+  findings?: string[];
+  
   /** Verification details, errors, or feedback */
   verification_details?: string;
   
@@ -211,6 +215,12 @@ export interface DelegationContract {
   /** Agent receiving the delegation */
   delegatee: DelegationAgent;
   
+  /** Delegator agent ID (convenience accessor) */
+  delegator_agent_id: string;
+  
+  /** Delegatee agent ID (convenience accessor) */
+  delegatee_agent_id: string;
+  
   /** Human-readable task description */
   task_description?: string;
   
@@ -232,6 +242,12 @@ export interface DelegationContract {
   /** Current contract status */
   status: DelegationContractStatus;
   
+  /** Contract activation timestamp */
+  activated_at?: string;
+  
+  /** Contract completion timestamp */
+  completed_at?: string;
+  
   /** Permission token for resource access */
   permission_token?: PermissionToken;
   
@@ -245,7 +261,10 @@ export interface DelegationContract {
   reputation_requirements?: ReputationRequirements;
   
   /** Required capabilities for task completion */
-  required_capabilities?: string[];
+  required_capabilities?: {
+    capability_id: string;
+    min_confidence?: number;
+  }[];
   
   /** 
    * Whether the delegatee must verify context sufficiency before acting.
@@ -330,6 +349,12 @@ export interface DelegationContract {
       network_bytes_received: number;
     };
   };
+  
+  /** Verification result (top-level accessor) */
+  verification_result?: VerificationResult;
+  
+  /** Failure timestamp (when status becomes failed) */
+  failed_at?: string;
 }
 
 /**
