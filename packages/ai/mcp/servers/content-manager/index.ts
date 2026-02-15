@@ -12,6 +12,7 @@
 import { FastMCP } from 'fastmcp';
 import { z } from 'zod';
 import { SimpleCache } from '../shared/cache.js';
+import { emitDelegationEvent } from '../shared/utils.js';
 import type { ContentProvider, ContentItem, ContentMetadata } from './content-provider.js';
 
 /**
@@ -44,16 +45,30 @@ export function createContentManagerServer(provider: ContentProvider) {
         .optional()
         .describe('Search query (searches title, description, tags, content)'),
       limit: z.number().default(20).describe('Maximum results to return'),
+      // Delegation context (optional)
+      delegationContext: z.object({
+        contractId: z.string().optional().describe('Delegation contract ID'),
+        delegatorAgentId: z.string().optional().describe('ID of delegating agent'),
+        taskId: z.string().optional().describe('Task ID within delegation'),
+      }).optional().describe('Delegation context for task tracking'),
     }),
     execute: async ({
       type,
       query,
       limit,
+      delegationContext,
     }: {
       type: 'blog' | 'project';
       query?: string;
       limit?: number;
+      delegationContext?: { contractId?: string; delegatorAgentId?: string; taskId?: string };
     }) => {
+      // Emit delegation event if context provided
+      emitDelegationEvent('tool_executed', 'content:query', delegationContext, {
+        type,
+        query,
+        limit,
+      });
       const cacheKey = `query:${type}:${query || 'all'}:${limit}`;
       let results = contentCache.get(cacheKey);
 
@@ -96,8 +111,27 @@ export function createContentManagerServer(provider: ContentProvider) {
     parameters: z.object({
       slug: z.string().describe('Content slug to analyze'),
       type: z.enum(['blog', 'project']).describe('Content type'),
+      // Delegation context (optional)
+      delegationContext: z.object({
+        contractId: z.string().optional().describe('Delegation contract ID'),
+        delegatorAgentId: z.string().optional().describe('ID of delegating agent'),
+        taskId: z.string().optional().describe('Task ID within delegation'),
+      }).optional().describe('Delegation context for task tracking'),
     }),
-    execute: async ({ slug, type }: { slug: string; type: 'blog' | 'project' }) => {
+    execute: async ({ 
+      slug, 
+      type,
+      delegationContext 
+    }: { 
+      slug: string; 
+      type: 'blog' | 'project';
+      delegationContext?: { contractId?: string; delegatorAgentId?: string; taskId?: string };
+    }) => {
+      // Emit delegation event if context provided
+      emitDelegationEvent('tool_executed', 'content:analyze', delegationContext, {
+        slug,
+        type,
+      });
       const content = await provider.getContent(slug, type);
 
       if (!content) {
@@ -135,16 +169,30 @@ export function createContentManagerServer(provider: ContentProvider) {
       slug: z.string().describe('Reference content slug'),
       type: z.enum(['blog', 'project']).describe('Content type'),
       limit: z.number().default(5).describe('Maximum related items to return'),
+      // Delegation context (optional)
+      delegationContext: z.object({
+        contractId: z.string().optional().describe('Delegation contract ID'),
+        delegatorAgentId: z.string().optional().describe('ID of delegating agent'),
+        taskId: z.string().optional().describe('Task ID within delegation'),
+      }).optional().describe('Delegation context for task tracking'),
     }),
     execute: async ({
       slug,
       type,
       limit,
+      delegationContext,
     }: {
       slug: string;
       type: 'blog' | 'project';
       limit?: number;
+      delegationContext?: { contractId?: string; delegatorAgentId?: string; taskId?: string };
     }) => {
+      // Emit delegation event if context provided
+      emitDelegationEvent('tool_executed', 'content:findRelated', delegationContext, {
+        slug,
+        type,
+        limit,
+      });
       const content = await provider.getContent(slug, type);
 
       if (!content) {
@@ -198,8 +246,24 @@ export function createContentManagerServer(provider: ContentProvider) {
     description: 'Get topic taxonomy with content counts',
     parameters: z.object({
       type: z.enum(['blog', 'project']).optional().describe('Filter by content type'),
+      // Delegation context (optional)
+      delegationContext: z.object({
+        contractId: z.string().optional().describe('Delegation contract ID'),
+        delegatorAgentId: z.string().optional().describe('ID of delegating agent'),
+        taskId: z.string().optional().describe('Task ID within delegation'),
+      }).optional().describe('Delegation context for task tracking'),
     }),
-    execute: async ({ type }: { type?: 'blog' | 'project' }) => {
+    execute: async ({ 
+      type,
+      delegationContext 
+    }: { 
+      type?: 'blog' | 'project';
+      delegationContext?: { contractId?: string; delegatorAgentId?: string; taskId?: string };
+    }) => {
+      // Emit delegation event if context provided
+      emitDelegationEvent('tool_executed', 'content:getTopics', delegationContext, {
+        type,
+      });
       const cacheKey = `topics:${type || 'all'}`;
       let tags = topicsCache.get(cacheKey);
 

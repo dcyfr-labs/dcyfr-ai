@@ -241,9 +241,72 @@ export function logToolExecution(
   params: Record<string, unknown>,
   success: boolean,
   durationMs?: number,
+  delegationContext?: { contractId?: string; delegatorAgentId?: string }
 ): void {
   const status = success ? "✅" : "❌";
   const duration = durationMs ? ` (${durationMs.toFixed(2)}ms)` : "";
+  const delegation = delegationContext 
+    ? ` [Contract: ${delegationContext.contractId || 'none'}]`
+    : "";
 
-  console.warn(`${status} ${toolName}`, params, duration);
+  console.warn(`${status} ${toolName}${delegation}`, params, duration);
+}
+
+// ============================================================================
+// Delegation Event Emission
+// ============================================================================
+
+export function emitDelegationEvent(
+  eventType: 'tool_executed' | 'resource_accessed',
+  toolName: string,
+  delegationContext?: { contractId?: string; delegatorAgentId?: string; taskId?: string },
+  metadata?: Record<string, unknown>
+): void {
+  if (!delegationContext?.contractId) {
+    return; // No delegation context, skip event
+  }
+
+  const event = {
+    type: eventType,
+    timestamp: Date.now(),
+    contract_id: delegationContext.contractId,
+    delegator_agent_id: delegationContext.delegatorAgentId,
+    task_id: delegationContext.taskId,
+    tool_name: toolName,
+    metadata,
+  };
+
+  // Always log to console for debugging
+  console.warn('🔗 Delegation Event:', JSON.stringify(event));
+
+  // Attempt to stream to dcyfr-labs observability API
+  streamDelegationToObservability(event).catch(error => {
+    // Fail silently - MCP servers should not break if observability is down
+    console.warn('Failed to stream delegation event to observability API:', error.message);
+  });
+}
+
+async function streamDelegationToObservability(event: Record<string, unknown>): Promise<void> {
+  // Default to localhost for development, can be overridden with env var
+  const apiUrl = process.env.DCYFR_LABS_API_URL || 'http://localhost:3000';
+  const endpoint = `${apiUrl}/api/delegation/events`;
+
+  try {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(event),
+      // Timeout after 5 seconds to avoid blocking MCP operations
+      signal: AbortSignal.timeout(5000),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+  } catch (error) {
+    // Re-throw for handling by caller
+    throw error;
+  }
 }

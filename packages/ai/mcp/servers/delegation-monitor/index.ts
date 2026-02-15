@@ -481,11 +481,12 @@ server.addTool({
 // Resource 1: Active Contracts
 // ============================================================================
 
-server.addResource({  uri: 'delegation://contracts/active',
+server.addResource({
+  uri: 'delegation://contracts/active',
   name: 'Active Delegation Contracts',
   description: 'List of currently active delegation contracts',
   mimeType: 'application/json',
-  read: async () => {
+  async load() {
     try {
       const activeContracts = contractManager.queryContracts({
         status: ['active', 'pending'],
@@ -524,7 +525,7 @@ server.addResource({
   name: 'Top Performing Agents',
   description: 'Agents with highest reputation scores',
   mimeType: 'application/json',
-  read: async () => {
+  async load() {
     try {
       const topPerformers = reputationEngine.queryProfiles({
         min_score: 0.7,

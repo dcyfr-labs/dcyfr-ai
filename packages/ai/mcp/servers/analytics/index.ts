@@ -29,6 +29,7 @@ import {
   logToolExecution,
   measurePerformance,
   getTimeRangeMs,
+  emitDelegationEvent,
 } from '../shared/utils.js';
 import { analyticsCache } from '../shared/cache.js';
 import type {
@@ -65,16 +66,31 @@ server.addTool({
       .optional()
       .default('7d')
       .describe('Time range for analytics'),
+    // Delegation context (optional)
+    delegationContext: z.object({
+      contractId: z.string().optional().describe('Delegation contract ID'),
+      delegatorAgentId: z.string().optional().describe('ID of delegating agent'),
+      taskId: z.string().optional().describe('Task ID within delegation'),
+    }).optional().describe('Delegation context for task tracking'),
   }),
   annotations: {
     readOnlyHint: true,
     openWorldHint: false,
   },
   execute: async (
-    args: { path?: string; timeRange?: '24h' | '7d' | '30d' | 'all' },
+    args: { 
+      path?: string; 
+      timeRange?: '24h' | '7d' | '30d' | 'all';
+      delegationContext?: { contractId?: string; delegatorAgentId?: string; taskId?: string };
+    },
     { log }: { log: any }
   ) => {
     try {
+      // Emit delegation event if context provided
+      emitDelegationEvent('tool_executed', 'analytics:getPageViews', args.delegationContext, {
+        path: args.path,
+        timeRange: args.timeRange,
+      });
       const { result, durationMs } = await measurePerformance(async () => {
         const cacheKey = `pageviews:${args.path || 'all'}:${args.timeRange}`;
         const cached = analyticsCache.get(cacheKey);
@@ -140,11 +156,11 @@ server.addTool({
         return data;
       }, 'getPageViews');
 
-      logToolExecution('analytics:getPageViews', args, true, durationMs);
+      logToolExecution('analytics:getPageViews', args, true, durationMs, args.delegationContext);
 
       return JSON.stringify(result, null, 2);
     } catch (error) {
-      logToolExecution('analytics:getPageViews', args, false);
+      logToolExecution('analytics:getPageViews', args, false, undefined, args.delegationContext);
       return handleToolError(error);
     }
   },
@@ -164,16 +180,31 @@ server.addTool({
       .optional()
       .default('7d')
       .describe('Time range for trending analysis'),
+    // Delegation context (optional)
+    delegationContext: z.object({
+      contractId: z.string().optional().describe('Delegation contract ID'),
+      delegatorAgentId: z.string().optional().describe('ID of delegating agent'),
+      taskId: z.string().optional().describe('Task ID within delegation'),
+    }).optional().describe('Delegation context for task tracking'),
   }),
   annotations: {
     readOnlyHint: true,
     openWorldHint: false,
   },
   execute: async (
-    args: { limit?: number; timeRange?: '24h' | '7d' | '30d' | 'all' },
+    args: { 
+      limit?: number; 
+      timeRange?: '24h' | '7d' | '30d' | 'all';
+      delegationContext?: { contractId?: string; delegatorAgentId?: string; taskId?: string };
+    },
     { log }: { log: any }
   ) => {
     try {
+      // Emit delegation event if context provided
+      emitDelegationEvent('tool_executed', 'analytics:getTrending', args.delegationContext, {
+        limit: args.limit,
+        timeRange: args.timeRange,
+      });
       const { result, durationMs } = await measurePerformance(async () => {
         const cacheKey = `trending:${args.timeRange}:${args.limit}`;
         const cached = analyticsCache.get(cacheKey);
@@ -222,11 +253,11 @@ server.addTool({
         return limited;
       }, 'getTrending');
 
-      logToolExecution('analytics:getTrending', args, true, durationMs);
+      logToolExecution('analytics:getTrending', args, true, durationMs, args.delegationContext);
 
       return JSON.stringify(result, null, 2);
     } catch (error) {
-      logToolExecution('analytics:getTrending', args, false);
+      logToolExecution('analytics:getTrending', args, false, undefined, args.delegationContext);
       return handleToolError(error);
     }
   },
@@ -247,16 +278,31 @@ server.addTool({
       .optional()
       .default('7d')
       .describe('Time range for engagement data'),
+    // Delegation context (optional)
+    delegationContext: z.object({
+      contractId: z.string().optional().describe('Delegation contract ID'),
+      delegatorAgentId: z.string().optional().describe('ID of delegating agent'),
+      taskId: z.string().optional().describe('Task ID within delegation'),
+    }).optional().describe('Delegation context for task tracking'),
   }),
   annotations: {
     readOnlyHint: true,
     openWorldHint: false,
   },
   execute: async (
-    args: { contentType?: string; timeRange?: '1h' | '24h' | '7d' | '30d' | 'all' },
+    args: { 
+      contentType?: string; 
+      timeRange?: '1h' | '24h' | '7d' | '30d' | 'all';
+      delegationContext?: { contractId?: string; delegatorAgentId?: string; taskId?: string };
+    },
     { log }: { log: any }
   ) => {
     try {
+      // Emit delegation event if context provided
+      emitDelegationEvent('tool_executed', 'analytics:getEngagement', args.delegationContext, {
+        contentType: args.contentType,
+        timeRange: args.timeRange,
+      });
       const { result, durationMs } = await measurePerformance(async () => {
         const cacheKey = `engagement:${args.contentType || 'all'}:${args.timeRange}`;
         const cached = analyticsCache.get(cacheKey);
@@ -324,11 +370,11 @@ server.addTool({
         return metrics;
       }, 'getEngagement');
 
-      logToolExecution('analytics:getEngagement', args, true, durationMs);
+      logToolExecution('analytics:getEngagement', args, true, durationMs, args.delegationContext);
 
       return JSON.stringify(result, null, 2);
     } catch (error) {
-      logToolExecution('analytics:getEngagement', args, false);
+      logToolExecution('analytics:getEngagement', args, false, undefined, args.delegationContext);
       return handleToolError(error);
     }
   },
@@ -354,6 +400,12 @@ server.addTool({
       .default('24h')
       .describe('Time range for activity search'),
     limit: z.number().optional().default(50).describe('Maximum number of results'),
+    // Delegation context (optional)
+    delegationContext: z.object({
+      contractId: z.string().optional().describe('Delegation contract ID'),
+      delegatorAgentId: z.string().optional().describe('ID of delegating agent'),
+      taskId: z.string().optional().describe('Task ID within delegation'),
+    }).optional().describe('Delegation context for task tracking'),
   }),
   annotations: {
     readOnlyHint: true,
@@ -365,10 +417,18 @@ server.addTool({
       activityType?: string;
       timeRange?: '1h' | '24h' | '7d' | '30d' | 'all';
       limit?: number;
+      delegationContext?: { contractId?: string; delegatorAgentId?: string; taskId?: string };
     },
     { log }: { log: any }
   ) => {
     try {
+      // Emit delegation event if context provided
+      emitDelegationEvent('tool_executed', 'analytics:searchActivity', args.delegationContext, {
+        query: args.query,
+        activityType: args.activityType,
+        timeRange: args.timeRange,
+        limit: args.limit,
+      });
       const { result, durationMs } = await measurePerformance(async () => {
         const cacheKey = `activity:${args.query || ''}:${args.activityType || ''}:${args.timeRange}`;
         const cached = analyticsCache.get(cacheKey);
@@ -444,11 +504,11 @@ server.addTool({
         return limited;
       }, 'searchActivity');
 
-      logToolExecution('analytics:searchActivity', args, true, durationMs);
+      logToolExecution('analytics:searchActivity', args, true, durationMs, args.delegationContext);
 
       return JSON.stringify(result, null, 2);
     } catch (error) {
-      logToolExecution('analytics:searchActivity', args, false);
+      logToolExecution('analytics:searchActivity', args, false, undefined, args.delegationContext);
       return handleToolError(error);
     }
   },
@@ -467,13 +527,29 @@ server.addTool({
       .optional()
       .default(false)
       .describe('Include test milestones (ignored in production)'),
+    // Delegation context (optional)
+    delegationContext: z.object({
+      contractId: z.string().optional().describe('Delegation contract ID'),
+      delegatorAgentId: z.string().optional().describe('ID of delegating agent'),
+      taskId: z.string().optional().describe('Task ID within delegation'),
+    }).optional().describe('Delegation context for task tracking'),
   }),
   annotations: {
     readOnlyHint: true,
     openWorldHint: false,
   },
-  execute: async (args: { includeTest?: boolean }, { log }: { log: any }) => {
+  execute: async (
+    args: { 
+      includeTest?: boolean; 
+      delegationContext?: { contractId?: string; delegatorAgentId?: string; taskId?: string };
+    }, 
+    { log }: { log: any }
+  ) => {
     try {
+      // Emit delegation event if context provided
+      emitDelegationEvent('tool_executed', 'analytics:getMilestones', args.delegationContext, {
+        includeTest: args.includeTest,
+      });
       const { result, durationMs } = await measurePerformance(async () => {
         const cacheKey = `milestones:${args.includeTest}`;
         const cached = analyticsCache.get(cacheKey);
@@ -499,11 +575,11 @@ server.addTool({
         return filtered;
       }, 'getMilestones');
 
-      logToolExecution('analytics:getMilestones', args, true, durationMs);
+      logToolExecution('analytics:getMilestones', args, true, durationMs, args.delegationContext);
 
       return JSON.stringify(result, null, 2);
     } catch (error) {
-      logToolExecution('analytics:getMilestones', args, false);
+      logToolExecution('analytics:getMilestones', args, false, undefined, args.delegationContext);
       return handleToolError(error);
     }
   },

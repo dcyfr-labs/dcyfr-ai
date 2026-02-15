@@ -23,6 +23,7 @@ import {
   handleToolError,
   logToolExecution,
   measurePerformance,
+  emitDelegationEvent,
 } from '../shared/utils.js';
 import { SimpleCache } from '../shared/cache.js';
 
@@ -82,16 +83,33 @@ server.addTool({
       .optional()
       .default(20)
       .describe('Maximum number of results (max 100)'),
+    // Delegation context (optional)
+    delegationContext: z.object({
+      contractId: z.string().optional().describe('Delegation contract ID'),
+      delegatorAgentId: z.string().optional().describe('ID of delegating agent'),
+      taskId: z.string().optional().describe('Task ID within delegation'),
+    }).optional().describe('Delegation context for task tracking'),
   }),
   annotations: {
     readOnlyHint: true,
     openWorldHint: false,
   },
   execute: async (
-    args: { severity?: string; category?: string; limit?: number },
+    args: { 
+      severity?: string; 
+      category?: string; 
+      limit?: number;
+      delegationContext?: { contractId?: string; delegatorAgentId?: string; taskId?: string };
+    },
     { log }: { log: any }
   ) => {
     try {
+      // Emit delegation event if context provided
+      emitDelegationEvent('tool_executed', 'promptintel:searchThreats', args.delegationContext, {
+        severity: args.severity,
+        category: args.category,
+        limit: args.limit,
+      });
       const { result, durationMs } = await measurePerformance(async () => {
         const cacheKey = `threats:${args.severity}:${args.category}:${args.limit}`;
         const cached = promptIntelCache.get(cacheKey);

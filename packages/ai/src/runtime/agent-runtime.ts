@@ -37,15 +37,15 @@ import {
   type RuntimeTelemetryIntegrationConfig,
   type DelegationTelemetryConfig,
 } from '../telemetry';
-import {
-  VerificationIntegration,
-  type ParsedVerificationResult,
-  type MultiModalVerificationReport,
-} from '../verification/parser-integration';
 import type {
   VerificationOutputFormat,
   FormattedVerificationOutput,
+  MultiModalVerificationReport,
 } from '../verification/output-formatter';
+import {
+  VerificationIntegration,
+  type ParsedVerificationResult,
+} from '../verification/parser-integration';
 
 /**
  * Task execution context with delegation information
@@ -320,7 +320,7 @@ export class AgentRuntime extends EventEmitter {
       agent_id: this.config.agent_id,
       agent_name: this.config.agent_name,
       version: this.config.version,
-      capabilities: this.config.capabilities?.capabilities || [],
+      capabilities: this.config.capabilities?.capabilities?.map(c => c.name) || [],
       reputation_score: this.calculateCurrentReputation(),
       current_workload: this.currentTasks.size,
       max_concurrent_tasks: this.config.max_concurrent_tasks || 5,
@@ -396,13 +396,17 @@ export class AgentRuntime extends EventEmitter {
       return result;
       
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorType = error instanceof Error ? error.constructor.name : typeof error;
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      
       const result: TaskExecutionResult = {
         context: { ...context, metadata: { ...context.metadata, status: 'failed' } },
         success: false,
         error: {
-          type: error.constructor.name,
-          message: error.message,
-          stack: error.stack,
+          type: errorType,
+          message: errorMessage,
+          stack: errorStack,
         },
         metrics: {
           execution_time_ms: Date.now() - new Date(context.metadata.started_at).getTime(),
@@ -753,6 +757,14 @@ export class AgentRuntime extends EventEmitter {
     const validPolicies: VerificationPolicy[] = ['direct_inspection', 'third_party_audit', 'cryptographic_proof', 'human_required'];
     if (!validPolicies.includes(contract.verification_policy)) {
       throw new Error(`Invalid verification policy: ${contract.verification_policy}`);
+    }
+    
+    // TLP Classification Enforcement
+    const { tlpEnforcement } = await import('../delegation/tlp-enforcement.js');
+    try {
+      tlpEnforcement.validateDelegationContract(contract);
+    } catch (error) {
+      throw new Error(`TLP Security Violation: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
   

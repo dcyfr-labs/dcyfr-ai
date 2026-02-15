@@ -14,6 +14,7 @@ import { z } from 'zod';
 import fs from 'fs/promises';
 import path from 'path';
 import { SimpleCache } from '../shared/cache.js';
+import { emitDelegationEvent } from '../shared/utils.js';
 import type {
   TokenProvider,
   TokenViolation,
@@ -227,8 +228,27 @@ export function createDesignTokenServer(provider: TokenProvider) {
     parameters: z.object({
       code: z.string().describe('Code snippet to validate (JSX/TSX)'),
       filePath: z.string().optional().describe('Optional file path for context'),
+      // Delegation context (optional)
+      delegationContext: z.object({
+        contractId: z.string().optional().describe('Delegation contract ID'),
+        delegatorAgentId: z.string().optional().describe('ID of delegating agent'),
+        taskId: z.string().optional().describe('Task ID within delegation'),
+      }).optional().describe('Delegation context for task tracking'),
     }),
-    execute: async ({ code, filePath }: { code: string; filePath?: string }) => {
+    execute: async ({ 
+      code, 
+      filePath,
+      delegationContext 
+    }: { 
+      code: string; 
+      filePath?: string;
+      delegationContext?: { contractId?: string; delegatorAgentId?: string; taskId?: string };
+    }) => {
+      // Emit delegation event if context provided
+      emitDelegationEvent('tool_executed', 'tokens:validate', delegationContext, {
+        filePath,
+        codeLength: code.length,
+      });
       const cacheKey = `validate:${code}`;
       const cached = validationCache.get(cacheKey);
       if (cached) {
@@ -269,14 +289,27 @@ export function createDesignTokenServer(provider: TokenProvider) {
         .enum(['spacing', 'typography', 'containers', 'breakpoints'])
         .optional()
         .describe('Token category to search in'),
+      // Delegation context (optional)
+      delegationContext: z.object({
+        contractId: z.string().optional().describe('Delegation contract ID'),
+        delegatorAgentId: z.string().optional().describe('ID of delegating agent'),
+        taskId: z.string().optional().describe('Task ID within delegation'),
+      }).optional().describe('Delegation context for task tracking'),
     }),
     execute: async ({
       hardcodedValue,
       category,
+      delegationContext,
     }: {
       hardcodedValue: string;
       category?: 'spacing' | 'typography' | 'containers' | 'breakpoints';
+      delegationContext?: { contractId?: string; delegatorAgentId?: string; taskId?: string };
     }) => {
+      // Emit delegation event if context provided
+      emitDelegationEvent('tool_executed', 'tokens:suggest', delegationContext, {
+        hardcodedValue,
+        category,
+      });
       const suggestions = suggestToken(hardcodedValue, category);
 
       const output = {

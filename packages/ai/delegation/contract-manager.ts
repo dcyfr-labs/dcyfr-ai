@@ -16,6 +16,9 @@ import type {
   DelegationContractStatus,
   VerificationResult,
 } from '../types/delegation-contracts';
+import { TLPEnforcementEngine } from '../src/delegation/tlp-enforcement.js';
+import { SecurityThreatValidator } from '../src/delegation/security-threat-model.js';
+import type { ThreatDetectionResult } from '../src/delegation/security-threat-model.js';
 
 /**
  * Contract manager configuration
@@ -32,6 +35,9 @@ export interface ContractManagerConfig {
   
   /** Enable telemetry integration */
   enable_telemetry?: boolean;
+  
+  /** Enable TLP classification enforcement */
+  enable_tlp_enforcement?: boolean;
 }
 
 /**
@@ -103,6 +109,8 @@ export interface ContractUpdate {
 export class ContractManager extends EventEmitter {
   private contracts: Map<string, DelegationContract>;
   private config: Required<ContractManagerConfig>;
+  private tlpEnforcement: TLPEnforcementEngine;
+  private threatValidator: SecurityThreatValidator;
   
   constructor(config: ContractManagerConfig = {}) {
     super();
@@ -112,7 +120,20 @@ export class ContractManager extends EventEmitter {
       retention_period_ms: config.retention_period_ms ?? 7 * 24 * 60 * 60 * 1000, // 7 days
       max_contracts: config.max_contracts ?? 10000,
       enable_telemetry: config.enable_telemetry ?? true,
+      enable_tlp_enforcement: config.enable_tlp_enforcement ?? true,
     };
+    
+    // Initialize TLP enforcement engine
+    this.tlpEnforcement = new TLPEnforcementEngine();
+    
+    // Initialize security threat validator
+    this.threatValidator = new SecurityThreatValidator({
+      max_chain_depth: 5,
+      max_contracts_per_hour: 50,
+      reputation_gaming_threshold: 0.1,
+      anomaly_detection_window_hours: 24,
+      permission_escalation_detection: true,
+    });
     
     this.contracts = new Map();
     
@@ -139,8 +160,8 @@ export class ContractManager extends EventEmitter {
       status: 'pending',
     };
     
-    // Validate contract
-    this.validateContract(contract);
+    // Validate contract (includes TLP enforcement and security threat detection)
+    await this.validateContract(contract);
     
     // Check capacity
     if (this.contracts.size >= this.config.max_contracts) {
@@ -449,9 +470,9 @@ export class ContractManager extends EventEmitter {
   }
   
   /**
-   * Validate contract data
+   * Validate contract data including TLP classification enforcement and security threat detection
    */
-  private validateContract(contract: DelegationContract): void {
+  private async validateContract(contract: DelegationContract): Promise<void> {
     // Required fields
     if (!contract.task_id) {
       throw new Error('Contract must have task_id');
@@ -476,6 +497,86 @@ export class ContractManager extends EventEmitter {
     // Validate timeout
     if (contract.timeout_ms !== undefined && contract.timeout_ms <= 0) {
       throw new Error('Contract timeout_ms must be positive');
+    }
+    
+    // Security Threat Model Validation (Task 6.2)
+    const threatResult = await this.threatValidator.validateDelegationSecurity(contract);
+    
+    if (threatResult.threat_detected) {
+      // Emit security threat event for monitoring
+      this.emit('security_threat_detected', {
+        contract_id: contract.contract_id,
+        threat_type: threatResult.threat_type,
+        severity: threatResult.severity,
+        action: threatResult.action,
+        description: threatResult.description,
+        evidence: threatResult.evidence,
+        confidence: threatResult.confidence,
+        timestamp: new Date().toISOString()
+      });
+      
+      // Take appropriate action based on threat level
+      switch (threatResult.action) {
+        case 'block':
+          throw new Error(
+            `Security threat detected: ${threatResult.description} ` +
+            `(${threatResult.threat_type}, ${threatResult.severity})`
+          );
+        
+        case 'terminate_chain':
+          // For delegation chains, terminate the entire chain
+          throw new Error(
+            `Critical security threat requiring chain termination: ${threatResult.description} ` +
+            `(${threatResult.threat_type}, ${threatResult.severity})`
+          );
+        
+        case 'escalate':
+          // Log as high priority but allow contract creation with monitoring
+          console.error(
+            `⚠️  Security threat requires escalation: ${threatResult.description} ` +
+            `(Contract: ${contract.contract_id})`
+          );
+          break;
+        
+        case 'warn':
+          // Log warning but allow contract creation
+          console.warn(
+            `⚠️  Security threat warning: ${threatResult.description} ` +
+            `(Contract: ${contract.contract_id})`
+          );
+          break;
+        
+        case 'allow':
+        default:
+          // Threat detected but action is to allow - just log
+          console.info(
+            `ℹ️  Security threat noted but allowed: ${threatResult.description} ` +
+            `(Contract: ${contract.contract_id})`
+          );
+          break;
+      }
+    }
+    
+    // TLP Classification Enforcement (Task 6.1)
+    if (this.config.enable_tlp_enforcement) {
+      const tlpResult = this.tlpEnforcement.enforceTLPClassification(contract);
+      
+      if (!tlpResult.allowed) {
+        throw new Error(
+          `TLP enforcement violation: ${tlpResult.reason}. ` +
+          `Required clearance: ${tlpResult.required_clearance}, ` +
+          `Agent clearance: ${tlpResult.agent_clearance || 'none'}`
+        );
+      }
+      
+      // Emit TLP validation event for monitoring
+      this.emit('tlp_validation', {
+        contract_id: contract.contract_id,
+        agent_id: contract.delegatee.agent_id,
+        tlp_classification: contract.tlp_classification,
+        enforcement_result: tlpResult,
+        timestamp: new Date().toISOString()
+      });
     }
   }
   
@@ -509,6 +610,99 @@ export class ContractManager extends EventEmitter {
    */
   getContractCount(): number {
     return this.contracts.size;
+  }
+
+  /**
+   * Get security threat validation statistics
+   */
+  getSecurityThreatStatistics() {
+    return this.threatValidator.getThreatStatistics();
+  }
+
+  /**
+   * Get recent security threat detections
+   */
+  getRecentSecurityThreats(limit = 10): ThreatDetectionResult[] {
+    return this.threatValidator.getRecentThreats(limit);
+  }
+
+  /**
+   * Get comprehensive security status including threat statistics and TLP enforcement status
+   */
+  getSecurityStatus() {
+    const threatStats = this.threatValidator.getThreatStatistics();
+    const recentThreats = this.threatValidator.getRecentThreats(5);
+    
+    return {
+      tlp_enforcement_enabled: this.config.enable_tlp_enforcement,
+      security_threat_validation_enabled: true,
+      contract_security_summary: {
+        total_contracts: this.contracts.size,
+        security_validations_performed: threatStats.total_validations,
+        threats_detected: threatStats.threats_detected,
+        threat_detection_rate: threatStats.total_validations > 0 
+          ? (threatStats.threats_detected / threatStats.total_validations * 100).toFixed(1) + '%'
+          : '0%',
+        threat_types: threatStats.threat_types,
+        severity_distribution: threatStats.severity_distribution,
+        action_distribution: threatStats.action_distribution,
+      },
+      recent_security_events: recentThreats.map(threat => ({
+        threat_type: threat.threat_type,
+        severity: threat.severity,
+        action: threat.action,
+        confidence: threat.confidence,
+        description: threat.description.substring(0, 100) + (threat.description.length > 100 ? '...' : ''),
+      })),
+      security_recommendations: this.generateSecurityRecommendations(threatStats, recentThreats),
+    };
+  }
+
+  /**
+   * Generate security recommendations based on threat patterns
+   */
+  private generateSecurityRecommendations(
+    stats: ReturnType<SecurityThreatValidator['getThreatStatistics']>,
+    recentThreats: ThreatDetectionResult[]
+  ): string[] {
+    const recommendations = [];
+    
+    // High threat detection rate
+    if (stats.total_validations > 10 && stats.threats_detected / stats.total_validations > 0.2) {
+      recommendations.push('High threat detection rate detected - consider reviewing agent access patterns');
+    }
+    
+    // Permission escalation concerns
+    if (stats.threat_types['permission_escalation'] > 0) {
+      recommendations.push('Permission escalation attempts detected - review agent privilege assignments');
+    }
+    
+    // Reputation gaming concerns
+    if (stats.threat_types['reputation_gaming'] > 0) {
+      recommendations.push('Reputation gaming patterns detected - audit agent delegation relationships');
+    }
+    
+    // Abuse pattern concerns
+    if (stats.threat_types['abuse_pattern'] > 0) {
+      recommendations.push('Delegation abuse patterns detected - consider implementing rate limiting');
+    }
+    
+    // Critical severity threats
+    if (stats.severity_distribution['critical'] > 0) {
+      recommendations.push('Critical security threats detected - immediate security review recommended');
+    }
+    
+    // Recent escalations
+    const recentEscalations = recentThreats.filter(t => t.action === 'escalate').length;
+    if (recentEscalations > 2) {
+      recommendations.push('Multiple recent security escalations - review security policies');
+    }
+    
+    if (recommendations.length === 0) {
+      recommendations.push('Security posture appears healthy - continue monitoring');
+    }
+    
+    return recommendations;
   }
 }
 

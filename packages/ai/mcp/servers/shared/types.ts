@@ -11,6 +11,16 @@ export interface MCPContext {
   sessionId?: string;
   requestId?: string;
   session?: Record<string, unknown>;
+  delegation?: DelegationContext;
+}
+
+export interface DelegationContext {
+  contractId?: string;
+  delegatorAgentId?: string;
+  delegateeAgentId?: string;
+  taskId?: string;
+  depth?: number;
+  parentContractId?: string;
 }
 
 export interface MCPError {
