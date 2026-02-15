@@ -247,6 +247,21 @@ export interface DelegationContract {
   /** Required capabilities for task completion */
   required_capabilities?: string[];
   
+  /** 
+   * Whether the delegatee must verify context sufficiency before acting.
+   * When true, the delegatee agent must perform a ContextSufficiencyAssessment
+   * and achieve minimum_context_confidence before proceeding with implementation.
+   * Prevents assumption-based decision making that leads to dead-end implementations.
+   */
+  context_verification_required?: boolean;
+  
+  /**
+   * Minimum confidence score (0-1) the delegatee must achieve in their
+   * context sufficiency assessment before proceeding. Defaults to 0.7.
+   * Higher values enforce stricter context gathering requirements.
+   */
+  minimum_context_confidence?: number;
+  
   /** Resource requirements for task execution */
   resource_requirements?: {
     memory_mb?: number;

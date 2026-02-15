@@ -12,7 +12,7 @@
  * - Anomalous delegation behavior detection
  * 
  * @module delegation/security-threat-model
- * @version 1.0.0
+ * @version 1.1.0
  * @date 2026-02-14
  */
 
@@ -27,7 +27,7 @@ export interface ThreatDetectionResult {
   threat_detected: boolean;
   
   /** Type of threat identified */
-  threat_type: 'permission_escalation' | 'reputation_gaming' | 'abuse_pattern' | 'anomaly' | 'none';
+  threat_type: 'permission_escalation' | 'reputation_gaming' | 'abuse_pattern' | 'anomaly' | 'context_insufficiency' | 'none';
   
   /** Severity level of the threat */
   severity: 'low' | 'medium' | 'high' | 'critical';
@@ -137,6 +137,7 @@ export class SecurityThreatValidator {
       this.detectReputationGaming(contract),
       this.detectAbusePatterns(contract),
       this.detectAnomalies(contract),
+      this.detectContextInsufficiency(contract),
     ]);
     
     // Find the most appropriate threat to report based on severity and threat type priority
@@ -165,7 +166,8 @@ export class SecurityThreatValidator {
     
     // Threat type priority (higher number = higher priority to report)
     const threatPriority = {
-      'permission_escalation': 4, // Highest priority - critical security issue
+      'permission_escalation': 5, // Highest priority - critical security issue
+      'context_insufficiency': 4, // High priority - prevents dead-end implementations
       'abuse_pattern': 3,         // High priority - system abuse
       'anomaly': 2,              // Medium priority - unusual behavior  
       'reputation_gaming': 1,     // Lower priority - unless severe
@@ -552,6 +554,108 @@ export class SecurityThreatValidator {
     });
 
     return mutual_count;
+  }
+
+  /**
+   * Detect context insufficiency — agents proceeding without adequate information
+   * 
+   * This threat vector catches delegation chains where agents are likely to make
+   * assumption-based decisions. It checks whether the contract has sufficient
+   * context for the delegatee to act without guessing.
+   * 
+   * Threat indicators:
+   * - context_verification_required is true but minimum_context_confidence is very low
+   * - Task description is vague or missing critical details
+   * - No required capabilities specified for complex tasks
+   * - High-complexity tasks without success criteria
+   * - Cross-package tasks without explicit scope boundaries
+   */
+  private async detectContextInsufficiency(contract: DelegationContract): Promise<ThreatDetectionResult> {
+    const suspicious_patterns: string[] = [];
+    let risk_score = 0;
+
+    // Check if context verification is required but threshold is suspiciously low
+    if (contract.context_verification_required && 
+        contract.minimum_context_confidence !== undefined && 
+        contract.minimum_context_confidence < 0.3) {
+      suspicious_patterns.push('Context verification required but confidence threshold is dangerously low');
+      risk_score += 0.3;
+    }
+
+    // Check for vague or missing task description
+    if (!contract.task_description || contract.task_description.trim().length < 20) {
+      suspicious_patterns.push('Task description is missing or too vague for informed decision-making');
+      risk_score += 0.3;
+    }
+
+    // Check for missing success criteria on complex tasks
+    const estimatedComplexity = contract.metadata?.estimated_complexity;
+    if (estimatedComplexity && estimatedComplexity > 5) {
+      if (!contract.success_criteria?.required_checks || contract.success_criteria.required_checks.length === 0) {
+        suspicious_patterns.push('Complex task delegated without success criteria — delegatee will have to guess expected outcomes');
+        risk_score += 0.25;
+      }
+      
+      if (!contract.required_capabilities || contract.required_capabilities.length === 0) {
+        suspicious_patterns.push('Complex task delegated without required capabilities — agent match will be assumption-based');
+        risk_score += 0.15;
+      }
+    }
+
+    // Check for cross-package scope without explicit boundaries
+    const taskCategories = contract.metadata?.task_categories;
+    if (taskCategories && Array.isArray(taskCategories)) {
+      const crossPackageIndicators = taskCategories.filter((cat: unknown) => {
+        if (typeof cat !== 'string') return false;
+        return cat.includes('cross-package') || cat.includes('multi-project') || cat.includes('workspace-wide');
+      });
+      if (crossPackageIndicators.length > 0 && !contract.permission_token?.resources?.length) {
+        suspicious_patterns.push('Cross-package task without explicit resource scope — agents may assume boundaries');
+        risk_score += 0.2;
+      }
+    }
+
+    // Check for context_verification_required not set on high-complexity tasks
+    if (estimatedComplexity && estimatedComplexity > 7 && !contract.context_verification_required) {
+      suspicious_patterns.push('High-complexity task does not require context verification — assumption risk is elevated');
+      risk_score += 0.2;
+    }
+
+    if (risk_score > 0.3) {
+      return {
+        threat_detected: true,
+        threat_type: 'context_insufficiency',
+        severity: risk_score > 0.7 ? 'high' : risk_score > 0.5 ? 'medium' : 'low',
+        description: `Context insufficiency risk detected (score: ${risk_score.toFixed(2)}) — delegatee agent may make assumption-based decisions`,
+        action: risk_score > 0.7 ? 'block' : 'warn',
+        evidence: {
+          metrics: { 
+            risk_score, 
+            pattern_count: suspicious_patterns.length,
+            estimated_complexity: estimatedComplexity as number ?? 0,
+            has_success_criteria: (contract.success_criteria?.required_checks?.length ?? 0) > 0 ? 1 : 0,
+            context_verification_required: contract.context_verification_required ? 1 : 0,
+          },
+          related_entities: [contract.delegator_agent_id, contract.delegatee_agent_id],
+          activity_timeline: [{
+            timestamp: new Date().toISOString(),
+            event: 'context_insufficiency_analysis',
+            details: { suspicious_patterns, contract_id: contract.contract_id }
+          }]
+        },
+        confidence: Math.min(risk_score, 0.9)
+      };
+    }
+
+    return { 
+      threat_detected: false, 
+      threat_type: 'none', 
+      severity: 'low', 
+      description: 'Sufficient context provided for delegation', 
+      action: 'allow', 
+      evidence: {}, 
+      confidence: 0.1 
+    };
   }
 
   /**
