@@ -206,10 +206,10 @@ export interface DelegationContract {
   task_id: string;
   
   /** Agent delegating the task */
-  delegator_agent_id: string;
+  delegator: DelegationAgent;
   
   /** Agent receiving the delegation */
-  delegatee_agent_id: string;
+  delegatee: DelegationAgent;
   
   /** Human-readable task description */
   task_description?: string;

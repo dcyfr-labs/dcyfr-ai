@@ -1,0 +1,95 @@
+{
+  "agent_id": "cro-reviewer",
+  "agent_name": "cro-reviewer",
+  "agent_version": "1.0.0",
+  "manifest_version": "1.0.0",
+  "capabilities": [
+    {
+      "capability_id": "cro-reviewer_general_development",
+      "capability_name": "General Development",
+      "description": "\"CRO-level revenue strategy, sales decisions, and go-to-market reviews\"",
+      "category": "general",
+      "proficiency_level": "intermediate",
+      "confidence_level": 0.7,
+      "estimated_completion_time_ms": 450000,
+      "resource_requirements": [
+        {
+          "type": "cpu",
+          "minimum": 1,
+          "recommended": 2,
+          "maximum": 4,
+          "unit": "cores"
+        },
+        {
+          "type": "memory",
+          "minimum": 256,
+          "recommended": 512,
+          "maximum": 1024,
+          "unit": "MB"
+        }
+      ],
+      "tags": [
+        "general"
+      ],
+      "version": "1.0.0",
+      "registered_at": "2026-02-15T09:33:39.148Z",
+      "calibration": {
+        "total_evaluations": 0,
+        "successful_outcomes": 0,
+        "calibration_accuracy": 0,
+        "last_calibrated_at": "2026-02-15T09:33:39.148Z",
+        "calibration_method": "automated"
+      }
+    },
+    {
+      "capability_id": "cro-reviewer_code_analysis",
+      "capability_name": "Code Analysis",
+      "description": "Analyze and understand existing codebases",
+      "category": "code_review",
+      "proficiency_level": "advanced",
+      "confidence_level": 0.8,
+      "estimated_completion_time_ms": 180000,
+      "resource_requirements": [
+        {
+          "type": "cpu",
+          "minimum": 1,
+          "recommended": 2,
+          "maximum": 4,
+          "unit": "cores"
+        },
+        {
+          "type": "memory",
+          "minimum": 256,
+          "recommended": 512,
+          "maximum": 1024,
+          "unit": "MB"
+        }
+      ],
+      "tags": [
+        "analysis",
+        "research"
+      ],
+      "version": "1.0.0",
+      "registered_at": "2026-02-15T09:33:39.148Z",
+      "calibration": {
+        "total_evaluations": 0,
+        "successful_outcomes": 0,
+        "calibration_accuracy": 0,
+        "last_calibrated_at": "2026-02-15T09:33:39.148Z",
+        "calibration_method": "automated"
+      }
+    }
+  ],
+  "overall_confidence": 0.75,
+  "specializations": [
+    "general",
+    "code_review"
+  ],
+  "availability": "available",
+  "tlp_clearance": [
+    "CLEAR"
+  ],
+  "created_at": "2026-02-15T09:33:39.148Z",
+  "updated_at": "2026-02-15T09:33:39.148Z",
+  "metadata": {}
+}

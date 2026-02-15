@@ -172,18 +172,18 @@ export class ContractManager extends EventEmitter {
    * Create a new delegation contract
    */
   async createContract(
-    partialContract: Omit<DelegationContract, 'contract_id' | 'created_at' | 'status'>
+    partialContract: Omit<DelegationContract, 'created_at' | 'status'> | DelegationContract
   ): Promise<DelegationContract> {
-    // Generate contract ID
-    const contract_id = `contract_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+    // Generate contract ID if not provided
+    const contract_id = (partialContract as any).contract_id || `contract_${Date.now()}_${Math.random().toString(36).substring(7)}`;
     
     // Build complete contract
     const contract: DelegationContract = {
       ...partialContract,
       contract_id,
-      created_at: new Date().toISOString(),
-      status: 'pending',
-    };
+      created_at: (partialContract as any).created_at || new Date().toISOString(),
+      status: (partialContract as any).status || 'pending',
+    } as DelegationContract;
     
     // Validate contract (includes TLP enforcement and security threat detection)
     await this.validateContract(contract);
@@ -647,7 +647,6 @@ export class ContractManager extends EventEmitter {
       chain_length: firebreakResult.chain_length,
       timestamp: new Date().toISOString()
     });
-    }
   }
   
   /**
@@ -865,6 +864,83 @@ export class ContractManager extends EventEmitter {
       pending_overrides: this.getPendingOverrides(),
       security_recommendations: this.generateSecurityRecommendations(threatStats, recentThreats),
     };
+  }
+
+  /**
+   * Update contract status (alias for updateStatus for test compatibility)
+   */
+  async updateContractStatus(
+    contract_id: string,
+    status: DelegationContractStatus,
+    options?: Record<string, unknown>
+  ): Promise<DelegationContract> {
+    const contract = this.contracts.get(contract_id);
+    
+    if (!contract) {
+      throw new Error(`Contract not found: ${contract_id}`);
+    }
+    
+    // Set timestamp fields based on status
+    const now = new Date().toISOString();
+    const updates: Partial<DelegationContract> = { status };
+    
+    if (status === 'active') {
+      updates.activated_at = now;
+    } else if (status === 'completed') {
+      updates.completed_at = now;
+    } else if (status === 'failed') {
+      updates.failed_at = now;
+    }
+    
+    // Merge additional options (like verification_result, etc.)
+    if (options) {
+      Object.assign(updates, options);
+    }
+    
+    // Apply updates to contract
+    const updatedContract = {
+      ...contract,
+      ...updates,
+      updated_at: now,
+    };
+    
+    this.contracts.set(contract_id, updatedContract);
+    this.emit('contract:updated', updatedContract);
+    
+    return updatedContract;
+  }
+
+  /**
+   * Cancel a contract with a reason
+   */
+  async cancelContract(
+    contract_id: string,
+    reason: string
+  ): Promise<DelegationContract> {
+    const contract = this.contracts.get(contract_id);
+    
+    if (!contract) {
+      throw new Error(`Contract not found: ${contract_id}`);
+    }
+    
+    const cancelled_at = new Date().toISOString();
+    
+    return this.updateContract(contract_id, {
+      status: 'cancelled',
+      completed_at: cancelled_at,
+      metadata: {
+        ...contract.metadata,
+        cancellation_reason: reason,
+        cancelled_at,
+      },
+    });
+  }
+
+  /**
+   * Clear all contracts (for testing)
+   */
+  async clearAll(): Promise<void> {
+    this.contracts.clear();
   }
 }
 

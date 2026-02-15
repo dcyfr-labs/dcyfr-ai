@@ -1,0 +1,178 @@
+{
+  "agent_id": "dependency-coordinator",
+  "agent_name": "dependency-coordinator",
+  "agent_version": "1.0.0",
+  "manifest_version": "1.0.0",
+  "capabilities": [
+    {
+      "capability_id": "dependency-coordinator_system_design",
+      "capability_name": "System Design",
+      "description": "Design and review system architecture and component interactions",
+      "category": "architecture",
+      "proficiency_level": "expert",
+      "confidence_level": 0.85,
+      "estimated_completion_time_ms": 420000,
+      "resource_requirements": [
+        {
+          "type": "cpu",
+          "minimum": 1,
+          "recommended": 2,
+          "maximum": 4,
+          "unit": "cores"
+        },
+        {
+          "type": "memory",
+          "minimum": 256,
+          "recommended": 512,
+          "maximum": 1024,
+          "unit": "MB"
+        }
+      ],
+      "tags": [
+        "design",
+        "patterns",
+        "architecture"
+      ],
+      "version": "1.0.0",
+      "registered_at": "2026-02-15T09:33:39.150Z",
+      "calibration": {
+        "total_evaluations": 0,
+        "successful_outcomes": 0,
+        "calibration_accuracy": 0,
+        "last_calibrated_at": "2026-02-15T09:33:39.150Z",
+        "calibration_method": "automated"
+      }
+    },
+    {
+      "capability_id": "dependency-coordinator_code_review",
+      "capability_name": "Code Review",
+      "description": "Review code for architectural patterns and best practices",
+      "category": "code_review",
+      "proficiency_level": "expert",
+      "confidence_level": 0.9,
+      "estimated_completion_time_ms": 126000,
+      "resource_requirements": [
+        {
+          "type": "cpu",
+          "minimum": 1,
+          "recommended": 2,
+          "maximum": 4,
+          "unit": "cores"
+        },
+        {
+          "type": "memory",
+          "minimum": 256,
+          "recommended": 512,
+          "maximum": 1024,
+          "unit": "MB"
+        }
+      ],
+      "tags": [
+        "review",
+        "patterns",
+        "quality"
+      ],
+      "version": "1.0.0",
+      "registered_at": "2026-02-15T09:33:39.150Z",
+      "calibration": {
+        "total_evaluations": 0,
+        "successful_outcomes": 0,
+        "calibration_accuracy": 0,
+        "last_calibrated_at": "2026-02-15T09:33:39.150Z",
+        "calibration_method": "automated"
+      }
+    },
+    {
+      "capability_id": "dependency-coordinator_code_analysis",
+      "capability_name": "Code Analysis",
+      "description": "Analyze and understand existing codebases",
+      "category": "code_review",
+      "proficiency_level": "advanced",
+      "confidence_level": 0.8,
+      "estimated_completion_time_ms": 180000,
+      "resource_requirements": [
+        {
+          "type": "cpu",
+          "minimum": 1,
+          "recommended": 2,
+          "maximum": 4,
+          "unit": "cores"
+        },
+        {
+          "type": "memory",
+          "minimum": 256,
+          "recommended": 512,
+          "maximum": 1024,
+          "unit": "MB"
+        }
+      ],
+      "tags": [
+        "analysis",
+        "research"
+      ],
+      "version": "1.0.0",
+      "registered_at": "2026-02-15T09:33:39.150Z",
+      "calibration": {
+        "total_evaluations": 0,
+        "successful_outcomes": 0,
+        "calibration_accuracy": 0,
+        "last_calibrated_at": "2026-02-15T09:33:39.150Z",
+        "calibration_method": "automated"
+      }
+    },
+    {
+      "capability_id": "dependency-coordinator_testing_and_validation",
+      "capability_name": "Testing and Validation",
+      "description": "Execute tests and validate implementations",
+      "category": "testing",
+      "proficiency_level": "advanced",
+      "confidence_level": 0.82,
+      "estimated_completion_time_ms": 240000,
+      "resource_requirements": [
+        {
+          "type": "cpu",
+          "minimum": 1,
+          "recommended": 2,
+          "maximum": 4,
+          "unit": "cores"
+        },
+        {
+          "type": "memory",
+          "minimum": 256,
+          "recommended": 512,
+          "maximum": 1024,
+          "unit": "MB"
+        }
+      ],
+      "tags": [
+        "testing",
+        "validation"
+      ],
+      "version": "1.0.0",
+      "registered_at": "2026-02-15T09:33:39.150Z",
+      "calibration": {
+        "total_evaluations": 0,
+        "successful_outcomes": 0,
+        "calibration_accuracy": 0,
+        "last_calibrated_at": "2026-02-15T09:33:39.150Z",
+        "calibration_method": "automated"
+      }
+    }
+  ],
+  "overall_confidence": 0.8424999999999999,
+  "specializations": [
+    "architecture",
+    "code_review",
+    "testing"
+  ],
+  "availability": "available",
+  "tlp_clearance": [
+    "CLEAR",
+    "GREEN"
+  ],
+  "created_at": "2026-02-15T09:33:39.150Z",
+  "updated_at": "2026-02-15T09:33:39.150Z",
+  "metadata": {
+    "tier": "workspace"
+  }
+}

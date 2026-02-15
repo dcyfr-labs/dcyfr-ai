@@ -496,6 +496,43 @@ export class TLPEnforcementEngine {
       throw new Error(`TLP Enforcement Violation: ${enforcement.reason}`);
     }
   }
+
+  /**
+   * Check if delegation is allowed based on TLP classifications
+   * Lightweight method for testing - returns boolean result
+   */
+  canDelegate(params: {
+    delegator_tlp: TLPLevel;
+    delegatee_tlp: TLPLevel;
+    task_tlp?: TLPLevel;
+    work_tlp?: TLPLevel;
+  }): { allowed: boolean; reason: string; violations?: string[] } {
+    const taskTLP = params.work_tlp || params.task_tlp || params.delegator_tlp;
+    
+    // TLP:CLEAR can delegate to anyone
+    if (taskTLP === 'TLP:CLEAR') {
+      return { allowed: true, reason: 'TLP:CLEAR allows all delegations' };
+    }
+    
+    // Check if delegatee has sufficient clearance
+    const delegateeTLP = params.delegatee_tlp;
+    const taskLevel = TLP_HIERARCHY[taskTLP];
+    const delegateeLevel = TLP_HIERARCHY[delegateeTLP];
+    
+    // Delegatee must have same or higher clearance
+    if (delegateeLevel >= taskLevel) {
+      return {
+        allowed: true,
+        reason: `Delegatee clearance ${delegateeTLP} sufficient for ${taskTLP} task`,
+      };
+    }
+    
+    return {
+      allowed: false,
+      reason: `Delegatee clearance ${delegateeTLP} insufficient for ${taskTLP} task`,
+      violations: [`TLP classification violation: ${taskTLP} work cannot be delegated to ${delegateeTLP} agent`],
+    };
+  }
 }
 
 // Export singleton instance for global use

@@ -1,0 +1,173 @@
+{
+  "agent_id": "cto-reviewer",
+  "agent_name": "cto-reviewer",
+  "agent_version": "1.0.0",
+  "manifest_version": "1.0.0",
+  "capabilities": [
+    {
+      "capability_id": "cto-reviewer_general_development",
+      "capability_name": "General Development",
+      "description": "\"CTO-level technical strategy, architecture decisions, and engineering excellence\"",
+      "category": "general",
+      "proficiency_level": "intermediate",
+      "confidence_level": 0.7,
+      "estimated_completion_time_ms": 450000,
+      "resource_requirements": [
+        {
+          "type": "cpu",
+          "minimum": 1,
+          "recommended": 2,
+          "maximum": 4,
+          "unit": "cores"
+        },
+        {
+          "type": "memory",
+          "minimum": 256,
+          "recommended": 512,
+          "maximum": 1024,
+          "unit": "MB"
+        }
+      ],
+      "tags": [
+        "general"
+      ],
+      "version": "1.0.0",
+      "registered_at": "2026-02-15T09:33:39.149Z",
+      "calibration": {
+        "total_evaluations": 0,
+        "successful_outcomes": 0,
+        "calibration_accuracy": 0,
+        "last_calibrated_at": "2026-02-15T09:33:39.149Z",
+        "calibration_method": "automated"
+      }
+    },
+    {
+      "capability_id": "cto-reviewer_code_analysis",
+      "capability_name": "Code Analysis",
+      "description": "Analyze and understand existing codebases",
+      "category": "code_review",
+      "proficiency_level": "advanced",
+      "confidence_level": 0.8,
+      "estimated_completion_time_ms": 180000,
+      "resource_requirements": [
+        {
+          "type": "cpu",
+          "minimum": 1,
+          "recommended": 2,
+          "maximum": 4,
+          "unit": "cores"
+        },
+        {
+          "type": "memory",
+          "minimum": 256,
+          "recommended": 512,
+          "maximum": 1024,
+          "unit": "MB"
+        }
+      ],
+      "tags": [
+        "analysis",
+        "research"
+      ],
+      "version": "1.0.0",
+      "registered_at": "2026-02-15T09:33:39.149Z",
+      "calibration": {
+        "total_evaluations": 0,
+        "successful_outcomes": 0,
+        "calibration_accuracy": 0,
+        "last_calibrated_at": "2026-02-15T09:33:39.149Z",
+        "calibration_method": "automated"
+      }
+    },
+    {
+      "capability_id": "cto-reviewer_code_modification",
+      "capability_name": "Code Modification",
+      "description": "Modify and update existing code",
+      "category": "code_generation",
+      "proficiency_level": "advanced",
+      "confidence_level": 0.78,
+      "estimated_completion_time_ms": 300000,
+      "resource_requirements": [
+        {
+          "type": "cpu",
+          "minimum": 1,
+          "recommended": 2,
+          "maximum": 4,
+          "unit": "cores"
+        },
+        {
+          "type": "memory",
+          "minimum": 256,
+          "recommended": 512,
+          "maximum": 1024,
+          "unit": "MB"
+        }
+      ],
+      "tags": [
+        "editing",
+        "implementation"
+      ],
+      "version": "1.0.0",
+      "registered_at": "2026-02-15T09:33:39.149Z",
+      "calibration": {
+        "total_evaluations": 0,
+        "successful_outcomes": 0,
+        "calibration_accuracy": 0,
+        "last_calibrated_at": "2026-02-15T09:33:39.149Z",
+        "calibration_method": "automated"
+      }
+    },
+    {
+      "capability_id": "cto-reviewer_testing_and_validation",
+      "capability_name": "Testing and Validation",
+      "description": "Execute tests and validate implementations",
+      "category": "testing",
+      "proficiency_level": "advanced",
+      "confidence_level": 0.82,
+      "estimated_completion_time_ms": 240000,
+      "resource_requirements": [
+        {
+          "type": "cpu",
+          "minimum": 1,
+          "recommended": 2,
+          "maximum": 4,
+          "unit": "cores"
+        },
+        {
+          "type": "memory",
+          "minimum": 256,
+          "recommended": 512,
+          "maximum": 1024,
+          "unit": "MB"
+        }
+      ],
+      "tags": [
+        "testing",
+        "validation"
+      ],
+      "version": "1.0.0",
+      "registered_at": "2026-02-15T09:33:39.149Z",
+      "calibration": {
+        "total_evaluations": 0,
+        "successful_outcomes": 0,
+        "calibration_accuracy": 0,
+        "last_calibrated_at": "2026-02-15T09:33:39.149Z",
+        "calibration_method": "automated"
+      }
+    }
+  ],
+  "overall_confidence": 0.775,
+  "specializations": [
+    "general",
+    "code_review",
+    "code_generation",
+    "testing"
+  ],
+  "availability": "available",
+  "tlp_clearance": [
+    "CLEAR"
+  ],
+  "created_at": "2026-02-15T09:33:39.149Z",
+  "updated_at": "2026-02-15T09:33:39.149Z",
+  "metadata": {}
+}

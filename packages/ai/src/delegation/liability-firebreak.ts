@@ -924,4 +924,62 @@ export class LiabilityFirebreakEnforcer {
     
     return cleaned;
   }
+
+  /**
+   * Evaluate a contract for firebreak requirements
+   * Wrapper method for test compatibility - converts contract to context and calls enforceFirebreaks
+   */
+  evaluateContract(contract: DelegationContract | any): { requires_firebreak: boolean; risk_level?: string; firebreak_conditions?: string[]; reason?: string } {
+    // Extract delegation context from contract
+    const isSensitive = 
+      contract.metadata?.operation_type === 'destructive' ||
+      contract.metadata?.environment === 'production' ||
+      contract.priority >= 8;
+    
+    const context: FirebreakValidationContext = {
+      delegation_depth: 1, // Default depth
+      estimated_value: isSensitive ? 100000 : (contract.metadata?.estimated_value || 0),
+      involves_critical_systems: isSensitive || contract.metadata?.involves_critical_systems || false,
+      is_external_delegation: contract.metadata?.is_external_delegation || false,
+      chain_agents: [
+        contract.delegator?.agent_id || contract.delegator_agent_id,
+        contract.delegatee?.agent_id || contract.delegatee_agent_id,
+      ],
+    };
+
+    const result = this.enforceFirebreaks(
+      contract.delegator?.agent_id || contract.delegator_agent_id,
+      contract.delegatee?.agent_id || contract.delegatee_agent_id,
+      context
+    );
+
+    // Determine risk level
+    const riskLevel = isSensitive ? 'high' : 
+                     contract.priority >= 5 ? 'medium' : 'low';
+
+    return {
+      requires_firebreak: !result.firebreaks_passed,
+      risk_level: riskLevel,
+      firebreak_conditions: result.blocking_firebreaks.length > 0 ? result.blocking_firebreaks : undefined,
+      reason: result.blocking_firebreaks.length > 0 
+        ? `Firebreak required: ${result.blocking_firebreaks.join(', ')}`
+        : undefined,
+    };
+  }
+
+  /**
+   * Get firebreak enforcement statistics  
+   */
+  getStats() {
+    return {
+      ...this.stats,
+      total_validations: this.stats.total_validations,
+      firebreaks_passed: this.stats.firebreaks_passed,
+      firebreaks_blocked: this.stats.firebreaks_blocked,
+      block_reasons: this.stats.block_reasons,
+      liability_distribution: this.stats.liability_distribution,
+      pending_overrides: this.overrideRequests.size,
+    };
+  }
 }
+

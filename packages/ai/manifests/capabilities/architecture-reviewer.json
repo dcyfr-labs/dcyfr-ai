@@ -1,0 +1,137 @@
+{
+  "agent_id": "architecture-reviewer",
+  "agent_name": "architecture-reviewer",
+  "agent_version": "1.0.0",
+  "manifest_version": "1.0.0",
+  "capabilities": [
+    {
+      "capability_id": "architecture-reviewer_general_development",
+      "capability_name": "General Development",
+      "description": "Architecture review, design pattern validation, and scalability assessment",
+      "category": "general",
+      "proficiency_level": "intermediate",
+      "confidence_level": 0.7,
+      "estimated_completion_time_ms": 450000,
+      "resource_requirements": [
+        {
+          "type": "cpu",
+          "minimum": 1,
+          "recommended": 2,
+          "maximum": 4,
+          "unit": "cores"
+        },
+        {
+          "type": "memory",
+          "minimum": 256,
+          "recommended": 512,
+          "maximum": 1024,
+          "unit": "MB"
+        }
+      ],
+      "tags": [
+        "general"
+      ],
+      "version": "1.0.0",
+      "registered_at": "2026-02-15T09:33:39.146Z",
+      "calibration": {
+        "total_evaluations": 0,
+        "successful_outcomes": 0,
+        "calibration_accuracy": 0,
+        "last_calibrated_at": "2026-02-15T09:33:39.146Z",
+        "calibration_method": "automated"
+      }
+    },
+    {
+      "capability_id": "architecture-reviewer_code_analysis",
+      "capability_name": "Code Analysis",
+      "description": "Analyze and understand existing codebases",
+      "category": "code_review",
+      "proficiency_level": "advanced",
+      "confidence_level": 0.8,
+      "estimated_completion_time_ms": 180000,
+      "resource_requirements": [
+        {
+          "type": "cpu",
+          "minimum": 1,
+          "recommended": 2,
+          "maximum": 4,
+          "unit": "cores"
+        },
+        {
+          "type": "memory",
+          "minimum": 256,
+          "recommended": 512,
+          "maximum": 1024,
+          "unit": "MB"
+        }
+      ],
+      "tags": [
+        "analysis",
+        "research"
+      ],
+      "version": "1.0.0",
+      "registered_at": "2026-02-15T09:33:39.146Z",
+      "calibration": {
+        "total_evaluations": 0,
+        "successful_outcomes": 0,
+        "calibration_accuracy": 0,
+        "last_calibrated_at": "2026-02-15T09:33:39.146Z",
+        "calibration_method": "automated"
+      }
+    },
+    {
+      "capability_id": "architecture-reviewer_code_modification",
+      "capability_name": "Code Modification",
+      "description": "Modify and update existing code",
+      "category": "code_generation",
+      "proficiency_level": "advanced",
+      "confidence_level": 0.78,
+      "estimated_completion_time_ms": 300000,
+      "resource_requirements": [
+        {
+          "type": "cpu",
+          "minimum": 1,
+          "recommended": 2,
+          "maximum": 4,
+          "unit": "cores"
+        },
+        {
+          "type": "memory",
+          "minimum": 256,
+          "recommended": 512,
+          "maximum": 1024,
+          "unit": "MB"
+        }
+      ],
+      "tags": [
+        "editing",
+        "implementation"
+      ],
+      "version": "1.0.0",
+      "registered_at": "2026-02-15T09:33:39.146Z",
+      "calibration": {
+        "total_evaluations": 0,
+        "successful_outcomes": 0,
+        "calibration_accuracy": 0,
+        "last_calibrated_at": "2026-02-15T09:33:39.146Z",
+        "calibration_method": "automated"
+      }
+    }
+  ],
+  "overall_confidence": 0.7600000000000001,
+  "specializations": [
+    "general",
+    "code_review",
+    "code_generation"
+  ],
+  "availability": "available",
+  "tlp_clearance": [
+    "CLEAR",
+    "GREEN"
+  ],
+  "created_at": "2026-02-15T09:33:39.146Z",
+  "updated_at": "2026-02-15T09:33:39.146Z",
+  "metadata": {
+    "tier": "workspace"
+  }
+}

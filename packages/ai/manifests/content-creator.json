@@ -1,0 +1,23 @@
+{
+  "agent_id": "content-creator",
+  "agent_name": "content-creator",
+  "capabilities": [],
+  "overall_confidence": 0,
+  "availability": "available",
+  "current_workload": 0,
+  "max_concurrent_tasks": 1,
+  "specializations": [
+    "Content Creation"
+  ],
+  "preferred_task_types": [],
+  "avoided_task_types": [
+    "Technical Implementation",
+    "Code Review"
+  ],
+  "reputation_score": 70,
+  "total_completions": 0,
+  "avg_completion_time_ms": 0,
+  "metadata": {},
+  "created_at": "2026-02-15T05:58:51.295Z",
+  "updated_at": "2026-02-15T05:58:51.295Z"
+}

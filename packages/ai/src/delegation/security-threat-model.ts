@@ -138,6 +138,8 @@ export class SecurityThreatValidator {
       this.detectAbusePatterns(contract),
       this.detectAnomalies(contract),
       this.detectContextInsufficiency(contract),
+      this.detectPromptInjection(contract),
+      this.detectResourceExhaustion(contract),
     ]);
     
     // Find the most appropriate threat to report based on severity and threat type priority
@@ -166,8 +168,10 @@ export class SecurityThreatValidator {
     
     // Threat type priority (higher number = higher priority to report)
     const threatPriority = {
+      'prompt_injection': 6,     // Highest - direct security attack
       'permission_escalation': 5, // Highest priority - critical security issue
-      'context_insufficiency': 4, // High priority - prevents dead-end implementations
+      'resource_exhaustion': 4,   // High - DoS attacks
+      'context_insufficiency': 3, // Medium - prevents dead-end implementations
       'abuse_pattern': 3,         // High priority - system abuse
       'anomaly': 2,              // Medium priority - unusual behavior  
       'reputation_gaming': 1,     // Lower priority - unless severe
@@ -697,5 +701,180 @@ export class SecurityThreatValidator {
       .filter(threat => threat.threat_detected)
       .slice(-limit)
       .reverse();
+  }
+
+  /**
+   * Validate delegation request for security threats
+   * Simplified method for integration tests - creates a minimal contract for validation
+   */
+  async validateDelegationRequest(request: {
+    task_description: string;
+    delegatee_agent_id: string;
+    delegator_agent_id?: string;
+    required_capabilities?: string[];
+    capabilities_required?: string[];
+    timeout_ms?: number;
+    metadata?: Record<string, unknown>;
+  }): Promise<{ is_safe: boolean; threats_detected: number; threat_types: string[] }> {
+    // Create a minimal contract for validation
+    const contract: DelegationContract = {
+      contract_id: `validation_${Date.now()}`,
+      task_id: 'validation_task',
+      delegator: {
+        agent_id: request.delegator_agent_id || 'system',
+        agent_name: 'System',
+      },
+      delegatee: {
+        agent_id: request.delegatee_agent_id,
+        agent_name: request.delegatee_agent_id,
+      },
+      required_capabilities: request.capabilities_required || request.required_capabilities || [],
+      task_description: request.task_description,
+      verification_policy: 'direct_inspection',
+      success_criteria: {},
+      priority: 5,
+      timeout_ms: request.timeout_ms || 300000,
+      status: 'pending',
+      created_at: new Date().toISOString(),
+      metadata: request.metadata,
+    };
+
+    // Run validation
+    const threat = await this.validateDelegationSecurity(contract);
+    
+    return {
+      is_safe: !threat.threat_detected || threat.action === 'allow' || threat.action === 'warn',
+      threats_detected: threat.threat_detected ? 1 : 0,
+      threat_types: threat.threat_detected ? [threat.threat_type] : [],
+    };
+  }
+
+  /**
+   * Detect prompt injection attempts in task descriptions
+   */
+  private async detectPromptInjection(contract: DelegationContract): Promise<ThreatDetectionResult> {
+    const taskDescription = contract.task_description?.toLowerCase() || '';
+    
+    // Prompt injection patterns
+    const injectionPatterns = [
+      'ignore previous instructions',
+      'ignore all previous',
+      'rm -rf',
+      'expose api keys',
+      'expose secrets',
+      'delete all',
+      'system prompt',
+      'override instructions',
+      'bypass restrictions',
+      'execute system',
+      'admin privileges',
+      'root access'
+    ];
+
+    const detectedPatterns = injectionPatterns.filter(pattern => 
+      taskDescription.includes(pattern)
+    );
+
+    if (detectedPatterns.length > 0) {
+      return {
+        threat_detected: true,
+        threat_type: 'prompt_injection',
+        severity: 'high',
+        description: `Prompt injection patterns detected: ${detectedPatterns.join(', ')}`,
+        action: 'block',
+        confidence: 0.95,
+        evidence: {
+          metrics: { pattern_count: detectedPatterns.length },
+          related_entities: [contract.delegator.agent_id, contract.delegatee.agent_id],
+          activity_timeline: [{
+            timestamp: new Date().toISOString(),
+            event: 'prompt_injection_detected',
+            details: { patterns: detectedPatterns, contract_id: contract.contract_id }
+          }]
+        }
+      };
+    }
+
+    return { threat_detected: false, threat_type: 'prompt_injection', severity: 'none' };
+  }
+
+  /**
+   * Detect resource exhaustion attempts
+   */
+  private async detectResourceExhaustion(contract: DelegationContract): Promise<ThreatDetectionResult> {
+    let riskScore = 0;
+    const indicators: string[] = [];
+
+    // Check timeout values
+    if (contract.timeout_ms > 600000) { // > 10 minutes
+      riskScore += 0.3;
+      indicators.push(`Excessive timeout: ${contract.timeout_ms}ms`);
+    }
+
+    if (contract.timeout_ms > 1800000) { // > 30 minutes
+      riskScore += 0.4; // Additional penalty
+      indicators.push('Extremely high timeout value');
+    }
+
+    // Check metadata for resource indicators
+    if (contract.metadata) {
+      if (contract.metadata.iterations && typeof contract.metadata.iterations === 'number') {
+        if (contract.metadata.iterations > 10000000) { // > 10M iterations
+          riskScore += 0.5;
+          indicators.push(`Excessive iterations: ${contract.metadata.iterations}`);
+        }
+      }
+
+      if (contract.metadata.max_memory && typeof contract.metadata.max_memory === 'number') {
+        if (contract.metadata.max_memory > 1000000000) { // > 1GB
+          riskScore += 0.3;
+          indicators.push(`Excessive memory: ${contract.metadata.max_memory} bytes`);
+        }
+      }
+    }
+
+    // Check task description for resource exhaustion patterns
+    const taskDescription = contract.task_description?.toLowerCase() || '';
+    const exhaustionPatterns = [
+      'infinite loop',
+      'recursive calls',
+      'unlimited',
+      'maximum resources',
+      'all available memory',
+      'exhaust',
+      'ddos',
+      'flood'
+    ];
+
+    const detectedPatterns = exhaustionPatterns.filter(pattern => 
+      taskDescription.includes(pattern)
+    );
+
+    if (detectedPatterns.length > 0) {
+      riskScore += detectedPatterns.length * 0.2;
+      indicators.push(...detectedPatterns.map(p => `Resource exhaustion pattern: ${p}`));
+    }
+
+    if (riskScore > 0.4) {
+      return {
+        threat_detected: true,
+        threat_type: 'resource_exhaustion',
+        severity: riskScore > 0.7 ? 'high' : 'medium',
+        description: `Resource exhaustion risk detected (score: ${riskScore.toFixed(2)})`,
+        action: riskScore > 0.7 ? 'block' : 'warn',
+        confidence: Math.min(riskScore, 0.9),
+        evidence: {
+          metrics: { risk_score: riskScore, indicator_count: indicators.length },
+          related_entities: [contract.delegator.agent_id, contract.delegatee.agent_id],
+          activity_timeline: [{
+            timestamp: new Date().toISOString(),
+            event: 'resource_exhaustion_analysis',
+            details: { indicators, contract_id: contract.contract_id }
+          }]
+        }
+      };
+    }
+
+    return { threat_detected: false, threat_type: 'resource_exhaustion', severity: 'none' };
   }
 }

@@ -1,0 +1,138 @@
+{
+  "generated_at": "2026-02-15T09:33:39.153Z",
+  "total_agents": 22,
+  "manifests": [
+    {
+      "agent_id": "dcyfr-workspace",
+      "agent_name": "DCYFR-WORKSPACE",
+      "capabilities_count": 5,
+      "overall_confidence": 0.8300000000000001
+    },
+    {
+      "agent_id": "architecture-reviewer",
+      "agent_name": "architecture-reviewer",
+      "capabilities_count": 3,
+      "overall_confidence": 0.7600000000000001
+    },
+    {
+      "agent_id": "cbo-reviewer",
+      "agent_name": "cbo-reviewer",
+      "capabilities_count": 2,
+      "overall_confidence": 0.75
+    },
+    {
+      "agent_id": "cco-reviewer",
+      "agent_name": "cco-reviewer",
+      "capabilities_count": 2,
+      "overall_confidence": 0.75
+    },
+    {
+      "agent_id": "ceo-reviewer",
+      "agent_name": "ceo-reviewer",
+      "capabilities_count": 2,
+      "overall_confidence": 0.75
+    },
+    {
+      "agent_id": "ciso-reviewer",
+      "agent_name": "ciso-reviewer",
+      "capabilities_count": 2,
+      "overall_confidence": 0.75
+    },
+    {
+      "agent_id": "clo-reviewer",
+      "agent_name": "clo-reviewer",
+      "capabilities_count": 2,
+      "overall_confidence": 0.75
+    },
+    {
+      "agent_id": "cmo-reviewer",
+      "agent_name": "cmo-reviewer",
+      "capabilities_count": 2,
+      "overall_confidence": 0.75
+    },
+    {
+      "agent_id": "cro-reviewer",
+      "agent_name": "cro-reviewer",
+      "capabilities_count": 2,
+      "overall_confidence": 0.75
+    },
+    {
+      "agent_id": "cto-reviewer",
+      "agent_name": "cto-reviewer",
+      "capabilities_count": 4,
+      "overall_confidence": 0.775
+    },
+    {
+      "agent_id": "database-architect",
+      "agent_name": "database-architect",
+      "capabilities_count": 4,
+      "overall_confidence": 0.775
+    },
+    {
+      "agent_id": "dependency-coordinator",
+      "agent_name": "dependency-coordinator",
+      "capabilities_count": 4,
+      "overall_confidence": 0.8424999999999999
+    },
+    {
+      "agent_id": "devops-engineer",
+      "agent_name": "devops-engineer",
+      "capabilities_count": 4,
+      "overall_confidence": 0.775
+    },
+    {
+      "agent_id": "documentation-expert",
+      "agent_name": "documentation-expert",
+      "capabilities_count": 3,
+      "overall_confidence": 0.7600000000000001
+    },
+    {
+      "agent_id": "fullstack-developer",
+      "agent_name": "fullstack-developer",
+      "capabilities_count": 4,
+      "overall_confidence": 0.775
+    },
+    {
+      "agent_id": "performance-profiler",
+      "agent_name": "performance-profiler",
+      "capabilities_count": 4,
+      "overall_confidence": 0.775
+    },
+    {
+      "agent_id": "quick-fix",
+      "agent_name": "quick-fix",
+      "capabilities_count": 4,
+      "overall_confidence": 0.775
+    },
+    {
+      "agent_id": "security-engineer",
+      "agent_name": "security-engineer",
+      "capabilities_count": 4,
+      "overall_confidence": 0.775
+    },
+    {
+      "agent_id": "test-engineer",
+      "agent_name": "test-engineer",
+      "capabilities_count": 4,
+      "overall_confidence": 0.775
+    },
+    {
+      "agent_id": "typescript-pro",
+      "agent_name": "typescript-pro",
+      "capabilities_count": 3,
+      "overall_confidence": 0.7600000000000001
+    },
+    {
+      "agent_id": "workspace-orchestrator",
+      "agent_name": "workspace-orchestrator",
+      "capabilities_count": 4,
+      "overall_confidence": 0.8424999999999999
+    },
+    {
+      "agent_id": "worktree-coordinator",
+      "agent_name": "worktree-coordinator",
+      "capabilities_count": 4,
+      "overall_confidence": 0.8124999999999999
+    }
+  ]
+}

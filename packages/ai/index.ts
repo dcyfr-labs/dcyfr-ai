@@ -280,5 +280,44 @@ export type {
   ReputationDimension,
 } from './reputation/reputation-engine';
 
+// Capability system exports
+export {
+  CapabilityRegistry,
+  defaultCapabilityRegistry,
+  createCapabilityRegistry,
+} from './src/capability-registry';
+
+export {
+  generateCapabilityManifest,
+  generateDcyfrCapabilityManifests,
+  validateCapabilityManifest,
+} from './src/capability-manifest-generator';
+
+export {
+  CapabilityBootstrap,
+  AgentAnalyzer,
+  CapabilityDetector,
+  ConfidenceInitializer,
+  defaultBootstrap,
+  bootstrapAgent,
+  bootstrapAgents,
+} from './src/capability-bootstrap';
+
+export type {
+  AgentCapabilityManifest,
+  AgentCapability,
+  ResourceRequirements,
+  TaskCapabilityMatch,
+  CapabilityQuery,
+  ICapabilityRegistry,
+} from './src/types/agent-capabilities';
+
+export type {
+  AgentSource,
+  CapabilityDetectionConfig,
+  ConfidenceInitConfig,
+  BootstrapResult,
+} from './src/capability-bootstrap';
+
 // Version
 export const VERSION = '1.0.0';

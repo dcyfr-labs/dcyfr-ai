@@ -120,7 +120,7 @@ export class DelegationChainTracker {
     return {
       chain_id: `chain-${contractId}`,
       contracts: chain,
-      depth: chain.length - 1,
+      depth: chain.length,
       has_loops: hasLoops,
       firebreak_contracts: firebreakContracts,
       created_at: new Date().toISOString(),
@@ -221,24 +221,28 @@ export class DelegationChainTracker {
    */
   private async findLoops(contracts: DelegationContract[]): Promise<ChainLoop[]> {
     const loops: ChainLoop[] = [];
-    const seen = new Map<string, number>(); // contract_id -> index
+    const agentsSeen = new Map<string, number>(); // agent_id -> first occurrence index
     
     for (let i = 0; i < contracts.length; i++) {
       const contract = contracts[i];
+      const delegatee = contract.delegatee.agent_id;
       
-      if (seen.has(contract.contract_id)) {
-        // Loop detected
-        const loopStart = seen.get(contract.contract_id)!;
+      // Check if this delegatee has already appeared as a delegator or delegatee earlier in the chain
+      if (agentsSeen.has(delegatee)) {
+        // Loop detected - agent is reappearing
+        const loopStart = agentsSeen.get(delegatee)!;
         const loopContracts = contracts.slice(loopStart, i + 1).map(c => c.contract_id);
         
         loops.push({
           contracts: loopContracts,
-          entry_contract_id: contract.contract_id,
-          description: `Loop of length ${loopContracts.length} starting at contract ${contract.contract_id}`,
+          entry_contract_id: contracts[loopStart].contract_id,
+          description: `Agent loop detected: ${delegatee} reappears in delegation chain`,
         });
       }
       
-      seen.set(contract.contract_id, i);
+      // Track both delegator and delegatee
+      agentsSeen.set(contract.delegator.agent_id, i);
+      agentsSeen.set(delegatee, i);
     }
     
     return loops;

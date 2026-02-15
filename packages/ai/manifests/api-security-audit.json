@@ -1,0 +1,20 @@
+{
+  "agent_id": "api-security-audit",
+  "agent_name": "api-security-audit",
+  "capabilities": [],
+  "overall_confidence": 0,
+  "availability": "available",
+  "current_workload": 0,
+  "max_concurrent_tasks": 1,
+  "specializations": [
+    "Security"
+  ],
+  "preferred_task_types": [],
+  "avoided_task_types": [],
+  "reputation_score": 70,
+  "total_completions": 0,
+  "avg_completion_time_ms": 0,
+  "metadata": {},
+  "created_at": "2026-02-15T05:58:51.293Z",
+  "updated_at": "2026-02-15T05:58:51.293Z"
+}

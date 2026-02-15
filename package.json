@@ -21,7 +21,7 @@
     "dcyfr": "./dist/ai/cli/telemetry-dashboard.js"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && node scripts/fix-esm-imports.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
