@@ -19,6 +19,8 @@ import type {
 import { TLPEnforcementEngine } from '../src/delegation/tlp-enforcement.js';
 import { SecurityThreatValidator } from '../src/delegation/security-threat-model.js';
 import type { ThreatDetectionResult } from '../src/delegation/security-threat-model.js';
+import { LiabilityFirebreakEnforcer } from '../src/delegation/liability-firebreak.js';
+import type { FirebreakResult, OverrideRequest } from '../src/delegation/liability-firebreak.js';
 
 /**
  * Contract manager configuration
@@ -111,6 +113,7 @@ export class ContractManager extends EventEmitter {
   private config: Required<ContractManagerConfig>;
   private tlpEnforcement: TLPEnforcementEngine;
   private threatValidator: SecurityThreatValidator;
+  private firebreakEnforcer: LiabilityFirebreakEnforcer;
   
   constructor(config: ContractManagerConfig = {}) {
     super();
@@ -133,6 +136,28 @@ export class ContractManager extends EventEmitter {
       reputation_gaming_threshold: 0.1,
       anomaly_detection_window_hours: 24,
       permission_escalation_detection: true,
+    });
+    
+    // Initialize liability firebreak enforcer
+    this.firebreakEnforcer = new LiabilityFirebreakEnforcer({
+      depth_thresholds: {
+        supervisor: 3,
+        manager: 5,
+        executive: 7,
+      },
+      liability_thresholds: {
+        high_value_limit: 100000,
+        critical_system_approval: true,
+        external_delegation_approval: true,
+      },
+      emergency_procedures: {
+        max_emergency_depth: 10,
+        emergency_contacts: [
+          { authority: 'supervisor', contact_id: 'supervisor@dcyfr.ai', response_time_sla_minutes: 30 },
+          { authority: 'manager', contact_id: 'manager@dcyfr.ai', response_time_sla_minutes: 60 },
+          { authority: 'executive', contact_id: 'executive@dcyfr.ai', response_time_sla_minutes: 120 },
+        ],
+      },
     });
     
     this.contracts = new Map();
@@ -578,6 +603,51 @@ export class ContractManager extends EventEmitter {
         timestamp: new Date().toISOString()
       });
     }
+    
+    // Liability Firebreak Enforcement (Task 6.3)
+    const firebreakResult = this.firebreakEnforcer.enforceFirebreaks(
+      contract.delegator.agent_id,
+      contract.delegatee.agent_id, 
+      {
+        delegation_depth: contract.metadata?.delegation_depth || 1,
+        estimated_value: contract.metadata?.estimated_value || 0, 
+        involves_critical_systems: contract.metadata?.involves_critical_systems || false,
+        is_external_delegation: contract.metadata?.is_external_delegation || false,
+        chain_agents: contract.metadata?.chain_agents || [contract.delegator.agent_id, contract.delegatee.agent_id],
+      }
+    );
+    
+    if (!firebreakResult.firebreaks_passed) {
+      // Emit firebreak violation event for monitoring  
+      this.emit('firebreak_violation', {
+        contract_id: contract.contract_id,
+        delegator: contract.delegator.agent_id,
+        delegatee: contract.delegatee.agent_id,
+        blocking_firebreaks: firebreakResult.blocking_firebreaks,
+        liability_level: firebreakResult.liability_level,
+        manual_override_available: firebreakResult.manual_override_available,
+        required_authority: firebreakResult.required_authority,
+        timestamp: new Date().toISOString()
+      });
+      
+      throw new Error(
+        `Liability firebreak violation: ${firebreakResult.blocking_firebreaks.join(', ')}. ` +
+        `Liability level: ${firebreakResult.liability_level}. ` +
+        `Manual override available: ${firebreakResult.manual_override_available} ` +
+        `(Required authority: ${firebreakResult.required_authority})`
+      );
+    }
+    
+    // Log successful firebreak validation
+    this.emit('firebreak_validation', {
+      contract_id: contract.contract_id,  
+      delegator: contract.delegator.agent_id,
+      delegatee: contract.delegatee.agent_id,
+      liability_level: firebreakResult.liability_level,
+      chain_length: firebreakResult.chain_length,
+      timestamp: new Date().toISOString()
+    });
+    }
   }
   
   /**
@@ -703,6 +773,98 @@ export class ContractManager extends EventEmitter {
     }
     
     return recommendations;
+  }
+  
+  /**
+   * Request manual override for a blocked contract due to firebreak violations
+   */
+  async requestFirebreakOverride(overrideRequest: OverrideRequest): Promise<any> {
+    const overrideResult = await this.firebreakEnforcer.requestOverride(overrideRequest);
+    
+    // Emit override request event for monitoring
+    this.emit('firebreak_override_requested', {
+      override_id: overrideResult.override_id,
+      requesting_agent: overrideRequest.requesting_agent,
+      required_authority: overrideRequest.authority_level,
+      reason: overrideRequest.reason,
+      timestamp: new Date().toISOString()
+    });
+    
+    return overrideResult;
+  }
+  
+  /**
+   * Process emergency escalation for critical delegation chains
+   */
+  async processEmergencyEscalation(escalationData: any): Promise<any> {
+    const escalationResult = await this.firebreakEnforcer.processEmergencyEscalation(escalationData);
+    
+    // Emit emergency escalation event for monitoring
+    this.emit('emergency_escalation', {
+      escalation_id: escalationResult.escalation_id,
+      agent_id: escalationData.agent_id,
+      emergency_level: escalationData.emergency_level,
+      bypass_granted: escalationResult.bypass_granted,
+      timestamp: new Date().toISOString()
+    });
+    
+    return escalationResult;
+  }
+  
+  /**
+   * Get firebreak enforcement statistics
+   */
+  getFirebreakStats(): any {
+    return this.firebreakEnforcer.getStats();
+  }
+  
+  /**
+   * Get pending override requests
+   */
+  getPendingOverrides(): any[] {
+    return this.firebreakEnforcer.getPendingOverrides();
+  }
+  
+  /**
+   * Get comprehensive security status including TLP, threats, and firebreaks
+   */
+  getComprehensiveSecurityStatus() {
+    const threatStats = this.threatValidator.getThreatStatistics();
+    const recentThreats = this.threatValidator.getRecentThreats(5);
+    const firebreakStats = this.firebreakEnforcer.getStats();
+    
+    return {
+      tlp_enforcement_enabled: this.config.enable_tlp_enforcement,
+      security_threat_validation_enabled: true,
+      liability_firebreak_enforcement_enabled: true,
+      contract_security_summary: {
+        total_contracts: this.contracts.size,
+        security_validations_performed: threatStats.total_validations,
+        threats_detected: threatStats.threats_detected,
+        firebreaks_blocked: firebreakStats.firebreaks_blocked || 0,
+        manual_overrides_pending: firebreakStats.pending_overrides || 0,
+        emergency_escalations: firebreakStats.emergency_escalations || 0,
+        threat_detection_rate: threatStats.total_validations > 0 
+          ? (threatStats.threats_detected / threatStats.total_validations * 100).toFixed(1) + '%'
+          : '0%',
+        firebreak_block_rate: firebreakStats.total_validations > 0
+          ? ((firebreakStats.firebreaks_blocked || 0) / firebreakStats.total_validations * 100).toFixed(1) + '%'
+          : '0%',
+        threat_types: threatStats.threat_types,
+        severity_distribution: threatStats.severity_distribution,
+        action_distribution: threatStats.action_distribution,
+        liability_distribution: firebreakStats.liability_distribution || {},
+      },
+      recent_security_events: recentThreats.map(threat => ({
+        threat_type: threat.threat_type,
+        severity: threat.severity,
+        action: threat.action,
+        confidence: threat.confidence,
+        description: threat.description.substring(0, 100) + (threat.description.length > 100 ? '...' : ''),
+      })),
+      pending_overrides: this.getPendingOverrides(),
+      security_recommendations: this.generateSecurityRecommendations(threatStats, recentThreats),
+    };
   }
 }
 
