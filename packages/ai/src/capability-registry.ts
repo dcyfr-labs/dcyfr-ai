@@ -131,7 +131,7 @@ export class CapabilityRegistry extends EventEmitter implements ICapabilityRegis
           agent_id: agentId,
           agent_name: manifest.agent_name,
           capability,
-          match_score: this.calculateMatchScore(capability, query, manifest),
+          match_score: this.calculateCapabilityScore(capability, query, manifest),
           match_reasons: this.generateMatchReasons(capability, query),
           estimated_completion_time_ms: capability.completion_time_estimate_ms,
           availability: manifest.availability || 'available',
@@ -316,7 +316,7 @@ export class CapabilityRegistry extends EventEmitter implements ICapabilityRegis
     return true;
   }
 
-  private calculateMatchScore(capability: AgentCapability, query: CapabilityQuery, manifest: AgentCapabilityManifest): number {
+  private calculateCapabilityScore(capability: AgentCapability, query: CapabilityQuery, manifest: AgentCapabilityManifest): number {
     let score = capability.confidence_level;
 
     // Bonus for success rate
@@ -437,12 +437,26 @@ export class CapabilityRegistry extends EventEmitter implements ICapabilityRegis
   findByCapability(
     capabilityId: string,
     options: { minConfidence?: number } = {}
-  ): TaskCapabilityMatch[] {
-    return this.queryCapabilities({
-      required_capabilities: [capabilityId],
-      min_confidence: options.minConfidence,
-      only_available: true,
-    });
+  ): AgentCapabilityManifest[] {
+    const results: AgentCapabilityManifest[] = [];
+
+    for (const manifest of this.manifests.values()) {
+      const hasCapability = manifest.capabilities.some(cap => {
+        const capName = cap.capability_id || (cap as any).capability;
+        const confidence = cap.confidence_level || (cap as any).confidence || 0;
+        
+        if (capName !== capabilityId) return false;
+        if (options?.minConfidence && confidence < options.minConfidence) return false;
+        
+        return true;
+      });
+
+      if (hasCapability) {
+        results.push(manifest);
+      }
+    }
+
+    return results;
   }
 
   /**
@@ -462,38 +476,157 @@ export class CapabilityRegistry extends EventEmitter implements ICapabilityRegis
   /**
    * Rank agents by multiple capabilities (convenience wrapper for queryCapabilities)
    */
-  async rankAgents(
+  rankAgents(
     requiredCapabilities: string[],
     options: { confidenceWeight?: number; considerWorkload?: boolean } = {}
-  ): Promise<TaskCapabilityMatch[]> {
-    return this.queryCapabilities({
-      required_capabilities: requiredCapabilities,
-      only_available: true,
+  ): AgentCapabilityManifest[] {
+    const results: AgentCapabilityManifest[] = [];
+
+    for (const manifest of this.manifests.values()) {
+      const score = this.calculateMatchScore(manifest.agent_id, requiredCapabilities);
+      if (score > 0) {
+        results.push(manifest);
+      }
+    }
+
+    // Sort by calculated score (higher is better)
+    results.sort((a, b) => {
+      const scoreA = this.calculateMatchScore(a.agent_id, requiredCapabilities);
+      const scoreB = this.calculateMatchScore(b.agent_id, requiredCapabilities);
+      
+      if (options?.considerWorkload) {
+        const workloadA = a.current_workload || 0;
+        const workloadB = b.current_workload || 0;
+        // Prefer agents with lower workload
+        return (scoreB - workloadB * 0.1) - (scoreA - workloadA * 0.1);
+      }
+      
+      return scoreB - scoreA;
     });
+
+    return results;
   }
 
   /**
    * Increment agent workload (convenience wrapper for updateWorkload)
    */
-  async incrementWorkload(agentId: string): Promise<void> {
+  incrementWorkload(agentId: string): void {
     const manifest = this.manifests.get(agentId);
-    if (!manifest) {
-      throw new Error(`Agent manifest not found: ${agentId}`);
-    }
-    const currentWorkload = (manifest.current_workload || 0) + 1;
-    await this.updateWorkload(agentId, currentWorkload);
+    if (!manifest) return;
+
+    manifest.current_workload = (manifest.current_workload || 0) + 1;
+    manifest.updated_at = new Date().toISOString();
+
+    this.emit('workload_updated', { agentId, workload: manifest.current_workload });
   }
 
   /**
    * Decrement agent workload (convenience wrapper for updateWorkload)
    */
-  async decrementWorkload(agentId: string): Promise<void> {
+  decrementWorkload(agentId: string): void {
     const manifest = this.manifests.get(agentId);
-    if (!manifest) {
-      throw new Error(`Agent manifest not found: ${agentId}`);
+    if (!manifest) return;
+
+    manifest.current_workload = Math.max(0, (manifest.current_workload || 0) - 1);
+    manifest.updated_at = new Date().toISOString();
+
+    this.emit('workload_updated', { agentId, workload: manifest.current_workload });
+  }
+
+  /**
+   * Get current workload for an agent
+   */
+  getWorkload(agentId: string): number {
+    const manifest = this.manifests.get(agentId);
+    return manifest?.current_workload || 0;
+  }
+
+  /**
+   * Update confidence for a specific capability
+   */
+  updateConfidence(agentId: string, capability: string, newConfidence: number): boolean {
+    if (newConfidence < 0 || newConfidence > 1) {
+      throw new Error('Confidence must be between 0 and 1');
     }
-    const currentWorkload = Math.max(0, (manifest.current_workload || 0) - 1);
-    await this.updateWorkload(agentId, currentWorkload);
+
+    const manifest = this.manifests.get(agentId);
+    if (!manifest) return false;
+
+    const capabilityEntry = manifest.capabilities.find(cap => {
+      const capName = cap.capability_id || (cap as any).capability;
+      return capName === capability;
+    });
+
+    if (!capabilityEntry) return false;
+
+    // Update confidence
+    if ('confidence_level' in capabilityEntry) {
+      capabilityEntry.confidence_level = newConfidence;
+    } else {
+      (capabilityEntry as any).confidence = newConfidence;
+    }
+
+    // Recalculate overall confidence
+    manifest.overall_confidence = this.calculateOverallConfidence(manifest.capabilities);
+    manifest.updated_at = new Date().toISOString();
+
+    this.emit('confidence_updated', { agentId, capability, newConfidence });
+    return true;
+  }
+
+  /**
+   * Update overall confidence for an agent
+   */
+  updateOverallConfidence(agentId: string, newConfidence: number): boolean {
+    if (newConfidence < 0 || newConfidence > 1) {
+      throw new Error('Confidence must be between 0 and 1');
+    }
+
+    const manifest = this.manifests.get(agentId);
+    if (!manifest) return false;
+
+    manifest.overall_confidence = newConfidence;
+    manifest.updated_at = new Date().toISOString();
+
+    this.emit('overall_confidence_updated', { agentId, newConfidence });
+    return true;
+  }
+
+  /**
+   * Calculate match score for an agent given required capabilities (public method for tests)
+   */
+  calculateAgentMatchScore(agentId: string, requiredCapabilities: string[]): number {
+    const manifest = this.manifests.get(agentId);
+    if (!manifest) return 0;
+
+    let totalScore = 0;
+    let matchedCount = 0;
+
+    for (const reqCap of requiredCapabilities) {
+      const capability = manifest.capabilities.find(cap => {
+        const capName = cap.capability_id || (cap as any).capability;
+        return capName === reqCap;
+      });
+
+      if (capability) {
+        const confidence = capability.confidence_level || (capability as any).confidence || 0;
+        totalScore += confidence;
+        matchedCount++;
+      }
+    }
+
+    // Return average confidence for matched capabilities, penalize for missing capabilities
+    const matchRatio = matchedCount / requiredCapabilities.length;
+    const avgConfidence = matchedCount > 0 ? totalScore / matchedCount : 0;
+    
+    return avgConfidence * matchRatio;
+  }
+
+  /**
+   * Calculate match score (alias for backward compatibility)
+   */
+  calculateMatchScore(agentId: string, requiredCapabilities: string[]): number {
+    return this.calculateAgentMatchScore(agentId, requiredCapabilities);
   }
 }
 

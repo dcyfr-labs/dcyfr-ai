@@ -538,15 +538,24 @@ export class CapabilityBootstrap {
         0, // No successful completions yet
       );
       
+      // Ensure confidence is always a valid number
+      const validConfidence = isNaN(initializedConfidence) ? 0.5 : 
+                             Math.max(0, Math.min(1, initializedConfidence));
+      
       return {
         ...capability,
-        confidence_level: initializedConfidence,
+        confidence_level: validConfidence,
       };
     });
     
-    // Step 5: Calculate overall confidence
-    const avgConfidence = manifest.capabilities.reduce((sum, c) => sum + c.confidence_level, 0) / 
-                          (manifest.capabilities.length || 1);
+    // Step 5: Calculate overall confidence with NaN protection
+    const validCapabilities = manifest.capabilities.filter(c => 
+      c.confidence_level !== undefined && !isNaN(c.confidence_level));
+    
+    const avgConfidence = validCapabilities.length > 0 ? 
+      validCapabilities.reduce((sum, c) => sum + c.confidence_level, 0) / validCapabilities.length : 
+      0.5; // Default confidence when no valid capabilities
+      
     manifest.overall_confidence = avgConfidence;
     
     // Step 6: Generate warnings and suggestions
