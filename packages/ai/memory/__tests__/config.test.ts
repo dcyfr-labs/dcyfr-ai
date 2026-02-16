@@ -67,6 +67,7 @@ describe('Memory Configuration', () => {
     it('loads LLM configuration from env vars', () => {
       process.env.LLM_PROVIDER = 'openai';
       process.env.OPENAI_API_KEY = 'sk-test-key';
+      process.env.OPENAI_API_BASE = 'http://localhost:8317/v1';
       process.env.LLM_MODEL = 'gpt-4-turbo';
       process.env.LLM_EMBEDDING_MODEL = 'text-embedding-3-large';
 
@@ -74,8 +75,24 @@ describe('Memory Configuration', () => {
 
       expect(config.llm.provider).toBe('openai');
       expect(config.llm.apiKey).toBe('sk-test-key');
+      expect(config.llm.baseURL).toBe('http://localhost:8317/v1');
       expect(config.llm.model).toBe('gpt-4-turbo');
       expect(config.llm.embeddingModel).toBe('text-embedding-3-large');
+    });
+
+    it('supports explicit embedder provider override', () => {
+      process.env.LLM_PROVIDER = 'anthropic';
+      process.env.ANTHROPIC_API_KEY = 'sk-ant-test';
+      process.env.LLM_EMBEDDING_PROVIDER = 'ollama';
+      process.env.LLM_EMBEDDING_BASE_URL = 'http://localhost:11434';
+      process.env.LLM_EMBEDDING_MODEL = 'nomic-embed-text';
+
+      const config = loadMemoryConfig();
+
+      expect(config.llm.provider).toBe('anthropic');
+      expect(config.llm.embeddingProvider).toBe('ollama');
+      expect(config.llm.embeddingBaseURL).toBe('http://localhost:11434');
+      expect(config.llm.embeddingModel).toBe('nomic-embed-text');
     });
 
     it('loads caching configuration from env vars', () => {
@@ -286,6 +303,7 @@ describe('Memory Configuration', () => {
         llm: {
           provider: 'anthropic',
           apiKey: 'sk-ant-test',
+          embeddingProvider: 'ollama',
           embeddingModel: 'text-embedding-3-small',
         },
       };

@@ -548,8 +548,13 @@ export class LiabilityFirebreakEnforcer {
     }
 
     // Check for external delegation
-    if (this.config.liability_thresholds.external_delegation_approval && 
-        contract.delegatee_agent_id.includes('external') || contract.delegatee_agent_id.includes('third-party')) {
+    if (
+      this.config.liability_thresholds.external_delegation_approval &&
+      (
+        contract.delegatee_agent_id.includes('external') ||
+        contract.delegatee_agent_id.includes('third-party')
+      )
+    ) {
       required_authority = 'manager';
       action = 'escalate';
       reason = 'External delegation requires manager escalation';
@@ -731,8 +736,9 @@ export class LiabilityFirebreakEnforcer {
       'emergency'
     );
 
-    // Auto-approve emergency escalations (in production, this would require proper authentication)
-    return this.approveOverride(override.override_id!, emergency_contact, 'emergency');
+    // Security hardening: emergency escalations are no longer auto-approved.
+    // Explicit human/operator approval must call approveOverride() separately.
+    return override;
   }
 
   /**

@@ -13,15 +13,21 @@
  */
 
 import { Command } from 'commander';
-import sqlite3 from 'sqlite3';
 import { promises as fs } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
 import { ProviderRegistry } from '../../core/provider-registry.js';
 import type { ProviderType } from '../../types/index.js';
 
-const { Database } = sqlite3;
-type DatabaseInstance = InstanceType<typeof Database>;
+interface DatabaseInstance {
+  all(query: string, callback: (err: Error | null, rows: any[]) => void): void;
+  close(callback: (err: Error | null) => void): void;
+}
+
+type DatabaseConstructor = new (
+  path: string,
+  callback: (err: Error | null) => void
+) => DatabaseInstance;
 
 // Types for telemetry data
 interface TelemetryRecord {
@@ -234,6 +240,27 @@ export class TelemetryDashboard {
   }
 
   /**
+   * Load sqlite3.Database constructor lazily so sqlite3 remains optional
+   */
+  private async loadDatabaseConstructor(): Promise<DatabaseConstructor> {
+    try {
+      const sqlite3Module = await import('sqlite3');
+      const sqlite3 = (sqlite3Module as any).default ?? sqlite3Module;
+
+      if (!sqlite3?.Database) {
+        throw new Error('sqlite3 module does not export Database');
+      }
+
+      return sqlite3.Database as DatabaseConstructor;
+    } catch (error) {
+      throw new Error(
+        'sqlite3 package not installed. Run: npm install sqlite3\n' +
+        `Original error: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+  }
+
+  /**
    * Set custom database path
    */
   setDatabasePath(path: string): void {
@@ -244,6 +271,8 @@ export class TelemetryDashboard {
    * Connect to SQLite telemetry database
    */
   private async connectDatabase(): Promise<DatabaseInstance> {
+    const Database = await this.loadDatabaseConstructor();
+
     return new Promise((resolve, reject) => {
       const db = new Database(this.dbPath, (err: Error | null) => {
         if (err) {

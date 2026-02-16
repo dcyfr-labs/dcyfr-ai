@@ -655,6 +655,44 @@ describe('Liability Firebreak Enforcement', () => {
   // ==========================================================================
 
   describe('8. Edge Cases and Error Handling', () => {
+    it('8.0 Should not trigger external-delegation firebreak when approval flag is disabled for third-party delegates', () => {
+      const localEnforcer = new LiabilityFirebreakEnforcer({
+        depth_thresholds: {
+          supervisor: 3,
+          manager: 5,
+          executive: 7,
+        },
+        liability_thresholds: {
+          high_value_limit: 50000,
+          critical_system_approval: true,
+          external_delegation_approval: false,
+        },
+        emergency_procedures: {
+          max_emergency_depth: 10,
+          emergency_contacts: [
+            { authority: 'supervisor', contact_id: 'supervisor@dcyfr.ai', response_time_sla_minutes: 30 },
+          ],
+        },
+      });
+
+      const evaluation = localEnforcer.evaluateContract({
+        contract_id: 'contract-third-party-no-flag',
+        delegator_agent_id: 'agent-internal',
+        delegatee_agent_id: 'third-party-processor',
+        priority: 3,
+        metadata: {
+          operation_type: 'read',
+          is_external_delegation: false,
+          estimated_value: 100,
+        },
+        permission_token: {
+          scopes: ['read'],
+        },
+      });
+
+      expect(evaluation.requires_firebreak).toBe(false);
+    });
+
     it('8.1 Should handle missing context properties gracefully', () => {
       const minimalContext = {
         delegation_depth: 3,

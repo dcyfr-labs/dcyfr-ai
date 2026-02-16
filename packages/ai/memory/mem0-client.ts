@@ -90,6 +90,7 @@ interface Mem0OSSConfig {
     config: {
       apiKey?: string;
       model?: string;
+      url?: string;
       embeddingDims?: number;
     };
   };
@@ -109,27 +110,48 @@ interface Mem0OSSConfig {
     config: {
       model?: string;
       apiKey?: string;
+      baseURL?: string;
     };
   };
   disableHistory?: boolean;
 }
 
 /**
+ * Determine embedding/vector dimensions from configured embedder provider.
+ */
+function resolveEmbeddingDimension(config: LLMConfig): number {
+  if (config.embeddingDims) {
+    return config.embeddingDims;
+  }
+
+  const provider = config.embeddingProvider || config.provider;
+
+  // Sensible provider defaults for common models
+  if (provider === 'ollama') {
+    return 1024;
+  }
+
+  // OpenAI text-embedding-3-small default
+  return 1536;
+}
+
+/**
  * Convert DCYFR VectorDBConfig to mem0 OSS vector_store config
  */
-function buildVectorStoreConfig(config: VectorDBConfig): Mem0OSSConfig['vectorStore'] {
+function buildVectorStoreConfig(
+  config: VectorDBConfig,
+  embeddingDimension: number
+): Mem0OSSConfig['vectorStore'] {
   switch (config.provider) {
     case 'qdrant':
       const qdrantConfig: any = {
         collectionName: config.index || 'dcyfr_memories',
-        dimension: 1536, // OpenAI text-embedding-3-small dimension
+        dimension: embeddingDimension,
       };
 
       if (config.url) {
-        const url = new URL(config.url);
+        // Qdrant client expects either URL or host/port, not both.
         qdrantConfig.url = config.url;
-        qdrantConfig.host = url.hostname;
-        qdrantConfig.port = parseInt(url.port || '6333', 10);
       }
 
       if (config.apiKey) {
@@ -147,14 +169,14 @@ function buildVectorStoreConfig(config: VectorDBConfig): Mem0OSSConfig['vectorSt
         config: {
           apiKey: config.apiKey,
           collectionName: config.index || 'dcyfr-memories',
-          dimension: 1536,
+          dimension: embeddingDimension,
         },
       };
 
     case 'weaviate':
       const weaviateConfig: any = {
         collectionName: config.index || 'dcyfr_memories',
-        dimension: 1536,
+        dimension: embeddingDimension,
       };
 
       if (config.url) {
@@ -180,10 +202,11 @@ function buildVectorStoreConfig(config: VectorDBConfig): Mem0OSSConfig['vectorSt
  */
 function buildLLMConfig(config: LLMConfig): Mem0OSSConfig['llm'] {
   return {
-    provider: config.provider === 'openai' ? 'openai' : config.provider,
+    provider: config.provider,
     config: {
       model: config.model || 'gpt-4',
       apiKey: config.apiKey,
+      baseURL: config.baseURL,
     },
   };
 }
@@ -192,12 +215,23 @@ function buildLLMConfig(config: LLMConfig): Mem0OSSConfig['llm'] {
  * Convert DCYFR LLMConfig to mem0 OSS embedder config
  */
 function buildEmbedderConfig(config: LLMConfig): Mem0OSSConfig['embedder'] {
+  const provider = config.embeddingProvider || config.provider;
+
+  // mem0 OSS embedder providers differ from LLM providers.
+  // Fall back to OpenAI-compatible embeddings when no native embedder exists.
+  const normalizedProvider = ['anthropic', 'groq', 'mistral'].includes(provider)
+    ? 'openai'
+    : provider;
+
+  const defaultEmbeddingDims = normalizedProvider === 'ollama' ? 768 : 1536;
+
   return {
-    provider: config.provider === 'openai' ? 'openai' : config.provider,
+    provider: normalizedProvider,
     config: {
       model: config.embeddingModel || 'text-embedding-3-small',
-      apiKey: config.apiKey,
-      embeddingDims: 1536, // OpenAI text-embedding-3-small dimension
+      apiKey: config.embeddingApiKey || config.apiKey,
+      url: config.embeddingBaseURL || (normalizedProvider === 'ollama' ? process.env.OLLAMA_URL : undefined),
+      embeddingDims: config.embeddingDims || defaultEmbeddingDims,
     },
   };
 }
@@ -217,11 +251,13 @@ function buildEmbedderConfig(config: LLMConfig): Mem0OSSConfig['embedder'] {
  */
 export async function createMem0Client(config: MemoryConfig): Promise<Mem0Client> {
   try {
+    const embeddingDimension = resolveEmbeddingDimension(config.llm);
+
     // Build mem0 OSS configuration
     const mem0Config: Mem0OSSConfig = {
       version: 'v1.1',
       embedder: buildEmbedderConfig(config.llm),
-      vectorStore: buildVectorStoreConfig(config.vectorDB),
+      vectorStore: buildVectorStoreConfig(config.vectorDB, embeddingDimension),
       llm: buildLLMConfig(config.llm),
       disableHistory: true, // Disable history DB for simplicity
     };
@@ -248,9 +284,9 @@ export async function createMem0Client(config: MemoryConfig): Promise<Mem0Client
 
     return client as Mem0Client;
   } catch (error: any) {
-    if (error.message?.includes('Cannot find module')) {
+    if (error.message?.includes('Cannot find module') || error.message?.includes('Cannot find package')) {
       throw new Error(
-        'mem0ai package not installed. Run: npm install mem0ai\n' +
+        'mem0ai runtime dependency missing. Ensure mem0ai and required provider SDKs (e.g. openai) are installed.\n' +
         'Original error: ' + error.message
       );
     }
@@ -263,6 +299,11 @@ export async function createMem0Client(config: MemoryConfig): Promise<Mem0Client
  * Initialized lazily on first use
  */
 let mem0ClientInstance: Mem0Client | null = null;
+let mem0ClientConfigFingerprint: string | null = null;
+
+function fingerprintConfig(config: MemoryConfig): string {
+  return JSON.stringify(config);
+}
 
 /**
  * Get or create singleton mem0 client
@@ -275,6 +316,18 @@ let mem0ClientInstance: Mem0Client | null = null;
  */
 export async function getMem0Client(config?: MemoryConfig): Promise<Mem0Client> {
   if (mem0ClientInstance) {
+    if (!config) {
+      return mem0ClientInstance;
+    }
+
+    const incomingFingerprint = fingerprintConfig(config);
+    if (mem0ClientConfigFingerprint === incomingFingerprint) {
+      return mem0ClientInstance;
+    }
+
+    // Runtime profile changed (provider/base URL/vector DB, etc) — recreate client.
+    mem0ClientInstance = await createMem0Client(config);
+    mem0ClientConfigFingerprint = incomingFingerprint;
     return mem0ClientInstance;
   }
 
@@ -283,6 +336,7 @@ export async function getMem0Client(config?: MemoryConfig): Promise<Mem0Client> 
   }
 
   mem0ClientInstance = await createMem0Client(config);
+  mem0ClientConfigFingerprint = fingerprintConfig(config);
   return mem0ClientInstance;
 }
 
@@ -291,4 +345,5 @@ export async function getMem0Client(config?: MemoryConfig): Promise<Mem0Client> 
  */
 export function resetMem0Client(): void {
   mem0ClientInstance = null;
+  mem0ClientConfigFingerprint = null;
 }

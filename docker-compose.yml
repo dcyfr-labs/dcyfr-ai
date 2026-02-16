@@ -6,7 +6,7 @@ version: '3.8'
 services:
   # Qdrant Vector Database
   qdrant:
-    image: qdrant/qdrant:v1.8.0
+    image: qdrant/qdrant:v1.13.0
     container_name: dcyfr-ai-qdrant
     restart: unless-stopped
     ports:

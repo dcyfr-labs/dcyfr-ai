@@ -26,11 +26,38 @@ export interface VectorDBConfig {
 /**
  * LLM configuration for mem0 embeddings
  */
+export type LLMProvider =
+  | 'openai'
+  | 'anthropic'
+  | 'ollama'
+  | 'google'
+  | 'gemini'
+  | 'groq'
+  | 'mistral'
+  | 'azure_openai'
+  | 'langchain';
+
+/**
+ * Embedder providers supported by mem0 OSS
+ */
+export type EmbedderProvider =
+  | 'openai'
+  | 'ollama'
+  | 'google'
+  | 'gemini'
+  | 'azure_openai'
+  | 'langchain';
+
 export interface LLMConfig {
-  provider: 'openai' | 'anthropic' | 'custom';
+  provider: LLMProvider;
   apiKey?: string;
   model?: string;
+  baseURL?: string;
   embeddingModel?: string;
+  embeddingProvider?: EmbedderProvider;
+  embeddingApiKey?: string;
+  embeddingBaseURL?: string;
+  embeddingDims?: number;
 }
 
 /**
@@ -76,10 +103,15 @@ export const DEFAULT_CONFIG: MemoryConfig = {
  * - VECTOR_DB_API_KEY: API key (for Pinecone, authenticated Qdrant)
  * - VECTOR_DB_ENVIRONMENT: Pinecone environment
  * - VECTOR_DB_INDEX: Index/collection name
- * - LLM_PROVIDER: 'openai' | 'anthropic' | 'custom'
- * - LLM_API_KEY: LLM API key (defaults to OPENAI_API_KEY if provider=openai)
+ * - LLM_PROVIDER: See LLMProvider type
+ * - LLM_API_KEY: LLM API key (defaults to provider-specific env key)
+ * - LLM_API_BASE: Optional base URL (useful for OpenAI-compatible proxies)
  * - LLM_MODEL: Model name
  * - LLM_EMBEDDING_MODEL: Embedding model name
+ * - LLM_EMBEDDING_PROVIDER: Optional embedder provider override
+ * - LLM_EMBEDDING_API_KEY: Optional embedder API key override
+ * - LLM_EMBEDDING_BASE_URL: Optional embedder base URL override
+ * - LLM_EMBEDDING_DIMS: Optional embedding dimensions override
  * - MEMORY_CACHE_ENABLED: 'true' | 'false'
  * - MEMORY_CACHE_TTL: Cache TTL in seconds
  * - MEMORY_CACHE_MAX_SIZE: Max cache entries
@@ -107,14 +139,60 @@ export function loadMemoryConfig(): MemoryConfig {
   }
 
   // LLM configuration
-  const llmProvider = (env.LLM_PROVIDER || 'openai') as LLMConfig['provider'];
-  const llmApiKey = env.LLM_API_KEY || (llmProvider === 'openai' ? env.OPENAI_API_KEY : undefined);
+  const llmProvider = (env.LLM_PROVIDER || 'openai') as LLMProvider;
+
+  const providerEnvKeys: Partial<Record<LLMProvider, string>> = {
+    openai: 'OPENAI_API_KEY',
+    anthropic: 'ANTHROPIC_API_KEY',
+    groq: 'GROQ_API_KEY',
+    google: 'GOOGLE_API_KEY',
+    gemini: 'GOOGLE_API_KEY',
+    mistral: 'MISTRAL_API_KEY',
+    azure_openai: 'AZURE_OPENAI_API_KEY',
+  };
+
+  const providerBaseEnvKeys: Partial<Record<LLMProvider, string>> = {
+    openai: 'OPENAI_API_BASE',
+    anthropic: 'ANTHROPIC_API_BASE',
+  };
+
+  const llmApiKey =
+    env.LLM_API_KEY ||
+    (providerEnvKeys[llmProvider]
+      ? env[providerEnvKeys[llmProvider] as string]
+      : undefined);
+
+  const llmBaseURL =
+    env.LLM_API_BASE ||
+    (providerBaseEnvKeys[llmProvider]
+      ? env[providerBaseEnvKeys[llmProvider] as string]
+      : undefined);
+
+  const defaultEmbeddingProvider: EmbedderProvider =
+    llmProvider === 'anthropic' || llmProvider === 'groq' || llmProvider === 'mistral'
+      ? 'openai'
+      : (llmProvider as EmbedderProvider);
+
+  const embeddingProvider =
+    (env.LLM_EMBEDDING_PROVIDER as EmbedderProvider | undefined) || defaultEmbeddingProvider;
+
+  const embeddingApiKey =
+    env.LLM_EMBEDDING_API_KEY ||
+    (providerEnvKeys[embeddingProvider as LLMProvider]
+      ? env[providerEnvKeys[embeddingProvider as LLMProvider] as string]
+      : undefined) ||
+    llmApiKey;
 
   const llmConfig: LLMConfig = {
     provider: llmProvider,
     apiKey: llmApiKey,
     model: env.LLM_MODEL || DEFAULT_CONFIG.llm.model,
+    baseURL: llmBaseURL,
     embeddingModel: env.LLM_EMBEDDING_MODEL || DEFAULT_CONFIG.llm.embeddingModel,
+    embeddingProvider,
+    embeddingApiKey,
+    embeddingBaseURL: env.LLM_EMBEDDING_BASE_URL,
+    embeddingDims: env.LLM_EMBEDDING_DIMS ? parseInt(env.LLM_EMBEDDING_DIMS, 10) : undefined,
   };
 
   // Caching configuration
@@ -184,6 +262,11 @@ export function validateMemoryConfig(config: MemoryConfig): void {
 
   if (!llm.embeddingModel) {
     throw new Error('LLM_EMBEDDING_MODEL is required');
+  }
+
+  const effectiveEmbeddingApiKey = llm.embeddingApiKey || llm.apiKey;
+  if ((llm.embeddingProvider || 'openai') === 'openai' && !effectiveEmbeddingApiKey) {
+    throw new Error('LLM_EMBEDDING_API_KEY or OPENAI_API_KEY is required for OpenAI embeddings');
   }
 
   // Validate caching configuration

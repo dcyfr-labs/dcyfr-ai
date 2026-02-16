@@ -341,7 +341,7 @@ describe('Memory Integration Tests', () => {
       const memories = await memory.getUserMemories('user123', 'coding');
 
       expect(memories).toHaveLength(1);
-      expect(mockClient.search).toHaveBeenCalledWith('', {
+      expect(mockClient.search).toHaveBeenCalledWith('*', {
         userId: 'user123',
         limit: 100,
         filters: { topic: 'coding' },
@@ -402,7 +402,7 @@ describe('Memory Integration Tests', () => {
       const memories = await memory.getUserMemories('user123');
 
       expect(memories).toHaveLength(2);
-      expect(mockClient.search).toHaveBeenCalledWith('', {
+      expect(mockClient.search).toHaveBeenCalledWith('*', {
         userId: 'user123',
         limit: 100,
         filters: undefined,

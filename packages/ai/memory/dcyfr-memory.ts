@@ -9,6 +9,7 @@ import type {
   MemoryContext,
   AgentMemory,
 } from './types.js';
+import { getMemoryConfig } from './config.js';
 import { getMem0Client, resetMem0Client as resetClient } from './mem0-client.js';
 
 // Default limits for memory queries
@@ -16,7 +17,13 @@ const DEFAULTS = {
   USER_MEMORY_LIMIT: 100,
   AGENT_MEMORY_LIMIT: 50,
   SESSION_MEMORY_LIMIT: 30,
+  CONSISTENCY_RETRIES: 4,
+  CONSISTENCY_RETRY_DELAY_MS: 150,
+  GET_ALL_QUERY: '*',
 };
+
+const sleep = (ms: number): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
  * DCYFRMemory implementation using mem0 OSS as the backend
@@ -29,9 +36,36 @@ export class DCYFRMemoryImpl implements DCYFRMemory {
    */
   private async ensureInitialized() {
     if (!this.mem0ClientPromise) {
-      this.mem0ClientPromise = getMem0Client();
+      const memoryConfig = getMemoryConfig();
+      this.mem0ClientPromise = getMem0Client(memoryConfig);
     }
     return this.mem0ClientPromise;
+  }
+
+  /**
+   * Retry semantic search briefly to smooth over vector index eventual consistency.
+   */
+  private async searchWithConsistencyRetries(
+    client: any,
+    query: string,
+    options: Record<string, unknown>
+  ): Promise<any> {
+    let result = await client.search(query, options);
+
+    if (result.results.length > 0) {
+      return result;
+    }
+
+    for (let attempt = 1; attempt <= DEFAULTS.CONSISTENCY_RETRIES; attempt++) {
+      await sleep(DEFAULTS.CONSISTENCY_RETRY_DELAY_MS * attempt);
+      result = await client.search(query, options);
+
+      if (result.results.length > 0) {
+        return result;
+      }
+    }
+
+    return result;
   }
 
   // ============================================================================
@@ -59,7 +93,23 @@ export class DCYFRMemoryImpl implements DCYFRMemory {
         },
       });
 
-      return result.results[0]?.id || '';
+      const directId = result.results[0]?.id;
+      if (directId) {
+        return directId;
+      }
+
+      // Some providers may return empty add results until embeddings are fully indexed.
+      try {
+        const fallback = await this.searchWithConsistencyRetries(client, message, {
+          userId,
+          limit: 1,
+        });
+
+        return fallback.results[0]?.id || '';
+      } catch {
+        // Keep legacy behavior when add succeeded but no ID is returned.
+        return '';
+      }
     } catch (error: any) {
       throw new Error(`Failed to add user memory: ${error.message}`);
     }
@@ -76,7 +126,7 @@ export class DCYFRMemoryImpl implements DCYFRMemory {
     try {
       const client = await this.ensureInitialized();
 
-      const result = await client.search(query, {
+      const result = await this.searchWithConsistencyRetries(client, query, {
         userId,
         limit,
       });
@@ -104,7 +154,7 @@ export class DCYFRMemoryImpl implements DCYFRMemory {
     try {
       const client = await this.ensureInitialized();
 
-      const result = await client.search('', {
+      const result = await client.search(DEFAULTS.GET_ALL_QUERY, {
         userId,
         limit: DEFAULTS.USER_MEMORY_LIMIT,
         filters: topic ? { topic } : undefined,
@@ -214,7 +264,7 @@ export class DCYFRMemoryImpl implements DCYFRMemory {
     try {
       const client = await this.ensureInitialized();
 
-      const result = await client.search('', {
+      const result = await client.search(DEFAULTS.GET_ALL_QUERY, {
         agentId,
         runId: sessionId,
         limit: 1,
@@ -269,7 +319,7 @@ export class DCYFRMemoryImpl implements DCYFRMemory {
     try {
       const client = await this.ensureInitialized();
 
-      const result = await client.search('', {
+      const result = await client.search(DEFAULTS.GET_ALL_QUERY, {
         runId: sessionId,
         limit: DEFAULTS.SESSION_MEMORY_LIMIT,
       });
