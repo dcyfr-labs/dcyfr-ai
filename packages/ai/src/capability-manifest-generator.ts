@@ -1087,3 +1087,45 @@ export function validateCapabilityManifest(manifest: AgentCapabilityManifest): {
     warnings,
   };
 }
+
+/**
+ * CapabilityManifestGenerator class wrapper for the functions
+ * Provides object-oriented API for easier testing and usage
+ */
+export class CapabilityManifestGenerator {
+  /**
+   * Get list of available capability types
+   */
+  getAvailableCapabilities(): string[] {
+    return Object.keys(CAPABILITY_DATABASE);
+  }
+
+  /**
+   * Get description for a specific capability
+   */
+  getCapabilityDescription(capability: string): string | undefined {
+    const cap = CAPABILITY_DATABASE[capability];
+    return cap ? cap.description : undefined;
+  }
+
+  /**
+   * Generate capability manifest for a DCYFR agent
+   */
+  generateCapabilityManifest(agent: Agent): AgentCapabilityManifest {
+    return generateCapabilityManifest(agent);
+  }
+
+  /**
+   * Generate capability manifests for multiple agents
+   */
+  generateManifests(agents: Agent[]): AgentCapabilityManifest[] {
+    return agents.map(agent => this.generateCapabilityManifest(agent));
+  }
+
+  /**
+   * Validate capability manifest completeness
+   */
+  validateCapabilityManifest(manifest: AgentCapabilityManifest) {
+    return validateCapabilityManifest(manifest);
+  }
+}
