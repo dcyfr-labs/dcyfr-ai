@@ -315,7 +315,7 @@ export class EnhancedCapabilityDetection extends EventEmitter {
     recommendations: string[];
     mcpServerStatus?: Array<{ name: string; healthy: boolean }>;
   }> {
-    const manifest = await this.registry.getManifest(agentId);
+    const manifest = this.registry.getManifest(agentId) || null;
     const performanceMetrics = this.getAgentPerformanceMetrics(agentId);
     const learningHistory = this.learningHistory.get(agentId) || [];
     const recommendations = this.generateImprovementRecommendations(agentId);

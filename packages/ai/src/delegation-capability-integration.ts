@@ -117,8 +117,7 @@ export class DelegationCapabilityIntegration extends EventEmitter {
     this.bootstrap = new CapabilityBootstrap(this.config.capabilityDetection);
     this.registry = new CapabilityRegistry();
     this.contractManager = new ContractManager({
-      enable_telemetry: this.config.enableTelemetry,
-      enable_tlp_enforcement: true,
+      debug: this.config.enableTelemetry,
     });
     this.chainTracker = new DelegationChainTracker(this.contractManager, {
       maxChainDepth: this.config.maxChainDepth,
@@ -289,7 +288,7 @@ export class DelegationCapabilityIntegration extends EventEmitter {
       },
     };
 
-    const createdContract = await this.contractManager.createContract(contract as DelegationContract);
+    const createdContract = await this.contractManager.createContract(contract as any);
 
     this.emit('delegation_contract_created', {
       contractId: createdContract.contract_id,

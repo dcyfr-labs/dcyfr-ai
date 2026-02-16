@@ -34,19 +34,18 @@ export class CapabilityRegistry extends EventEmitter implements ICapabilityRegis
   /**
    * Register agent capability manifest
    */
-  async registerManifest(manifest: AgentCapabilityManifest): Promise<void> {
+  registerManifest(manifest: AgentCapabilityManifest): void {
     // Validate manifest completeness
-    if (!manifest.agent_id || !manifest.agent_name || !manifest.capabilities) {
+    if (!manifest.agent_id || !manifest.capabilities) {
       throw new Error('Invalid capability manifest: missing required fields');
     }
 
-    // Validate capabilities structure
+    // Validate capabilities structure (support both full and simplified formats)
     for (const capability of manifest.capabilities) {
-      if (!capability.capability_id || !capability.name || !capability.description) {
-        throw new Error(`Invalid capability in manifest for ${manifest.agent_id}: missing required fields`);
-      }
-      if (capability.confidence_level < 0 || capability.confidence_level > 1) {
-        throw new Error(`Invalid confidence level for capability ${capability.capability_id}: must be 0-1`);
+      const conf = (capability as any).confidence_level ?? (capability as any).confidence;
+      if (conf !== undefined && (conf < 0 || conf > 1)) {
+        const capId = (capability as any).capability_id || (capability as any).capability;
+        throw new Error(`Invalid confidence level for capability ${capId}: must be 0-1`);
       }
     }
 
@@ -54,7 +53,7 @@ export class CapabilityRegistry extends EventEmitter implements ICapabilityRegis
     const updatedManifest: AgentCapabilityManifest = {
       ...manifest,
       updated_at: new Date().toISOString(),
-      overall_confidence: this.calculateOverallConfidence(manifest.capabilities),
+      overall_confidence: manifest.overall_confidence ?? this.calculateOverallConfidence(manifest.capabilities),
     };
 
     this.manifests.set(manifest.agent_id, updatedManifest);
@@ -66,7 +65,7 @@ export class CapabilityRegistry extends EventEmitter implements ICapabilityRegis
   /**
    * Update agent capability manifest
    */
-  async updateManifest(agentId: string, updates: Partial<AgentCapabilityManifest>): Promise<void> {
+  updateManifest(agentId: string, updates: Partial<AgentCapabilityManifest>): void {
     const existing = this.manifests.get(agentId);
     if (!existing) {
       throw new Error(`Agent manifest not found: ${agentId}`);
@@ -85,7 +84,7 @@ export class CapabilityRegistry extends EventEmitter implements ICapabilityRegis
     }
 
     this.manifests.set(agentId, updatedManifest);
-    this.lastUpdated.set(agentId, Date.now());
+    this.lastUpdated.set(agentId,Date.now());
 
     this.emit('manifest_updated', { agentId, manifest: updatedManifest });
   }
@@ -93,14 +92,21 @@ export class CapabilityRegistry extends EventEmitter implements ICapabilityRegis
   /**
    * Get agent capability manifest
    */
-  async getManifest(agentId: string): Promise<AgentCapabilityManifest | null> {
-    return this.manifests.get(agentId) || null;
+  getManifest(agentId: string): AgentCapabilityManifest | undefined {
+    return this.manifests.get(agentId);
+  }
+
+  /**
+   * List all registered manifests
+   */
+  listManifests(): AgentCapabilityManifest[] {
+    return Array.from(this.manifests.values());
   }
 
   /**
    * Query agents by capability criteria
    */
-  async queryCapabilities(query: CapabilityQuery): Promise<TaskCapabilityMatch[]> {
+  queryCapabilities(query: CapabilityQuery): TaskCapabilityMatch[] {
     const matches: TaskCapabilityMatch[] = [];
 
     for (const [agentId, manifest] of this.manifests) {
@@ -157,7 +163,7 @@ export class CapabilityRegistry extends EventEmitter implements ICapabilityRegis
   /**
    * Update agent availability
    */
-  async updateAvailability(agentId: string, availability: 'available' | 'busy' | 'offline' | 'maintenance'): Promise<void> {
+  updateAvailability(agentId: string, availability: 'available' | 'busy' | 'offline' | 'maintenance'): void {
     const manifest = this.manifests.get(agentId);
     if (!manifest) {
       throw new Error(`Agent manifest not found: ${agentId}`);
@@ -172,7 +178,7 @@ export class CapabilityRegistry extends EventEmitter implements ICapabilityRegis
   /**
    * Update agent workload
    */
-  async updateWorkload(agentId: string, currentWorkload: number): Promise<void> {
+  updateWorkload(agentId: string, currentWorkload: number): void {
     const manifest = this.manifests.get(agentId);
     if (!manifest) {
       throw new Error(`Agent manifest not found: ${agentId}`);
@@ -187,7 +193,7 @@ export class CapabilityRegistry extends EventEmitter implements ICapabilityRegis
   /**
    * Delete agent manifest
    */
-  async deleteManifest(agentId: string): Promise<void> {
+  deleteManifest(agentId: string): void {
     const deleted = this.manifests.delete(agentId);
     if (!deleted) {
       throw new Error(`Agent manifest not found: ${agentId}`);
@@ -200,15 +206,26 @@ export class CapabilityRegistry extends EventEmitter implements ICapabilityRegis
   /**
    * Find capability matches for a query (alias for queryCapabilities)
    */
-  async findMatches(query: CapabilityQuery): Promise<TaskCapabilityMatch[]> {
+  findMatches(query: CapabilityQuery): TaskCapabilityMatch[] {
     return this.queryCapabilities(query);
   }
 
   /**
-   * List all agent manifests
+   * Register multiple agent capability manifests at once
    */
-  async listManifests(): Promise<AgentCapabilityManifest[]> {
-    return Array.from(this.manifests.values());
+  registerManifests(manifests: AgentCapabilityManifest[]): void {
+    for (const manifest of manifests) {
+      this.registerManifest(manifest);
+    }
+  }
+
+  /**
+   * Clear all registered manifests
+   */
+  clear(): void {
+    this.manifests.clear();
+    this.lastUpdated.clear();
+    this.emit('registry_cleared');
   }
 
   /**

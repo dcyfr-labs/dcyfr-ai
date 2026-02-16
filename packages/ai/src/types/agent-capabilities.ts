@@ -206,42 +206,42 @@ export interface ICapabilityRegistry {
   /**
    * Register agent capability manifest
    */
-  registerManifest(manifest: AgentCapabilityManifest): Promise<void>;
+  registerManifest(manifest: AgentCapabilityManifest): void;
   
   /**
    * Update agent capability manifest
    */
-  updateManifest(agentId: string, manifest: Partial<AgentCapabilityManifest>): Promise<void>;
+  updateManifest(agentId: string, manifest: Partial<AgentCapabilityManifest>): void;
   
   /**
    * Get agent capability manifest
    */
-  getManifest(agentId: string): Promise<AgentCapabilityManifest | null>;
+  getManifest(agentId: string): AgentCapabilityManifest | undefined;
   
   /**
    * Query agents by capability criteria
    */
-  queryCapabilities(query: CapabilityQuery): Promise<TaskCapabilityMatch[]>;
+  queryCapabilities(query: CapabilityQuery): TaskCapabilityMatch[];
   
   /**
    * Update agent availability
    */
-  updateAvailability(agentId: string, availability: 'available' | 'busy' | 'offline' | 'maintenance'): Promise<void>;
+  updateAvailability(agentId: string, availability: 'available' | 'busy' | 'offline' | 'maintenance'): void;
   
   /**
    * Update agent workload
    */
-  updateWorkload(agentId: string, currentWorkload: number): Promise<void>;
+  updateWorkload(agentId: string, currentWorkload: number): void;
   
   /**
    * Delete agent manifest
    */
-  deleteManifest(agentId: string): Promise<void>;
+  deleteManifest(agentId: string): void;
   
   /**
    * List all agent manifests
    */
-  listManifests(): Promise<AgentCapabilityManifest[]>;
+  listManifests(): AgentCapabilityManifest[];
 }
 
 /**

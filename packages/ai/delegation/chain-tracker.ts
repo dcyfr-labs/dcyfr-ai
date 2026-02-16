@@ -10,7 +10,7 @@
  * @date 2026-02-13
  */
 
-import type { DelegationContract } from '../src/types/delegation-contracts.js';
+import type { DelegationContract } from '../types/delegation-contracts.js';
 
 /**
  * Delegation chain tracking info
@@ -287,7 +287,7 @@ export class DelegationChainTracker {
       }
       
       // 2. TLP:AMBER or TLP:RED classification
-      if (contract.tlp_classification === 'TLP:AMBER' || contract.tlp_classification === 'TLP:RED') {
+      if (contract.tlp_classification === 'AMBER' || contract.tlp_classification === 'RED') {
         firebreaks.push(contract.contract_id);
         continue;
       }
@@ -321,13 +321,13 @@ export class DelegationChainTracker {
       const child = contracts[i];
       
       // Check if child has more permissions than parent
-      const parentToken = parent.permission_token;
-      const childToken = child.permission_token;
-      if (parentToken && childToken) {
+      const parentTokens = parent.permission_tokens;
+      const childTokens = child.permission_tokens;
+      if (parentTokens && parentTokens.length > 0 && childTokens && childTokens.length > 0) {
         const parentScopes = new Set(
-          parentToken.scopes || []
+          parentTokens[0].scopes || []
         );
-        const childScopes = childToken.scopes || [];
+        const childScopes = childTokens[0].scopes || [];
         
         for (const scope of childScopes) {
           // Check if child scope is more permissive than any parent scope
