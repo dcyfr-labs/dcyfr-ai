@@ -6,7 +6,7 @@
  * and lifecycle tracking.
  * 
  * @module delegation/contract-manager
- * @version 1.0.0
+ * @version 1.1.0
  * @date 2026-02-15
  */
 
@@ -43,31 +43,46 @@ export interface CreateDelegationContractRequest {
 }
 
 /**
- * Contract query options
+ * Contract query options - supports both full and short field aliases
  */
 export interface ContractQueryOptions {
   delegator_agent_id?: string;
   delegatee_agent_id?: string;
+  /** Alias for delegator_agent_id */
+  delegator_id?: string;
+  /** Alias for delegatee_agent_id */
+  delegatee_id?: string;
   task_id?: string;
   status?: DelegationContractStatus | DelegationContractStatus[];
   delegation_depth?: number;
   parent_contract_id?: string;
   limit?: number;
   offset?: number;
-  sort_by?: 'created_at' | 'updated_at';
+  sort_by?: 'created_at' | 'updated_at' | 'completed_at' | 'timeout_ms';
   sort_order?: 'asc' | 'desc';
+}
+
+/**
+ * Contract update options - single object with contract_id
+ */
+export interface ContractUpdateOptions {
+  contract_id: string;
+  status?: DelegationContractStatus;
+  activated_at?: string;
+  completed_at?: string;
+  verification_result?: VerificationResult;
 }
 
 /**
  * Contract statistics
  */
 export interface ContractStatistics {
-  total_contracts: number;
-  active_contracts: number;
-  completed_contracts: number;
-  failed_contracts: number;
+  total: number;
+  active: number;
+  completed: number;
+  failed: number;
   average_completion_time_ms?: number;
-  success_rate?: number;
+  success_rate: number;
 }
 
 /**
@@ -86,6 +101,8 @@ export class DelegationContractManager extends EventEmitter {
   private db: Database.Database;
   private maxDelegationDepth: number;
   private debug: boolean;
+  /** In-memory agent name cache (DB may not store names) */
+  private agentNames: Map<string, string> = new Map();
 
   constructor(config: DelegationContractManagerConfig = {}) {
     super();
@@ -108,9 +125,7 @@ export class DelegationContractManager extends EventEmitter {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         contract_id TEXT NOT NULL UNIQUE,
         delegator_agent_id TEXT NOT NULL,
-        delegator_agent_name TEXT NOT NULL,
         delegatee_agent_id TEXT NOT NULL,
-        delegatee_agent_name TEXT NOT NULL,
         task_id TEXT NOT NULL,
         task_description TEXT NOT NULL,
         verification_policy TEXT NOT NULL,
@@ -121,12 +136,10 @@ export class DelegationContractManager extends EventEmitter {
         created_at TEXT NOT NULL,
         activated_at TEXT,
         completed_at TEXT,
-        failed_at TEXT,
         verification_result TEXT,
         parent_contract_id TEXT,
         delegation_depth INTEGER DEFAULT 0,
-        tlp_classification TEXT,
-        metadata TEXT
+        tlp_classification TEXT
       );
       
       CREATE INDEX IF NOT EXISTS idx_delegator ON delegation_contracts(delegator_agent_id);
@@ -144,6 +157,10 @@ export class DelegationContractManager extends EventEmitter {
     const contract_id = `contract-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
     const created_at = new Date().toISOString();
     
+    // Cache agent names for later retrieval
+    this.agentNames.set(request.delegator.agent_id, request.delegator.agent_name);
+    this.agentNames.set(request.delegatee.agent_id, request.delegatee.agent_name);
+    
     // Calculate delegation depth
     let delegation_depth = 0;
     if (request.parent_contract_id) {
@@ -152,10 +169,8 @@ export class DelegationContractManager extends EventEmitter {
         delegation_depth = (parent.delegation_depth ?? 0) + 1;
         
         // Check max depth
-        if (delegation_depth > this.maxDelegationDepth) {
-          throw new Error(
-            `Delegation depth ${delegation_depth} exceeds maximum ${this.maxDelegationDepth}`
-          );
+        if (delegation_depth >= this.maxDelegationDepth) {
+          throw new Error('Maximum delegation depth exceeded');
         }
       }
     }
@@ -163,21 +178,18 @@ export class DelegationContractManager extends EventEmitter {
     // Insert contract
     const stmt = this.db.prepare(`
       INSERT INTO delegation_contracts (
-        contract_id, delegator_agent_id, delegator_agent_name,
-        delegatee_agent_id, delegatee_agent_name,
+        contract_id, delegator_agent_id, delegatee_agent_id,
         task_id, task_description, verification_policy,
         success_criteria, timeout_ms, permission_tokens,
         parent_contract_id, delegation_depth, tlp_classification,
         status, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     
     stmt.run(
       contract_id,
       request.delegator.agent_id,
-      request.delegator.agent_name,
       request.delegatee.agent_id,
-      request.delegatee.agent_name,
       request.task_id,
       request.task_description,
       request.verification_policy,
@@ -204,22 +216,24 @@ export class DelegationContractManager extends EventEmitter {
   }
 
   /**
-
-  /**
    * Query contracts with filters
    */
   queryContracts(options: ContractQueryOptions = {}): DelegationContract[] {
     const conditions: string[] = [];
     const params: any[] = [];
     
-    if (options.delegator_agent_id) {
+    // Support both full and short aliases for agent IDs
+    const delegatorId = options.delegator_agent_id ?? options.delegator_id;
+    const delegateeId = options.delegatee_agent_id ?? options.delegatee_id;
+    
+    if (delegatorId) {
       conditions.push('delegator_agent_id = ?');
-      params.push(options.delegator_agent_id);
+      params.push(delegatorId);
     }
     
-    if (options.delegatee_agent_id) {
+    if (delegateeId) {
       conditions.push('delegatee_agent_id = ?');
-      params.push(options.delegatee_agent_id);
+      params.push(delegateeId);
     }
     
     if (options.task_id) {
@@ -265,6 +279,10 @@ export class DelegationContractManager extends EventEmitter {
     }
     
     if (options.offset !== undefined) {
+      if (options.limit === undefined) {
+        // SQLite requires LIMIT before OFFSET
+        query += ' LIMIT -1';
+      }
       query += ' OFFSET ?';
       params.push(options.offset);
     }
@@ -274,24 +292,38 @@ export class DelegationContractManager extends EventEmitter {
   }
 
   /**
-   * Update contract status and metadata
+   * Update contract status and metadata.
+   * Accepts a single object with contract_id and fields to update.
+   * Automatically sets activated_at when status='active' and completed_at when status='completed'.
    */
   async updateContract(
-    contract_id: string,
-    updates: {
-      status?: DelegationContractStatus;
-      activated_at?: string;
-      completed_at?: string;
-      failed_at?: string;
-      verification_result?: VerificationResult;
-    }
+    updates: ContractUpdateOptions
   ): Promise<DelegationContract> {
+    const { contract_id } = updates;
+    
+    // Verify contract exists
+    const existing = this.getContractById(contract_id);
+    if (!existing) {
+      throw new Error(`Contract not found: ${contract_id}`);
+    }
+    
     const fields: string[] = [];
     const params: any[] = [];
     
     if (updates.status) {
       fields.push('status = ?');
       params.push(updates.status);
+      
+      // Auto-set timestamps based on status
+      if (updates.status === 'active' && !updates.activated_at) {
+        fields.push('activated_at = ?');
+        params.push(new Date().toISOString());
+      }
+      
+      if ((updates.status === 'completed' || updates.status === 'revoked') && !updates.completed_at) {
+        fields.push('completed_at = ?');
+        params.push(new Date().toISOString());
+      }
     }
     
     if (updates.activated_at) {
@@ -302,22 +334,15 @@ export class DelegationContractManager extends EventEmitter {
     if (updates.completed_at) {
       fields.push('completed_at = ?');
       params.push(updates.completed_at);
-      
-      // Emit completion event
-      const contract = this.getContractById(contract_id);
-      if (contract) {
-        this.emit('contract_completed', contract);
-      }
-    }
-    
-    if (updates.failed_at) {
-      fields.push('failed_at = ?');
-      params.push(updates.failed_at);
     }
     
     if (updates.verification_result) {
       fields.push('verification_result = ?');
       params.push(JSON.stringify(updates.verification_result));
+    }
+    
+    if (fields.length === 0) {
+      return existing;
     }
     
     params.push(contract_id);
@@ -327,24 +352,38 @@ export class DelegationContractManager extends EventEmitter {
     
     const contract = this.getContractById(contract_id);
     if (!contract) {
-      throw new Error(`Contract ${contract_id} not found after update`);
+      throw new Error(`Contract not found: ${contract_id}`);
+    }
+    
+    // Emit events based on status
+    if (updates.status === 'completed') {
+      this.emit('contract_completed', contract);
+    }
+    
+    if (this.debug) {
+      console.log(`[ContractManager] Updated contract ${contract_id}: status=${updates.status}`);
     }
     
     return contract;
   }
 
   /**
-   * Soft delete a contract
+   * Soft delete (revoke) a contract
    */
-  async deleteContract(contract_id: string): Promise<void> {
+  async deleteContract(contract_id: string, reason?: string): Promise<void> {
     const contract = this.getContractById(contract_id);
     if (!contract) {
-      throw new Error(`Contract ${contract_id} not found`);
+      throw new Error(`Contract not found: ${contract_id}`);
     }
     
-    this.updateContract(contract_id, {
-      status: 'failed' as DelegationContractStatus,
+    await this.updateContract({
+      contract_id,
+      status: 'revoked' as DelegationContractStatus,
     });
+    
+    if (this.debug) {
+      console.log(`[ContractManager] Deleted contract ${contract_id}: ${reason ?? 'no reason'}`);
+    }
   }
 
   /**
@@ -381,10 +420,10 @@ export class DelegationContractManager extends EventEmitter {
   getStatistics(agent_id?: string): ContractStatistics {
     let query = `
       SELECT
-        COUNT(*) as total_contracts,
-        SUM(CASE WHEN status IN ('active', 'pending') THEN 1 ELSE 0 END) as active_contracts,
-        SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed_contracts,
-        SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed_contracts
+        COUNT(*) as total,
+        SUM(CASE WHEN status IN ('active', 'pending') THEN 1 ELSE 0 END) as active,
+        SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
+        SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed
       FROM delegation_contracts
     `;
     
@@ -396,13 +435,18 @@ export class DelegationContractManager extends EventEmitter {
     
     const stats = this.db.prepare(query).get(...params) as any;
     
+    const total = stats.total || 0;
+    const completed = stats.completed || 0;
+    const failed = stats.failed || 0;
+    const decidedTotal = completed + failed;
+    
     return {
-      total_contracts: stats.total_contracts || 0,
-      active_contracts: stats.active_contracts || 0,
-      completed_contracts: stats.completed_contracts || 0,
-      failed_contracts: stats.failed_contracts || 0,
-      success_rate: stats.total_contracts > 0
-        ? stats.completed_contracts / stats.total_contracts
+      total,
+      active: stats.active || 0,
+      completed,
+      failed,
+      success_rate: decidedTotal > 0
+        ? completed / decidedTotal
         : 0,
     };
   }
@@ -419,7 +463,12 @@ export class DelegationContractManager extends EventEmitter {
    */
   clearAll(): void {
     this.db.prepare('DELETE FROM delegation_contracts').run();
-    this.db.prepare('DELETE FROM reputation_audit_log').run();
+    // Safely attempt to clear audit log if it exists
+    try {
+      this.db.prepare('DELETE FROM reputation_audit_log').run();
+    } catch {
+      // Table may not exist
+    }
   }
 
   /**
@@ -430,11 +479,11 @@ export class DelegationContractManager extends EventEmitter {
       contract_id: row.contract_id,
       delegator: {
         agent_id: row.delegator_agent_id,
-        agent_name: row.delegator_agent_name,
+        agent_name: this.agentNames.get(row.delegator_agent_id) ?? row.delegator_agent_id,
       },
       delegatee: {
         agent_id: row.delegatee_agent_id,
-        agent_name: row.delegatee_agent_name,
+        agent_name: this.agentNames.get(row.delegatee_agent_id) ?? row.delegatee_agent_id,
       },
       task_id: row.task_id,
       task_description: row.task_description,

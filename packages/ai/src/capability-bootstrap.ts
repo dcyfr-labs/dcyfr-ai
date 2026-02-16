@@ -282,7 +282,7 @@ export class CapabilityDetector {
       'PageLayout', 'layout', 'ArchiveLayout', 'ArticleLayout', 'page structure'
     ],
     production_testing: [
-      'test', 'testing', '99%', 'pass rate', 'quality', 'vitest', 'playwright'
+      'test', 'testing', '99%', 'pass rate', 'quality', 'vitest', 'playwright', 'test coverage', 'test automation'
     ],
     content_creation_seo: [
       'content', 'blog', 'SEO', 'MDX', 'marketing', 'writing'

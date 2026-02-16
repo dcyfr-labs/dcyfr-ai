@@ -139,7 +139,7 @@ export class DelegationChainTracker {
     return {
       chain_id: `chain-${contractId}`,
       contracts: chain,
-      depth: chain.length,
+      depth: Math.max(0, chain.length - 1),
       has_loops: hasLoops,
       firebreak_contracts: firebreakContracts,
       created_at: new Date().toISOString(),

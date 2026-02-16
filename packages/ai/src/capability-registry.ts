@@ -110,8 +110,8 @@ export class CapabilityRegistry extends EventEmitter implements ICapabilityRegis
     const matches: TaskCapabilityMatch[] = [];
 
     for (const [agentId, manifest] of this.manifests) {
-      // Skip offline/unavailable agents if requested
-      if (query.only_available && manifest.availability !== 'available') {
+      // Skip offline/unavailable agents if requested (treat undefined as available)
+      if (query.only_available && manifest.availability && manifest.availability !== 'available') {
         continue;
       }
 
@@ -265,13 +265,17 @@ export class CapabilityRegistry extends EventEmitter implements ICapabilityRegis
   }
 
   private matchesCapabilityQuery(capability: AgentCapability, query: CapabilityQuery): boolean {
-    // Check required capabilities
-    if (query.required_capabilities && !query.required_capabilities.includes(capability.capability_id)) {
-      return false;
+    // Check required capabilities (support both capability_id and capability alias)
+    if (query.required_capabilities) {
+      const capName = capability.capability_id || (capability as any).capability;
+      if (!query.required_capabilities.includes(capName)) {
+        return false;
+      }
     }
 
-    // Check minimum confidence
-    if (query.min_confidence && capability.confidence_level < query.min_confidence) {
+    // Check minimum confidence (support both confidence_level and confidence alias)
+    const confidenceValue = capability.confidence_level ?? (capability as any).confidence ?? 0;
+    if (query.min_confidence && confidenceValue < query.min_confidence) {
       return false;
     }
 
@@ -317,7 +321,7 @@ export class CapabilityRegistry extends EventEmitter implements ICapabilityRegis
   }
 
   private calculateCapabilityScore(capability: AgentCapability, query: CapabilityQuery, manifest: AgentCapabilityManifest): number {
-    let score = capability.confidence_level;
+    let score = capability.confidence_level ?? (capability as any).confidence ?? 0;
 
     // Bonus for success rate
     if (capability.success_rate) {
@@ -466,11 +470,63 @@ export class CapabilityRegistry extends EventEmitter implements ICapabilityRegis
     capabilityIds: string[],
     options: { minConfidence?: number } = {}
   ): TaskCapabilityMatch[] {
-    return this.queryCapabilities({
-      required_capabilities: capabilityIds,
-      min_confidence: options.minConfidence,
-      only_available: true,
-    });
+    // Find agents that have ALL requested capabilities
+    const results: TaskCapabilityMatch[] = [];
+
+    for (const manifest of this.manifests.values()) {
+      // Check if agent has all required capabilities
+      const hasAll = capabilityIds.every(reqCap =>
+        manifest.capabilities.some(cap => {
+          const capName = cap.capability_id || (cap as any).capability;
+          const confidence = cap.confidence_level ?? (cap as any).confidence ?? 0;
+          if (capName !== reqCap) return false;
+          if (options.minConfidence && confidence < options.minConfidence) return false;
+          return true;
+        })
+      );
+
+      if (hasAll) {
+        const score = this.calculateMatchScore(manifest.agent_id, capabilityIds);
+        results.push({
+          agent_id: manifest.agent_id,
+          agent_name: manifest.agent_name,
+          capability: manifest.capabilities[0],
+          match_score: score,
+          match_reasons: [`Matches all ${capabilityIds.length} required capabilities`],
+          availability: manifest.availability || 'available',
+          current_workload: manifest.current_workload || 0,
+          priority: 50,
+        } as TaskCapabilityMatch);
+      }
+    }
+
+    return results;
+  }
+
+  /**
+   * Find agents by specialization
+   */
+  findBySpecialization(
+    specialization: string,
+    options: { minConfidence?: number } = {}
+  ): AgentCapabilityManifest[] {
+    const results: AgentCapabilityManifest[] = [];
+
+    for (const manifest of this.manifests.values()) {
+      const matchesSpec = manifest.specializations?.some(spec =>
+        spec.toLowerCase().includes(specialization.toLowerCase()) ||
+        specialization.toLowerCase().includes(spec.toLowerCase())
+      );
+
+      if (matchesSpec) {
+        if (options.minConfidence && (manifest.overall_confidence || 0) < options.minConfidence) {
+          continue;
+        }
+        results.push(manifest);
+      }
+    }
+
+    return results;
   }
 
   /**
@@ -479,29 +535,31 @@ export class CapabilityRegistry extends EventEmitter implements ICapabilityRegis
   rankAgents(
     requiredCapabilities: string[],
     options: { confidenceWeight?: number; considerWorkload?: boolean } = {}
-  ): AgentCapabilityManifest[] {
-    const results: AgentCapabilityManifest[] = [];
+  ): (AgentCapabilityManifest & { score: number })[] {
+    const results: (AgentCapabilityManifest & { score: number })[] = [];
 
     for (const manifest of this.manifests.values()) {
-      const score = this.calculateMatchScore(manifest.agent_id, requiredCapabilities);
+      let score = this.calculateMatchScore(manifest.agent_id, requiredCapabilities);
+      
+      // Apply confidence weighting if provided
+      if (options?.confidenceWeight && score > 0) {
+        score = score * options.confidenceWeight + (manifest.overall_confidence || 0) * (1 - options.confidenceWeight);
+      }
+      
       if (score > 0) {
-        results.push(manifest);
+        results.push({ ...manifest, score });
       }
     }
 
     // Sort by calculated score (higher is better)
     results.sort((a, b) => {
-      const scoreA = this.calculateMatchScore(a.agent_id, requiredCapabilities);
-      const scoreB = this.calculateMatchScore(b.agent_id, requiredCapabilities);
-      
       if (options?.considerWorkload) {
         const workloadA = a.current_workload || 0;
         const workloadB = b.current_workload || 0;
-        // Prefer agents with lower workload
-        return (scoreB - workloadB * 0.1) - (scoreA - workloadA * 0.1);
+        return (b.score - workloadB * 0.1) - (a.score - workloadA * 0.1);
       }
       
-      return scoreB - scoreA;
+      return b.score - a.score;
     });
 
     return results;

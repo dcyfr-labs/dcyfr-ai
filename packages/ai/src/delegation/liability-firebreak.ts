@@ -165,7 +165,7 @@ export interface OverrideRequest {
   urgency?: 'routine' | 'urgent' | 'emergency';
   
   /** Approval status */
-  status?: 'pending' | 'approved' | 'denied' | 'expired';
+  status?: 'pending' | 'approved' | 'denied' | 'rejected' | 'expired';
   
   /** Expiration timestamp */
   expires_at?: string;
@@ -359,7 +359,7 @@ export class LiabilityFirebreakEnforcer {
       return 'full';
     }
     
-    if (context.delegation_depth > 3 || context.estimated_value > 5000) {
+    if (context.delegation_depth > 3 && context.estimated_value > 500) {
       return 'shared';
     }
     
@@ -631,45 +631,150 @@ export class LiabilityFirebreakEnforcer {
    * Request manual override for blocked delegation
    */
   async requestOverride(
-    contract_id: string,
-    requesting_agent_id: string,
-    authority: OverrideAuthority,
-    justification: string,
-    business_impact: OverrideRequest['business_impact'],
-    urgency: OverrideRequest['urgency']
-  ): Promise<OverrideRequest> {
+    contractIdOrRequest: string | {
+      requesting_agent?: string;
+      requesting_agent_id?: string;
+      target_agent?: string;
+      authority_level?: OverrideAuthority;
+      authority?: OverrideAuthority;
+      reason?: string;
+      justification?: string;
+      context?: FirebreakValidationContext;
+      expires_at?: string;
+      business_impact?: OverrideRequest['business_impact'];
+      urgency?: OverrideRequest['urgency'];
+      contract_id?: string;
+    },
+    requesting_agent_id?: string,
+    authority?: OverrideAuthority,
+    justification?: string,
+    business_impact?: OverrideRequest['business_impact'],
+    urgency?: OverrideRequest['urgency']
+  ): Promise<OverrideRequest & { rejection_reason?: string; required_approvals?: string[]; auto_approved?: boolean }> {
     const override_id = `override_${Date.now()}_${Math.random().toString(36).substring(7)}`;
     
-    const expires_at = new Date();
-    // Set expiry based on urgency
-    switch (urgency) {
-      case 'emergency':
-        expires_at.setHours(expires_at.getHours() + 1); // 1 hour for emergency
-        break;
-      case 'urgent':  
-        expires_at.setHours(expires_at.getHours() + 4); // 4 hours for urgent
-        break;
-      default:
-        expires_at.setHours(expires_at.getHours() + 24); // 24 hours for routine
+    // Support both object-based and positional parameter calling
+    let reqAgent: string;
+    let reqAuthority: OverrideAuthority;
+    let reqJustification: string;
+    let reqReason: string | undefined;
+    let reqContext: FirebreakValidationContext | undefined;
+    let reqExpiresAt: string | undefined;
+    let reqBusinessImpact: OverrideRequest['business_impact'] | undefined;
+    let reqUrgency: OverrideRequest['urgency'] | undefined;
+    let reqContractId: string | undefined;
+    let reqTargetAgent: string | undefined;
+    
+    if (typeof contractIdOrRequest === 'object') {
+      const req = contractIdOrRequest;
+      reqAgent = req.requesting_agent || req.requesting_agent_id || 'unknown';
+      reqAuthority = req.authority_level || req.authority || 'agent';
+      reqJustification = req.justification || req.reason || '';
+      reqReason = req.reason;
+      reqContext = req.context;
+      reqExpiresAt = req.expires_at;
+      reqBusinessImpact = req.business_impact;
+      reqUrgency = req.urgency;
+      reqContractId = req.contract_id;
+      reqTargetAgent = req.target_agent;
+    } else {
+      reqContractId = contractIdOrRequest;
+      reqAgent = requesting_agent_id || 'unknown';
+      reqAuthority = authority || 'agent';
+      reqJustification = justification || '';
+      reqBusinessImpact = business_impact;
+      reqUrgency = urgency;
+    }
+    
+    // Determine required authority level based on context
+    let requiredAuthority: OverrideAuthority = 'agent';
+    if (reqContext) {
+      if (reqContext.is_external_delegation) {
+        requiredAuthority = this.escalateAuthority(requiredAuthority, 'executive');
+      }
+      if (reqContext.involves_critical_systems) {
+        requiredAuthority = this.escalateAuthority(requiredAuthority, 'manager');
+      }
+      if (reqContext.estimated_value > this.config.liability_thresholds.high_value_limit) {
+        requiredAuthority = this.escalateAuthority(requiredAuthority, 'manager');
+      }
+      if (reqContext.delegation_depth > this.config.depth_thresholds.executive) {
+        requiredAuthority = this.escalateAuthority(requiredAuthority, 'emergency');
+      }
+    }
+    
+    // Check if requesting authority is sufficient
+    const authority_levels: OverrideAuthority[] = ['agent', 'supervisor', 'manager', 'executive', 'emergency'];
+    const requestedLevel = authority_levels.indexOf(reqAuthority);
+    const requiredLevel = authority_levels.indexOf(requiredAuthority);
+    
+    if (requiredLevel > requestedLevel) {
+      // Insufficient authority - reject
+      const rejected: OverrideRequest & { rejection_reason?: string; required_approvals?: string[]; auto_approved?: boolean } = {
+        override_id,
+        authority: reqAuthority,
+        authority_level: reqAuthority,
+        requesting_agent_id: reqAgent,
+        requesting_agent: reqAgent,
+        target_agent: reqTargetAgent,
+        contract_id: reqContractId,
+        justification: reqJustification,
+        reason: reqReason,
+        context: reqContext,
+        business_impact: reqBusinessImpact,
+        urgency: reqUrgency,
+        status: 'rejected',
+        expires_at: reqExpiresAt,
+        created_at: new Date().toISOString(),
+        rejection_reason: `Insufficient authority level: ${reqAuthority}. Required: ${requiredAuthority}`,
+        required_approvals: [requiredAuthority],
+        auto_approved: false,
+      };
+      
+      this.overrideRequests.set(override_id, rejected);
+      return rejected;
+    }
+    
+    // Calculate expiry if not provided
+    if (!reqExpiresAt) {
+      const expiresDate = new Date();
+      switch (reqUrgency) {
+        case 'emergency':
+          expiresDate.setHours(expiresDate.getHours() + 1);
+          break;
+        case 'urgent':  
+          expiresDate.setHours(expiresDate.getHours() + 4);
+          break;
+        default:
+          expiresDate.setHours(expiresDate.getHours() + 24);
+      }
+      reqExpiresAt = expiresDate.toISOString();
     }
 
-    const override: OverrideRequest = {
+    const override: OverrideRequest & { rejection_reason?: string; required_approvals?: string[]; auto_approved?: boolean } = {
       override_id,
-      authority,
-      requesting_agent_id,
-      contract_id,
-      justification,
-      business_impact,
-      urgency,
+      authority: reqAuthority,
+      authority_level: reqAuthority,
+      requesting_agent_id: reqAgent,
+      requesting_agent: reqAgent,
+      target_agent: reqTargetAgent,
+      contract_id: reqContractId,
+      justification: reqJustification,
+      reason: reqReason,
+      context: reqContext,
+      business_impact: reqBusinessImpact,
+      urgency: reqUrgency,
       status: 'pending',
-      expires_at: expires_at.toISOString(),
+      expires_at: reqExpiresAt,
       created_at: new Date().toISOString(),
+      required_approvals: requiredLevel > 0 ? [requiredAuthority] : undefined,
+      auto_approved: false,
     };
 
     this.overrideRequests.set(override_id, override);
 
     // Emit override request event for monitoring
-    console.log(`🔥 Firebreak Override Requested: ${override_id} (${authority}) - ${justification}`);
+    console.log(`🔥 Firebreak Override Requested: ${override_id} (${reqAuthority}) - ${reqJustification}`);
 
     return override;
   }
@@ -856,14 +961,26 @@ export class LiabilityFirebreakEnforcer {
    * Get firebreak enforcement statistics  
    */
   getStats() {
+    // Calculate override request summary
+    const overrideValues = Array.from(this.overrideRequests.values());
+    const override_requests_summary = {
+      total: overrideValues.length,
+      pending: overrideValues.filter(o => o.status === 'pending').length,
+      approved: overrideValues.filter(o => o.status === 'approved').length,
+      rejected: overrideValues.filter(o => o.status === 'denied' || o.status === 'rejected').length,
+      expired: overrideValues.filter(o => o.status === 'expired').length,
+    };
+
     return {
       ...this.stats,
       total_validations: this.stats.total_validations,
       firebreaks_passed: this.stats.firebreaks_passed,
       firebreaks_blocked: this.stats.firebreaks_blocked,
       block_reasons: this.stats.block_reasons,
+      block_reason_distribution: this.stats.block_reasons,
       liability_distribution: this.stats.liability_distribution,
       pending_overrides: this.overrideRequests.size,
+      override_requests_summary,
     };
   }
 }
