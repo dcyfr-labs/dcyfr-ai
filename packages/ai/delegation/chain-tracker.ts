@@ -10,7 +10,26 @@
  * @date 2026-02-13
  */
 
-import type { DelegationContract, DelegationChain } from '../types/delegation-contracts';
+import type { DelegationContract } from '../src/types/delegation-contracts.js';
+
+/**
+ * Delegation chain tracking info
+ */
+export interface DelegationChain {
+  /** Chain identifier */
+  chain_id: string;
+  /** Ordered contracts from root to current */
+  contracts: DelegationContract[];
+  /** Total chain depth */
+  depth: number;
+  /** Whether chain has loops */
+  has_loops: boolean;
+  /** Firebreak contract IDs */
+  firebreak_contracts?: string[];
+  /** Creation timestamp */
+  created_at: string;
+}
+
 import type { ContractManager } from './contract-manager';
 
 /**
@@ -268,13 +287,13 @@ export class DelegationChainTracker {
       }
       
       // 2. TLP:AMBER or TLP:RED classification
-      if (contract.tlp_classification === 'AMBER' || contract.tlp_classification === 'RED') {
+      if (contract.tlp_classification === 'TLP:AMBER' || contract.tlp_classification === 'TLP:RED') {
         firebreaks.push(contract.contract_id);
         continue;
       }
       
       // 3. Depth threshold (every 3rd level)
-      if (contract.delegation_depth > 0 && contract.delegation_depth % 3 === 0) {
+      if ((contract.delegation_depth || 0) > 0 && (contract.delegation_depth || 0) % 3 === 0) {
         firebreaks.push(contract.contract_id);
         continue;
       }
@@ -302,11 +321,13 @@ export class DelegationChainTracker {
       const child = contracts[i];
       
       // Check if child has more permissions than parent
-      if (parent.permission_tokens && child.permission_tokens) {
+      const parentToken = parent.permission_token;
+      const childToken = child.permission_token;
+      if (parentToken && childToken) {
         const parentScopes = new Set(
-          parent.permission_tokens.flatMap(t => t.scopes)
+          parentToken.scopes || []
         );
-        const childScopes = child.permission_tokens.flatMap(t => t.scopes);
+        const childScopes = childToken.scopes || [];
         
         for (const scope of childScopes) {
           // Check if child scope is more permissive than any parent scope
@@ -414,7 +435,7 @@ export class DelegationChainTracker {
     }
     
     // Check depth limit
-    const newDepth = parent.delegation_depth + 1;
+    const newDepth = (parent.delegation_depth || 0) + 1;
     if (newDepth >= (this.config.maxChainDepth ?? 10)) {
       return {
         valid: false,
@@ -435,7 +456,7 @@ export class DelegationChainTracker {
     const totalContracts = chain.contracts.length + descendants.length;
     const maxDepth = Math.max(
       chain.depth,
-      ...descendants.map(d => d.delegation_depth)
+      ...descendants.map(d => d.delegation_depth || 0)
     );
     
     const uniqueAgents = new Set([

@@ -356,13 +356,14 @@ export class HighPerformanceBatchProcessor<TInput = any, TOutput = any> extends 
       return result;
       
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       const errorResult: BatchResult<TInput, TOutput> = {
         batchId,
         status: 'failed',
         successful: [],
         failed: items.map(item => ({
           item,
-          error: error.message,
+          error: errorMessage,
           processingTime: Date.now() - startTime,
         })),
         totalProcessingTime: Date.now() - startTime,
@@ -376,7 +377,7 @@ export class HighPerformanceBatchProcessor<TInput = any, TOutput = any> extends 
         completedAt: new Date(),
       };
       
-      this.emit('batch_failed', { batchId, error: error.message, result: errorResult });
+      this.emit('batch_failed', { batchId, error: errorMessage, result: errorResult });
       return errorResult;
       
     } finally {
@@ -705,7 +706,7 @@ export function createCapabilityDetectionBatchProcessor(
           const result = await mockCapabilityDetection(item.data);
           successful.push({ item, result, processingTime: 100 });
         } catch (error) {
-          failed.push({ item, error: error.message, processingTime: 50 });
+          failed.push({ item, error: (error as Error).message, processingTime: 50 });
         }
       }
       
@@ -754,7 +755,7 @@ export function createAgentOnboardingBatchProcessor(
           const result = await mockAgentOnboarding(item.data);
           successful.push({ item, result, processingTime: 500 });
         } catch (error) {
-          failed.push({ item, error: error.message, processingTime: 200 });
+          failed.push({ item, error: (error as Error).message, processingTime: 200 });
         }
       }
       

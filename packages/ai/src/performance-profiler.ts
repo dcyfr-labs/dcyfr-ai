@@ -633,12 +633,12 @@ export class PerformanceProfiler extends EventEmitter {
    */
   private estimateImplementationComplexity(bottleneckType: PerformanceBottleneck['type']): number {
     const complexity: Record<PerformanceBottleneck['type'], number> = {
-      configuration: 1,
-      caching: 2,
-      resource: 3,
-      batching: 3,
+      cpu: 3,
+      memory: 3,
+      io: 2,
+      network: 2,
+      concurrency: 5,
       algorithm: 4,
-      parallelization: 5,
     };
     return complexity[bottleneckType] || 3;
   }

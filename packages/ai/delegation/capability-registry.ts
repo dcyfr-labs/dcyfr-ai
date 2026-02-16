@@ -200,8 +200,8 @@ export class CapabilityRegistry {
     // Sort results
     if (query.sort_by) {
       results.sort((a, b) => {
-        const aVal = a[query.sort_by!] as number;
-        const bVal = b[query.sort_by!] as number;
+        const aVal = (a as unknown as Record<string, number>)[query.sort_by!] ?? 0;
+        const bVal = (b as unknown as Record<string, number>)[query.sort_by!] ?? 0;
         return query.sort_order === 'desc' ? bVal - aVal : aVal - bVal;
       });
     }

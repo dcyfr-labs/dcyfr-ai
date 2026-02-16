@@ -845,18 +845,18 @@ This agent handles design token validation and security scanning.
       recommendations.push('Check MCP server configurations and network connectivity');
     }
 
-    if (systemHealth.averageAgentConfidence < this.config.minConfidenceThreshold) {
+    if (systemHealth.averageAgentConfidence < (this.config.minConfidenceThreshold ?? 0.7)) {
       warnings.push('Average agent confidence below threshold');
       recommendations.push('Consider additional training or capability refinement for agents');
     }
 
     // Analyze performance metrics
-    if (performanceMetrics.averageOnboardingTime > 5000) {
+    if (performanceMetrics && performanceMetrics.averageOnboardingTime && performanceMetrics.averageOnboardingTime > 5000) {
       warnings.push('Agent onboarding time is high');
       recommendations.push('Optimize capability detection algorithms for faster onboarding');
     }
 
-    if (performanceMetrics.systemResourceUtilization > 0.8) {
+    if (performanceMetrics && performanceMetrics.systemResourceUtilization && performanceMetrics.systemResourceUtilization > 0.8) {
       warnings.push('High system resource utilization');
       recommendations.push('Consider scaling resources or optimizing resource usage');
     }

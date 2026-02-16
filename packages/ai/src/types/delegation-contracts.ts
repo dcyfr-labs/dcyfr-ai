@@ -260,6 +260,12 @@ export interface DelegationContract {
   /** Reputation requirements for delegatee acceptance */
   reputation_requirements?: ReputationRequirements;
   
+  /** Parent contract ID (for multi-hop delegation chains) */
+  parent_contract_id?: string;
+  
+  /** Depth in delegation chain (0 = top-level) */
+  delegation_depth?: number;
+  
   /** Required capabilities for task completion */
   required_capabilities?: {
     capability_id: string;
@@ -386,14 +392,6 @@ export interface ContractAcceptanceDecision {
   };
 }
 
-export default {
-  DelegationContract,
-  ContractAcceptanceDecision,
-  PermissionToken,
-  Firebreak,
-  RetryPolicy,
-  ReputationRequirements,
-  SuccessCriteria,
-  VerificationResult,
-  DelegationAgent,
-};
+// All types are already exported individually as named exports above.
+// No default export needed - consumers should use named imports:
+// import type { DelegationContract, SuccessCriteria, ... } from './delegation-contracts.js';

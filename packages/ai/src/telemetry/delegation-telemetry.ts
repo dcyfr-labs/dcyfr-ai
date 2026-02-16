@@ -426,7 +426,7 @@ export class DelegationTelemetryEngine extends EventEmitter {
       event_type: 'delegation_contract_created',
       contract_id: contract.contract_id,
       chain_correlation: correlation,
-      event_data: eventData,
+      event_data: eventData as unknown as Record<string, unknown>,
       severity: 'info',
     });
   }
@@ -463,7 +463,7 @@ export class DelegationTelemetryEngine extends EventEmitter {
       contract_id: contractId,
       execution_id: executionId,
       chain_correlation: correlation,
-      event_data: eventData,
+      event_data: eventData as unknown as Record<string, unknown>,
       severity: 'info',
     });
   }
@@ -506,7 +506,7 @@ export class DelegationTelemetryEngine extends EventEmitter {
       contract_id: contractId,
       execution_id: executionId,
       chain_correlation: correlation,
-      event_data: eventData,
+      event_data: eventData as unknown as Record<string, unknown>,
       performance_metrics: performanceMetrics,
       severity: result.success ? 'info' : 'warning',
     });
@@ -541,7 +541,7 @@ export class DelegationTelemetryEngine extends EventEmitter {
       event_type: 'delegation_firebreak_triggered',
       contract_id: contractId,
       chain_correlation: correlation,
-      event_data: eventData,
+      event_data: eventData as unknown as Record<string, unknown>,
       severity: 'warning',
     });
   }
@@ -652,10 +652,10 @@ export class DelegationTelemetryEngine extends EventEmitter {
     if (eventSeverityIndex < minSeverityIndex) return;
     
     const event: DelegationTelemetryEvent = {
+      ...eventData as DelegationTelemetryEvent,
       event_id: randomUUID(),
       timestamp: new Date().toISOString(),
       agent_id: this.config.agent_id,
-      ...eventData as DelegationTelemetryEvent,
     };
     
     // Add to buffer

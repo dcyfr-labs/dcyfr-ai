@@ -695,7 +695,7 @@ export class LiabilityFirebreakEnforcer {
 
     // Check if approver has sufficient authority
     const authority_levels = ['agent', 'supervisor', 'manager', 'executive', 'emergency'];
-    const required_level = authority_levels.indexOf(override.authority);
+    const required_level = authority_levels.indexOf(override.authority || 'agent');
     const approver_level = authority_levels.indexOf(approver_clearance);
     
     if (approver_level < required_level) {
@@ -732,7 +732,7 @@ export class LiabilityFirebreakEnforcer {
     );
 
     // Auto-approve emergency escalations (in production, this would require proper authentication)
-    return this.approveOverride(override.override_id, emergency_contact, 'emergency');
+    return this.approveOverride(override.override_id!, emergency_contact, 'emergency');
   }
 
   /**
@@ -767,11 +767,11 @@ export class LiabilityFirebreakEnforcer {
       .filter(override => override.status === 'pending')
       .sort((a, b) => {
         // Sort by urgency and business impact
-        const urgencyOrder = { emergency: 3, urgent: 2, routine: 1 };
-        const impactOrder = { critical: 4, high: 3, medium: 2, low: 1 };
+        const urgencyOrder: Record<string, number> = { emergency: 3, urgent: 2, routine: 1 };
+        const impactOrder: Record<string, number> = { critical: 4, high: 3, medium: 2, low: 1 };
         
-        const aScore = urgencyOrder[a.urgency] * 10 + impactOrder[a.business_impact];
-        const bScore = urgencyOrder[b.urgency] * 10 + impactOrder[b.business_impact];
+        const aScore = (urgencyOrder[a.urgency || 'routine'] ?? 0) * 10 + (impactOrder[a.business_impact || 'low'] ?? 0);
+        const bScore = (urgencyOrder[b.urgency || 'routine'] ?? 0) * 10 + (impactOrder[b.business_impact || 'low'] ?? 0);
         
         return bScore - aScore; // Descending order (highest priority first)
       });
@@ -794,7 +794,7 @@ export class LiabilityFirebreakEnforcer {
     const now = new Date();
     
     for (const [override_id, override] of this.overrideRequests) {
-      if (new Date(override.expires_at) <= now && override.status === 'pending') {
+      if (override.expires_at && new Date(override.expires_at) <= now && override.status === 'pending') {
         override.status = 'expired';
         this.overrideRequests.set(override_id, override);
         cleaned++;

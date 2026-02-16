@@ -156,7 +156,7 @@ async function runBasicDemo(): Promise<void> {
     }
     
   } catch (error) {
-    log(`Basic demo failed: ${error.message}`, 'error');
+    log(`Basic demo failed: ${(error as Error).message}`, 'error');
     throw error;
   }
 }
@@ -459,7 +459,7 @@ Content strategy and optimization agent:
     }
     
   } catch (error) {
-    log(`Advanced demo failed: ${error.message}`, 'error');
+    log(`Advanced demo failed: ${(error as Error).message}`, 'error');
     throw error;
   } finally {
     await orchestrator.shutdown();
@@ -523,11 +523,11 @@ async function runPerformanceBenchmark(): Promise<void> {
     
     const successRate = totalTasks > 0 ? (successfulTasks / totalTasks) * 100 : 0;
     console.log(`Task Success Rate: ${colors.green(successRate.toFixed(1) + '%')}`);
-    console.log(`Total Tasks Executed: ${colors.cyan(totalTasks)}`);
+    console.log(`Total Tasks Executed: ${colors.cyan(String(totalTasks))}`);
     console.log(`Throughput: ${colors.cyan((totalTasks / (totalTime / 60000)).toFixed(2) + ' tasks/minute')}`);
     
   } catch (error) {
-    log(`Performance benchmark failed: ${error.message}`, 'error');
+    log(`Performance benchmark failed: ${(error as Error).message}`, 'error');
     throw error;
   } finally {
     await orchestrator.shutdown();
@@ -568,7 +568,7 @@ async function main(): Promise<void> {
         await demo.fn();
         await new Promise(resolve => setTimeout(resolve, 2000)); // Brief pause between demos
       } catch (error) {
-        log(`${demo.name} failed: ${error.message}`, 'error');
+        log(`${demo.name} failed: ${(error as Error).message}`, 'error');
         // Continue with other demos
       }
     }

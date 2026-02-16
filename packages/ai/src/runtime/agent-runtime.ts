@@ -1007,8 +1007,8 @@ export class AgentRuntime extends EventEmitter {
       confidence_level: adjustedConfidence,
       assessed_at: new Date().toISOString(),
       confidence_factors: {
-        recent_success_rate: successRate,
-        resource_efficiency: this.calculateResourceEfficiency(recentTasks),
+        recent_success_rate: successRate ?? undefined,
+        resource_efficiency: (this.calculateResourceEfficiency(recentTasks) ?? undefined),
       },
       reasoning: `Assessment based on ${recentTasks.length} recent tasks`,
       recommendations: {
@@ -1026,7 +1026,7 @@ export class AgentRuntime extends EventEmitter {
       for (const capability of this.config.capabilities.capabilities) {
         if (this.taskMatchesCapability(result.context.task.description, capability)) {
           capability.successful_completions = (capability.successful_completions || 0) + (result.success ? 1 : 0);
-          capability.success_rate = this.calculateCapabilitySuccessRate(capability.capability_id) || 0;
+          capability.success_rate = (this.calculateCapabilitySuccessRate(capability.capability_id) ?? null) ?? undefined;
           
           if (result.metrics.execution_time_ms) {
             capability.completion_time_estimate_ms = this.calculateAverageCompletionTime(capability.capability_id) || 0;
@@ -1463,8 +1463,12 @@ export class AgentRuntime extends EventEmitter {
         strict_validation: true,
         auto_generate_formats: this.config.verification_auto_formats || ['json', 'markdown'],
         default_formatter_config: {
+          default_formats: ['json', 'markdown'],
+          include_human_readable: true,
+          include_machine_readable: true,
           include_content_hash: true,
-          include_debug_info: this.config.debug || false,
+          enable_compression: false,
+          strict_compliance_checking: true,
           max_content_size_bytes: this.config.max_verification_output_bytes || 1024 * 1024,
           metadata_options: {
             include_timing_data: true,

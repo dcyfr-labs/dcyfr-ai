@@ -223,7 +223,7 @@ export class EnhancedCapabilityDetection extends EventEmitter {
     mcpRecommendations?: string[];
   }> {
     // Step 1: Bootstrap capability detection
-    const bootstrapResult = await this.bootstrap.bootstrap(source, agentId);
+    const bootstrapResult = await this.bootstrap.bootstrap(source);
     
     // Step 2: Register with registry
     await this.registry.registerManifest(bootstrapResult.manifest);
@@ -444,7 +444,7 @@ export class EnhancedCapabilityDetection extends EventEmitter {
    * Update performance metrics based on delegation outcome
    */
   private async updatePerformanceMetrics(contract: DelegationContract): Promise<void> {
-    for (const requiredCapability of contract.required_capabilities) {
+    for (const requiredCapability of (contract.required_capabilities || [])) {
       const metricKey = `${contract.delegatee_agent_id}:${requiredCapability.capability_id}`;
       const metric = this.performanceMetrics.get(metricKey);
 
@@ -489,7 +489,7 @@ export class EnhancedCapabilityDetection extends EventEmitter {
     if (!manifest) return updates;
 
     const updatedCapabilities = manifest.capabilities.map(capability => {
-      const wasUsed = contract.required_capabilities.some(
+      const wasUsed = (contract.required_capabilities || []).some(
         req => req.capability_id === capability.capability_id
       );
 

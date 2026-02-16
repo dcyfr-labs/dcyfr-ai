@@ -12,14 +12,14 @@
  */
 
 import { EventEmitter } from 'events';
-import { MCPRegistry } from './mcp-registry.js';
+import { MCPRegistry } from '../mcp/mcp-registry.js';
 import type { 
   MCPServerConfig, 
   MCPServerManifest, 
   MCPServerStatus,
   LoadedMCPServer 
-} from './types.js';
-import type { AgentCapabilityManifest } from '../src/types/agent-capabilities.js';
+} from '../mcp/types.js';
+import type { AgentCapabilityManifest } from './types/agent-capabilities.js';
 
 /**
  * MCP server capability mapping
@@ -367,13 +367,8 @@ export class MCPAutoConfiguration extends EventEmitter {
    * Setup event handlers
    */
   private setupEventHandlers(): void {
-    this.registry.on('server_registered', ({ serverName }) => {
-      this.emit('mcp_server_configured', { serverName });
-    });
-
-    this.registry.on('health_check_failed', ({ serverName, error }) => {
-      this.emit('mcp_server_error', { serverName, error });
-    });
+    // Event handlers would be configured if MCPRegistry supported events
+    // Currently MCPRegistry doesn't extend EventEmitter
   }
 
   /**
@@ -430,7 +425,7 @@ export class MCPAutoConfiguration extends EventEmitter {
           await this.registry.registerServer(server.config);
           result.startedServers.push(server.config.name);
         } catch (error) {
-          result.warnings.push(`Failed to start server ${server.config.name}: ${error.message}`);
+          result.warnings.push(`Failed to start server ${server.config.name}: ${(error as Error).message}`);
         }
       }
     }
@@ -634,7 +629,7 @@ export class MCPAutoConfiguration extends EventEmitter {
     manifest?: MCPServerManifest;
   }>> {
     const servers = this.registry.getAvailableServers();
-    return servers.map(server => ({
+    return servers.map((server: LoadedMCPServer) => ({
       name: server.config.name,
       status: server.status,
       config: server.config,
@@ -651,8 +646,9 @@ export class MCPAutoConfiguration extends EventEmitter {
     
     for (const server of servers) {
       try {
-        const healthResult = await this.registry.healthCheck(server.config.name);
-        results.set(server.config.name, healthResult.healthy);
+        // Health check by checking if server has 'available' status
+        const isHealthy = server.status === 'available';
+        results.set(server.config.name, isHealthy);
       } catch (error) {
         results.set(server.config.name, false);
       }

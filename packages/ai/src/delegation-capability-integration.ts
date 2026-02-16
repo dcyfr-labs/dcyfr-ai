@@ -156,7 +156,7 @@ export class DelegationCapabilityIntegration extends EventEmitter {
   async onboardAgent(source: AgentSource, agentId?: string): Promise<AgentOnboardingResult> {
     try {
       // Step 1: Bootstrap capability detection
-      const bootstrapResult = await this.bootstrap.bootstrap(source, agentId);
+      const bootstrapResult = await this.bootstrap.bootstrap(source);
       
       const result: AgentOnboardingResult = {
         agentId: bootstrapResult.agentId,
@@ -269,9 +269,8 @@ export class DelegationCapabilityIntegration extends EventEmitter {
       verification_policy: 'direct_inspection',
       tlp_classification: (options.tlp_classification as any) || 'TLP:CLEAR',
       success_criteria: {
-        completeness_percentage: 95,
         quality_threshold: 0.8,
-        verification_required: true,
+        required_checks: ['completeness', 'verification'],
       },
       required_capabilities: requiredCapabilities.map(cap => ({
         capability_id: cap.capability_id,
@@ -283,14 +282,14 @@ export class DelegationCapabilityIntegration extends EventEmitter {
       metadata: {
         delegation_depth: options.max_chart_depth || 1,
         agent_selection: {
-          match_confidence: bestAgent.match_score,
+          match_confidence: bestAgent.recommendation_score,
           estimated_completion: bestAgent.estimated_completion_time_ms,
           selection_time: new Date().toISOString(),
         },
       },
     };
 
-    const createdContract = await this.contractManager.createContract(contract);
+    const createdContract = await this.contractManager.createContract(contract as DelegationContract);
 
     this.emit('delegation_contract_created', {
       contractId: createdContract.contract_id,
@@ -347,11 +346,15 @@ export class DelegationCapabilityIntegration extends EventEmitter {
     recommendations: string[];
   }> {
     const analysis = await this.chainTracker.buildChain(contractId);
-    const chainAnalysis = await this.chainTracker.analyzeChain(analysis);
+    const chainAnalysis = await this.chainTracker.analyzeChain(contractId);
     
     const recommendations: string[] = [];
     
-    if (chainAnalysis.depth > this.config.maxChainDepth * 0.8) {
+    if (!chainAnalysis) {
+      return { analysis, recommendations };
+    }
+    
+    if ((chainAnalysis.depth ?? 0) > (this.config.maxChainDepth ?? 10) * 0.8) {
       recommendations.push('Chain depth approaching limit - consider direct assignment');
     }
     
@@ -359,7 +362,7 @@ export class DelegationCapabilityIntegration extends EventEmitter {
       recommendations.push('Delegation loops detected - review chain logic');
     }
     
-    if (chainAnalysis.firebreak_contracts.length === 0 && chainAnalysis.depth > 3) {
+    if ((chainAnalysis.firebreak_contracts?.length ?? 0) === 0 && (chainAnalysis.depth ?? 0) > 3) {
       recommendations.push('Consider adding liability firebreaks for deep chains');
     }
 
@@ -379,7 +382,7 @@ export class DelegationCapabilityIntegration extends EventEmitter {
 
     const updatedCapabilities = manifest.capabilities.map(capability => {
       // Check if this capability was used in the contract
-      const wasUsed = contract.required_capabilities.some(
+      const wasUsed = (contract.required_capabilities || []).some(
         req => req.capability_id === capability.capability_id
       );
 
@@ -420,7 +423,7 @@ export class DelegationCapabilityIntegration extends EventEmitter {
       reasons.push('Good capability match');
     }
     
-    if (manifest.overall_confidence >= 0.9) {
+    if ((manifest.overall_confidence ?? 0) >= 0.9) {
       reasons.push('High proven success rate');
     }
     

@@ -351,7 +351,7 @@ export class IntelligentCacheManager extends EventEmitter {
       return true;
 
     } catch (error) {
-      this.emit('cache_error', { operation: 'set', key, error: error.message });
+      this.emit('cache_error', { operation: 'set', key, error: (error as Error).message });
       return false;
       
     } finally {

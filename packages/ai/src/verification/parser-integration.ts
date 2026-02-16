@@ -86,14 +86,18 @@ export class VerificationOutputParser {
       strict_validation: true,
       auto_generate_formats: ['json', 'markdown', 'contract_compliance'],
       default_formatter_config: {
+        default_formats: ['json', 'markdown'],
+        include_human_readable: true,
+        include_machine_readable: true,
         include_content_hash: true,
-        include_debug_info: false,
+        enable_compression: false,
+        strict_compliance_checking: true,
         max_content_size_bytes: 1024 * 1024, // 1MB
         metadata_options: {
           include_timing_data: true,
           include_resource_usage: true,
           include_error_details: true,
-          include_contract_metadata: true,
+          include_verification_artifacts: true,
         },
       },
       ...config,
@@ -180,18 +184,23 @@ export class VerificationOutputParser {
     return {
       report_id: this.generateReportId(),
       contract_id: contract.contract_id,
-      generated_at: new Date().toISOString(),
+      execution_result: result,
       outputs: parsedResult.formatted_outputs,
-      verification_summary: {
-        overall_verified: result.verification?.verified || false,
-        overall_compliant: parsedResult.compliance_analysis.overall_compliant,
-        quality_score: result.verification?.quality_score,
-        compliance_score: parsedResult.compliance_analysis.compliance_score,
+      primary_output: formats?.[0] || 'json',
+      metadata: {
+        generated_at: new Date().toISOString(),
+        generator_version: '1.0.0',
+        format_count: parsedResult.formatted_outputs.length,
+        total_size_bytes: parsedResult.formatted_outputs.reduce(
+          (sum, output) => sum + (output.content?.length || 0),
+          0
+        ),
       },
-      compliance_status: {
-        contract_compliant: parsedResult.compliance_analysis.overall_compliant,
-        failed_checks: parsedResult.compliance_analysis.failed_checks,
-        recommendations: parsedResult.compliance_analysis.recommendations,
+      verification_summary: {
+        all_requirements_met: result.verification?.verified || false,
+        compliance_status: parsedResult.compliance_analysis.overall_compliant ? 'compliant' : 'non_compliant',
+        findings: parsedResult.compliance_analysis.failed_checks || [],
+        recommendations: parsedResult.compliance_analysis.recommendations || [],
       },
     };
   }
@@ -411,9 +420,4 @@ export class VerificationIntegration {
   }
 }
 
-// Export types and implementations
-export type {
-  VerificationParserConfig,
-  ParsedVerificationResult,
-  ValidationReport,
-};
+// Export types - all interfaces already exported at declaration (lines 33, 51, 316)

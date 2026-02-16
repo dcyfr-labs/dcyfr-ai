@@ -237,8 +237,8 @@ export function generatePerformanceSummary(
   
   const firebreakEvents = periodEvents.filter(e => e.event_type === 'delegation_firebreak_triggered');
   const failedEvents = periodEvents.filter(e => e.event_type === 'delegation_failed');
-  const failureReasons = failedEvents.map(e => e.event_data.completion_reason).filter(r => r);
-  const mostCommonFailure = getMostFrequent(failureReasons) || 'unknown';
+  const failureReasons = failedEvents.map(e => e.event_data.completion_reason).filter(r => typeof r === 'string');
+  const mostCommonFailure: string = String(getMostFrequent(failureReasons) || 'unknown');
   
   // Resource utilization
   const resourceEvents = periodEvents.filter(e => e.performance_metrics?.resource_utilization);
