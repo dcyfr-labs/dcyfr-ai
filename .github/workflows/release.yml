@@ -45,8 +45,14 @@ jobs:
       - name: Verify npm version and OIDC support
         run: |
           echo "npm version: $(npm --version)"
-          npm --version | awk '{if ($1 < 11.5) exit 1}'
-          echo "✅ npm supports Trusted Publishing"
+          NPM_VERSION=$(npm --version)
+          NPM_MAJOR=$(echo $NPM_VERSION | cut -d. -f1)
+          NPM_MINOR=$(echo $NPM_VERSION | cut -d. -f2)
+          if [ "$NPM_MAJOR" -lt 11 ] || ([ "$NPM_MAJOR" -eq 11 ] && [ "$NPM_MINOR" -lt 5 ]); then
+            echo "❌ npm version $NPM_VERSION does not support Trusted Publishing (requires >=11.5)"
+            exit 1
+          fi
+          echo "✅ npm $NPM_VERSION supports Trusted Publishing"
           echo "OIDC environment variables:"
           env | grep ACTIONS_ID_TOKEN || echo "⚠️ No OIDC tokens found"
 
