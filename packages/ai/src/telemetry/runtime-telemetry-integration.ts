@@ -329,13 +329,14 @@ export class RuntimeTelemetryIntegration {
       });
       
       runtime.on('task:failed', async (context: TaskExecutionContext, error: any) => {
+        const startTime = context.metadata?.started_at ? new Date(context.metadata.started_at).getTime() : Date.now();
         const result: TaskExecutionResult = {
           context: context,
           success: false,
           output: null,
           error: error,
           metrics: {
-            execution_time_ms: Date.now() - new Date(context.metadata.started_at).getTime(),
+            execution_time_ms: Date.now() - startTime,
             peak_memory_mb: 64,
             cpu_time_ms: 1000,
           },

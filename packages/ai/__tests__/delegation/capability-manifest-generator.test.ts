@@ -5,7 +5,7 @@
  * Validates 15 capability types and 79+ agent mappings.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { CapabilityManifestGenerator } from '../../src/capability-manifest-generator.js';
 import type { AgentCapabilityManifest } from '../../types/agent-capabilities.js';
 

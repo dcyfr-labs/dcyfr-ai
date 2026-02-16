@@ -434,12 +434,26 @@ export class CapabilityRegistry extends EventEmitter implements ICapabilityRegis
   /**
    * Find agents by capability (convenience wrapper for queryCapabilities)
    */
-  async findByCapability(
+  findByCapability(
     capabilityId: string,
     options: { minConfidence?: number } = {}
-  ): Promise<TaskCapabilityMatch[]> {
+  ): TaskCapabilityMatch[] {
     return this.queryCapabilities({
       required_capabilities: [capabilityId],
+      min_confidence: options.minConfidence,
+      only_available: true,
+    });
+  }
+
+  /**
+   * Find agents with multiple capabilities
+   */
+  findByCapabilities(
+    capabilityIds: string[],
+    options: { minConfidence?: number } = {}
+  ): TaskCapabilityMatch[] {
+    return this.queryCapabilities({
+      required_capabilities: capabilityIds,
       min_confidence: options.minConfidence,
       only_available: true,
     });
