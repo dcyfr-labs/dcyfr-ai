@@ -663,6 +663,12 @@ export class DelegationTelemetryEngine extends EventEmitter {
     
     // Emit event to listeners
     this.emit('telemetry_event', event);
+
+    // Immediate flush mode for tests and low-latency integrations
+    if (this.config.flush_interval_ms === 0) {
+      await this.flushBuffer();
+      return;
+    }
     
     // Flush if buffer is full
     if (this.eventBuffer.length >= this.config.buffer_size!) {
@@ -714,7 +720,7 @@ export class DelegationTelemetryEngine extends EventEmitter {
       case 'execution':
         if (progressPercentage > 25) checkpoints.push('task_started');
         if (progressPercentage > 50) checkpoints.push('halfway_milestone');
-        if (progressPercentage > 75) checkpoints.push('near_completion');
+        if (progressPercentage >= 75) checkpoints.push('near_completion');
         if (progressPercentage >= 100) checkpoints.push('task_completed');
         break;
         

@@ -694,7 +694,7 @@ const telemetry = new TelemetryEngine({
   storage: new FileStorageAdapter('./telemetry')
 });
 ```
-Telemetry tracks: API calls, token usage, costs, latency, quality scores. See [docs/configuration.md](./docs/configuration.md#telemetry) for full guide.
+Telemetry tracks: API calls, token usage, costs, latency, quality scores.
 
 **Q: Is this framework production-ready?**
 
@@ -763,7 +763,7 @@ Found a security issue? Report it privately:
 
 ### Platform-Specific Issues
 - **Windows:** Path separators handled automatically but some plugins may have issues
-- **Node.js version:** Requires ≥18.0.0 (uses native fetch, modern APIs)
+- **Node.js version:** Requires ≥24.13.0 (uses native fetch, modern APIs)
 - **ESM-only:** Package is ESM (ECMAScript Modules) - CommonJS require() not supported
 
 ### Planned Improvements
@@ -805,13 +805,13 @@ This package is dual-licensed:
 - 💼 **Executive** ($4,800/yr) - Business license + 2hr consultation/mo + 50 employees
 - 🏢 **Enterprise** ($9,600/yr) - Enterprise license + 4hr consultation/mo + unlimited scale
 
-**Learn more:** [SPONSORSHIP.md](https://github.com/dcyfr/workspace/blob/main/SPONSORSHIP.md)
+**Learn more:** [SPONSORS.md](https://github.com/dcyfr/dcyfr-workspace/blob/main/SPONSORS.md)
 **Join:** [GitHub Sponsors](https://github.com/sponsors/dcyfr)
 **Contact:** licensing@dcyfr.ai
 
 ### Trademark
 
-"DCYFR" is a trademark of DCYFR Labs. See [TRADEMARK.md](https://github.com/dcyfr/workspace/blob/main/TRADEMARK.md) for usage guidelines.
+"DCYFR" is a trademark of DCYFR Labs. See [TRADEMARK.md](https://github.com/dcyfr/dcyfr-workspace/blob/main/TRADEMARK.md) for usage guidelines.
 
 ---
 

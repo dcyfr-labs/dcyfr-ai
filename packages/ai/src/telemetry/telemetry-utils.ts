@@ -124,10 +124,23 @@ export function analyzeDelegationChain(
   const participants = new Set(chainEvents.map(e => e.agent_id));
   const maxDepth = Math.max(...chainEvents.map(e => e.chain_correlation.chain_depth));
   
-  // Calculate durations
-  const startTime = new Date(chainEvents[0].timestamp);
-  const endTime = new Date(chainEvents[chainEvents.length - 1].timestamp);
-  const totalDurationMs = endTime.getTime() - startTime.getTime();
+  // Calculate durations (prefer explicit chain lifecycle timestamps when available)
+  const startedTimes = chainEvents
+    .map(e => e.chain_correlation.chain_started_at)
+    .filter((t): t is string => typeof t === 'string' && t.length > 0)
+    .map(t => new Date(t).getTime())
+    .filter(ms => Number.isFinite(ms));
+  const completedTimes = chainEvents
+    .map(e => e.chain_correlation.chain_completed_at)
+    .filter((t): t is string => typeof t === 'string' && t.length > 0)
+    .map(t => new Date(t).getTime())
+    .filter(ms => Number.isFinite(ms));
+
+  const eventStart = new Date(chainEvents[0].timestamp).getTime();
+  const eventEnd = new Date(chainEvents[chainEvents.length - 1].timestamp).getTime();
+  const startTimeMs = startedTimes.length > 0 ? Math.min(...startedTimes) : eventStart;
+  const endTimeMs = completedTimes.length > 0 ? Math.max(...completedTimes) : eventEnd;
+  const totalDurationMs = Math.max(0, endTimeMs - startTimeMs);
   
   // Calculate success rate
   const completionEvents = chainEvents.filter(e => 
@@ -313,7 +326,7 @@ export function findChainAnomalies(
       anomalies.push({
         chain_id: rootId,
         anomaly_type: 'excessive_depth',
-        severity: analysis.max_depth > thresholds.max_depth_threshold * 1.5 ? 'critical' : 'warning',
+        severity: analysis.max_depth >= thresholds.max_depth_threshold * 1.5 ? 'critical' : 'warning',
         details: {
           actual_depth: analysis.max_depth,
           threshold: thresholds.max_depth_threshold,
@@ -327,7 +340,7 @@ export function findChainAnomalies(
       anomalies.push({
         chain_id: rootId,
         anomaly_type: 'excessive_duration',
-        severity: analysis.total_duration_ms > thresholds.max_duration_threshold_ms * 2 ? 'critical' : 'warning',
+        severity: analysis.total_duration_ms >= thresholds.max_duration_threshold_ms * 2 ? 'critical' : 'warning',
         details: {
           actual_duration_ms: analysis.total_duration_ms,
           threshold_duration_ms: thresholds.max_duration_threshold_ms,
@@ -341,7 +354,7 @@ export function findChainAnomalies(
       anomalies.push({
         chain_id: rootId,
         anomaly_type: 'low_success_rate',
-        severity: analysis.success_rate < thresholds.min_success_rate_threshold * 0.5 ? 'critical' : 'warning',
+        severity: analysis.success_rate <= thresholds.min_success_rate_threshold * 0.5 ? 'critical' : 'warning',
         details: {
           actual_success_rate: analysis.success_rate,
           threshold_success_rate: thresholds.min_success_rate_threshold,
@@ -355,7 +368,7 @@ export function findChainAnomalies(
       anomalies.push({
         chain_id: rootId,
         anomaly_type: 'excessive_retries',
-        severity: analysis.performance_summary.total_retries > thresholds.max_retry_threshold * 2 ? 'critical' : 'warning',
+        severity: analysis.performance_summary.total_retries >= thresholds.max_retry_threshold * 2 ? 'critical' : 'warning',
         details: {
           actual_retries: analysis.performance_summary.total_retries,
           threshold_retries: thresholds.max_retry_threshold,

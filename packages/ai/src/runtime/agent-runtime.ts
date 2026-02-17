@@ -725,20 +725,37 @@ export class AgentRuntime extends EventEmitter {
   }
   
   private async validateDelegationContract(contract: DelegationContract): Promise<void> {
-    // Validate contract format
-    if (!contract.task_id || !contract.delegator_agent_id || !contract.delegatee_agent_id) {
+    const legacyContract = contract as unknown as Record<string, any>;
+    const hasExplicitTaskIdField = Object.prototype.hasOwnProperty.call(legacyContract, 'task_id');
+    const taskId = contract.task_id || contract.contract_id || legacyContract?.task?.id;
+    const delegatorAgentId = contract.delegator_agent_id || legacyContract?.delegator_agent || contract.delegator?.agent_id;
+    const delegateeAgentId = contract.delegatee_agent_id || legacyContract?.delegatee_agent || contract.delegatee?.agent_id;
+
+    // Validate contract format (support legacy aliases)
+    if ((hasExplicitTaskIdField && !contract.task_id) || !taskId || !delegatorAgentId || !delegateeAgentId) {
       throw new Error('Invalid delegation contract: missing required fields');
     }
     
     // Check if we're the correct delegatee
-    if (contract.delegatee_agent_id !== this.config.agent_id) {
-      throw new Error(`Contract delegated to ${contract.delegatee_agent_id} but runtime is ${this.config.agent_id}`);
+    const enforceDelegateeMatch = !!(contract.delegatee_agent_id || contract.delegatee?.agent_id);
+    if (enforceDelegateeMatch && delegateeAgentId !== this.config.agent_id) {
+      throw new Error(`Contract delegated to ${delegateeAgentId} but runtime is ${this.config.agent_id}`);
     }
     
     // Validate verification policy
-    const validPolicies: VerificationPolicy[] = ['direct_inspection', 'third_party_audit', 'cryptographic_proof', 'human_required'];
-    if (!validPolicies.includes(contract.verification_policy)) {
-      throw new Error(`Invalid verification policy: ${contract.verification_policy}`);
+    const policyAliases: Record<string, VerificationPolicy> = {
+      automated: 'direct_inspection',
+      manual: 'human_required',
+      capability_match: 'direct_inspection',
+    };
+    const rawPolicy = typeof contract.verification_policy === 'string'
+      ? contract.verification_policy
+      : legacyContract?.verification_policy?.verification_method;
+    const normalizedPolicy = policyAliases[rawPolicy as string] || rawPolicy;
+
+    const validPolicies: string[] = ['direct_inspection', 'third_party_audit', 'cryptographic_proof', 'human_required', 'none'];
+    if (!normalizedPolicy || !validPolicies.includes(String(normalizedPolicy))) {
+      throw new Error(`Invalid verification policy: ${rawPolicy}`);
     }
     
     // TLP Classification Enforcement

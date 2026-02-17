@@ -220,6 +220,7 @@ export class RuntimeTelemetryIntegration {
   private taskTracker = new TaskExecutionTracker();
   private contractTracker = new ContractLifecycleTracker();
   private isAttached = false;
+  private executionToSyntheticContractId = new Map<string, string>();
   
   constructor(config: RuntimeTelemetryIntegrationConfig) {
     this.config = {
@@ -257,9 +258,6 @@ export class RuntimeTelemetryIntegration {
   async detach(runtime: AgentRuntime): Promise<void> {
     if (!this.isAttached) return;
     
-    // Remove all event listeners
-    runtime.removeAllListeners();
-    
     // Close telemetry engine
     await this.telemetryEngine.close();
     
@@ -286,9 +284,42 @@ export class RuntimeTelemetryIntegration {
   private setupEventListeners(runtime: AgentRuntime): void {
     // Task lifecycle events
     if (this.config.track_task_metrics) {
-      runtime.on('task:started', (context: TaskExecutionContext) => {
+      runtime.on('task:started', async (context: TaskExecutionContext) => {
         const contractId = this.findContractIdForContext(context);
         this.taskTracker.startTask(context.execution_id, context, contractId);
+
+        // For non-delegated tasks, synthesize a lightweight contract so telemetry lifecycle still works
+        if (this.config.track_delegation_lifecycle && !contractId) {
+          const syntheticContractId = `local-${context.execution_id}`;
+          this.executionToSyntheticContractId.set(context.execution_id, syntheticContractId);
+
+          const runtimeAgentId = runtime.getAgentInfo().agent_id;
+          const syntheticContract = {
+            contract_id: syntheticContractId,
+            task_id: context.execution_id,
+            delegator: { agent_id: 'runtime', agent_name: 'runtime' },
+            delegatee: { agent_id: runtimeAgentId, agent_name: runtimeAgentId },
+            delegator_agent_id: 'runtime',
+            delegatee_agent_id: runtimeAgentId,
+            task_description: context.task.description,
+            verification_policy: 'none',
+            success_criteria: {},
+            timeout_ms: context.metadata.estimated_completion_ms,
+            created_at: context.metadata.started_at,
+            status: 'active',
+          } as unknown as DelegationContract;
+
+          this.contractTracker.trackContractCreated(syntheticContract, 'runtime', runtimeAgentId);
+          await this.telemetryEngine.logContractCreated(
+            syntheticContract,
+            'runtime',
+            runtimeAgentId,
+            {
+              chain_depth: 0,
+              root_delegation_id: syntheticContractId,
+            }
+          );
+        }
       });
       
       runtime.on('task:progress', (context: TaskExecutionContext, progress: number) => {
@@ -315,12 +346,41 @@ export class RuntimeTelemetryIntegration {
         }
       });
       
-      runtime.on('task:completed', async (context: TaskExecutionContext, result: TaskExecutionResult) => {
+      runtime.on('task:completed', async (result: TaskExecutionResult) => {
+        const context = result.context;
         const metrics = this.taskTracker.completeTask(context.execution_id, result);
         
         if (metrics && this.config.track_delegation_lifecycle) {
           const contractId = this.findContractIdForContext(context);
           if (contractId) {
+            if (!this.telemetryEngine.getChainCorrelation(contractId)) {
+              const tracked = this.contractTracker.getContract(contractId);
+              const runtimeAgentId = runtime.getAgentInfo().agent_id;
+              const trackedContract = tracked?.contract || ({
+                contract_id: contractId,
+                task_id: context.execution_id,
+                delegator: { agent_id: 'runtime', agent_name: 'runtime' },
+                delegatee: { agent_id: runtimeAgentId, agent_name: runtimeAgentId },
+                delegator_agent_id: 'runtime',
+                delegatee_agent_id: runtimeAgentId,
+                task_description: context.task.description,
+                verification_policy: 'none',
+                success_criteria: {},
+                created_at: context.metadata.started_at,
+                status: 'active',
+              } as unknown as DelegationContract);
+
+              await this.telemetryEngine.logContractCreated(
+                trackedContract,
+                tracked?.delegator_agent || 'runtime',
+                tracked?.delegatee_agent || runtimeAgentId,
+                {
+                  chain_depth: 0,
+                  root_delegation_id: contractId,
+                }
+              );
+            }
+
             this.contractTracker.trackContractCompleted(contractId, result.success);
             await this.telemetryEngine.logDelegationCompleted(
               contractId,
@@ -332,26 +392,41 @@ export class RuntimeTelemetryIntegration {
         }
       });
       
-      runtime.on('task:failed', async (context: TaskExecutionContext, error: any) => {
-        const startTime = context.metadata?.started_at ? new Date(context.metadata.started_at).getTime() : Date.now();
-        const result: TaskExecutionResult = {
-          context: context,
-          success: false,
-          output: null,
-          error: error,
-          metrics: {
-            execution_time_ms: Date.now() - startTime,
-            peak_memory_mb: 64,
-            cpu_time_ms: 1000,
-          },
-          completed_at: new Date().toISOString(),
-        };
-        
+      runtime.on('task:failed', async (result: TaskExecutionResult) => {
+        const context = result.context;
         const metrics = this.taskTracker.completeTask(context.execution_id, result);
         
         if (metrics && this.config.track_delegation_lifecycle) {
           const contractId = this.findContractIdForContext(context);
           if (contractId) {
+            if (!this.telemetryEngine.getChainCorrelation(contractId)) {
+              const tracked = this.contractTracker.getContract(contractId);
+              const runtimeAgentId = runtime.getAgentInfo().agent_id;
+              const trackedContract = tracked?.contract || ({
+                contract_id: contractId,
+                task_id: context.execution_id,
+                delegator: { agent_id: 'runtime', agent_name: 'runtime' },
+                delegatee: { agent_id: runtimeAgentId, agent_name: runtimeAgentId },
+                delegator_agent_id: 'runtime',
+                delegatee_agent_id: runtimeAgentId,
+                task_description: context.task.description,
+                verification_policy: 'none',
+                success_criteria: {},
+                created_at: context.metadata.started_at,
+                status: 'active',
+              } as unknown as DelegationContract);
+
+              await this.telemetryEngine.logContractCreated(
+                trackedContract,
+                tracked?.delegator_agent || 'runtime',
+                tracked?.delegatee_agent || runtimeAgentId,
+                {
+                  chain_depth: 0,
+                  root_delegation_id: contractId,
+                }
+              );
+            }
+
             this.contractTracker.trackContractCompleted(contractId, false);
             await this.telemetryEngine.logDelegationCompleted(
               contractId,
@@ -385,7 +460,8 @@ export class RuntimeTelemetryIntegration {
         );
       });
       
-      runtime.on('delegation:contract:accepted', (contract: DelegationContract, executionId: string) => {
+      runtime.on('delegation:contract:accepted', (contract: DelegationContract) => {
+        const executionId = contract.contract_id;
         this.contractTracker.trackContractAccepted(contract.contract_id, executionId);
         this.taskTracker.addCheckpoint(executionId, 'contract_accepted', 0);
       });
@@ -415,7 +491,12 @@ export class RuntimeTelemetryIntegration {
     }
     
     // Resource limit events
-    runtime.on('resource:limit:exceeded', async (context: TaskExecutionContext, resourceType: string, limit: number, actual: number) => {
+    runtime.on('resource:limit:exceeded', async (resourceType: string, actual: number, limit: number) => {
+      const currentTasks = runtime.getCurrentTasks();
+      const context = currentTasks[0];
+      if (!context) {
+        return;
+      }
       const contractId = this.findContractIdForContext(context);
       if (contractId) {
         await this.telemetryEngine.logFirebreakTriggered(
@@ -429,20 +510,26 @@ export class RuntimeTelemetryIntegration {
     });
     
     // Capability assessment events
-    runtime.on('capability:assessed', (context: TaskExecutionContext, assessment: any) => {
-      this.taskTracker.addCheckpoint(
-        context.execution_id,
-        'capability_assessed',
-        0.1 // Early in negotiation phase
-      );
+    runtime.on('capability:assessed', () => {
+      const currentTasks = runtime.getCurrentTasks();
+      if (currentTasks[0]) {
+        this.taskTracker.addCheckpoint(
+          currentTasks[0].execution_id,
+          'capability_assessed',
+          0.1 // Early in negotiation phase
+        );
+      }
     });
     
-    runtime.on('confidence:updated', (context: TaskExecutionContext, confidence: number) => {
-      this.taskTracker.addCheckpoint(
-        context.execution_id,
-        `confidence_${confidence}`,
-        0.2 // During assessment phase
-      );
+    runtime.on('confidence:updated', (_capabilityId: string, _oldConfidence: number, confidence: number) => {
+      const currentTasks = runtime.getCurrentTasks();
+      if (currentTasks[0]) {
+        this.taskTracker.addCheckpoint(
+          currentTasks[0].execution_id,
+          `confidence_${confidence}`,
+          0.2 // During assessment phase
+        );
+      }
     });
   }
   
@@ -450,6 +537,12 @@ export class RuntimeTelemetryIntegration {
     // Try direct delegated contract reference
     if (context.delegation_contract?.contract_id) {
       return context.delegation_contract.contract_id;
+    }
+
+    // Try synthetic mapping for non-delegated tasks
+    const syntheticContractId = this.executionToSyntheticContractId.get(context.execution_id);
+    if (syntheticContractId) {
+      return syntheticContractId;
     }
     
     // Try to find contract ID from task description or parameters

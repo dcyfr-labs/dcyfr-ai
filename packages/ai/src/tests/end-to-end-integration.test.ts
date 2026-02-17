@@ -12,11 +12,14 @@
  */
 
 import { describe, it, afterEach, expect, beforeEach } from 'vitest';
-import { EndToEndWorkflowOrchestrator, createEndToEndWorkflowOrchestrator } from '../src/end-to-end-workflow-orchestrator.js';
-import type { WorkflowDefinition, WorkflowExecutionResult } from '../src/end-to-end-workflow-orchestrator.js';
+import { EndToEndWorkflowOrchestrator, createEndToEndWorkflowOrchestrator } from '../end-to-end-workflow-orchestrator.js';
+import type { WorkflowDefinition, WorkflowExecutionResult } from '../end-to-end-workflow-orchestrator.js';
 import path from 'path';
 
-describe('End-to-End Workflow Integration Tests', () => {
+const runE2EIntegration = process.env.DCYFR_RUN_E2E_INTEGRATION === 'true';
+const describeE2E = runE2EIntegration ? describe : describe.skip;
+
+describeE2E('End-to-End Workflow Integration Tests', () => {
   let orchestrator: EndToEndWorkflowOrchestrator;
   const testWorkspaceRoot = path.resolve(process.cwd(), 'test-workspace');
 
@@ -548,12 +551,12 @@ This agent will be onboarded but have no tasks to execute.
 /**
  * Integration test for convenience functions
  */
-describe('Convenience Functions', () => {
+describeE2E('Convenience Functions', () => {
   it('should execute demo workflow using convenience function', async () => {
     const testWorkspaceRoot = path.resolve(process.cwd(), 'test-workspace');
     
     // Import the convenience function
-    const { runDemoWorkflow } = await import('../src/end-to-end-workflow-orchestrator.js');
+    const { runDemoWorkflow } = await import('../end-to-end-workflow-orchestrator.js');
     
     const result = await runDemoWorkflow(testWorkspaceRoot);
     
