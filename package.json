@@ -74,7 +74,7 @@
     "@google/genai": "^1.2.0",
     "@langchain/core": "^0.3.44",
     "@mistralai/mistralai": "^1.5.2",
-    "@qdrant/js-client-rest": "1.13.0",
+    "@qdrant/js-client-rest": "^1.16.2",
     "@supabase/supabase-js": "^2.49.1",
     "openai": "^4.104.0",
     "@upstash/redis": "^1.34.3",
