@@ -396,9 +396,8 @@ describe('VerificationOutputParser', () => {
     expect(report.outputs.length).toBeGreaterThan(3); // auto formats + additional
 
     expect(report.verification_summary).toMatchObject({
-      overall_verified: true,
-      overall_compliant: true,
-      quality_score: 0.92,
+      all_requirements_met: true,
+      compliance_status: 'compliant',
     });
   });
 

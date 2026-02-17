@@ -197,10 +197,6 @@ export class VerificationOutputParser {
         ),
       },
       verification_summary: {
-        // Legacy summary keys retained for backward compatibility
-        overall_verified: result.verification?.verified || false,
-        overall_compliant: parsedResult.compliance_analysis.overall_compliant,
-        quality_score: result.verification?.quality_score || 0,
         // Current summary keys
         all_requirements_met: result.verification?.verified || false,
         compliance_status: parsedResult.compliance_analysis.overall_compliant ? 'compliant' : 'non_compliant',
