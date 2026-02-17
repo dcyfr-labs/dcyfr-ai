@@ -274,10 +274,10 @@ export type {
 export { ReputationEngine } from './reputation/reputation-engine';
 export type {
   ReputationEngineConfig,
-  ReputationProfile,
-  ReputationUpdate,
+  AgentReputation,
+  ReputationTaskOutcome,
   ReputationQuery,
-  ReputationDimension,
+  AuditLogEntry,
 } from './reputation/reputation-engine';
 
 // Capability system exports

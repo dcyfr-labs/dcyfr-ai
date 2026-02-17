@@ -28,50 +28,7 @@ describe('DelegationContractManager', () => {
       unlinkSync(TEST_DB_PATH);
     }
     
-    // Initialize database with schema
-    const Database = require('better-sqlite3');
-    const db = new Database(TEST_DB_PATH);
-    
-    // Create schema (simplified for testing)
-    db.exec(`
-      CREATE TABLE IF NOT EXISTS delegation_contracts (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        contract_id TEXT NOT NULL UNIQUE,
-        delegator_agent_id TEXT NOT NULL,
-        delegatee_agent_id TEXT NOT NULL,
-        task_id TEXT NOT NULL,
-        task_description TEXT NOT NULL,
-        verification_policy TEXT NOT NULL,
-        success_criteria TEXT NOT NULL,
-        timeout_ms INTEGER NOT NULL,
-        permission_tokens TEXT,
-        status TEXT NOT NULL DEFAULT 'pending',
-        created_at TEXT NOT NULL,
-        activated_at TEXT,
-        completed_at TEXT,
-        verification_result TEXT,
-        parent_contract_id TEXT,
-        delegation_depth INTEGER DEFAULT 0,
-        tlp_classification TEXT
-      );
-      
-      CREATE TABLE IF NOT EXISTS reputation_audit_log (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        event_id TEXT NOT NULL UNIQUE,
-        event_type TEXT NOT NULL,
-        timestamp TEXT NOT NULL,
-        agent_id TEXT NOT NULL,
-        agent_name TEXT NOT NULL,
-        event_data TEXT NOT NULL,
-        task_id TEXT,
-        delegation_contract_id TEXT,
-        source_system TEXT NOT NULL DEFAULT 'dcyfr-ai'
-      );
-    `);
-    
-    db.close();
-    
-    // Initialize manager
+    // Initialize manager - it will create schema via initializeSchema()
     manager = new DelegationContractManager({
       databasePath: TEST_DB_PATH,
       maxDelegationDepth: 3,

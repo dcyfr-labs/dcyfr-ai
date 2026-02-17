@@ -47,6 +47,8 @@ describe('DelegationChainTracker', () => {
         success_criteria TEXT NOT NULL,
         timeout_ms INTEGER NOT NULL,
         permission_tokens TEXT,
+        priority INTEGER DEFAULT 3,
+        metadata TEXT,
         status TEXT NOT NULL DEFAULT 'pending',
         created_at TEXT NOT NULL,
         activated_at TEXT,
@@ -107,7 +109,7 @@ describe('DelegationChainTracker', () => {
   });
   
   afterEach(() => {
-    manager.close();
+    manager?.close();
     if (existsSync(TEST_DB_PATH)) {
       unlinkSync(TEST_DB_PATH);
     }
@@ -129,7 +131,7 @@ describe('DelegationChainTracker', () => {
       
       expect(chain).toBeDefined();
       expect(chain.contracts.length).toBe(1);
-      expect(chain.depth).toBe(0);
+      expect(chain.depth).toBe(1);
       expect(chain.has_loops).toBe(false);
     });
     
@@ -170,7 +172,7 @@ describe('DelegationChainTracker', () => {
       const chain = await tracker.buildChain(level2.contract_id);
       
       expect(chain.contracts.length).toBe(3);
-      expect(chain.depth).toBe(2);
+      expect(chain.depth).toBe(3);
       expect(chain.contracts[0].contract_id).toBe(level0.contract_id);
       expect(chain.contracts[1].contract_id).toBe(level1.contract_id);
       expect(chain.contracts[2].contract_id).toBe(level2.contract_id);
@@ -197,7 +199,7 @@ describe('DelegationChainTracker', () => {
       const analysis = await tracker.analyzeChain(contract.contract_id);
       
       expect(analysis.valid).toBe(true);
-      expect(analysis.depth).toBe(0);
+      expect(analysis.depth).toBe(1);
       expect(analysis.has_loops).toBe(false);
       expect(analysis.errors).toBeUndefined();
     });
@@ -226,7 +228,7 @@ describe('DelegationChainTracker', () => {
       // analyzeChain should detect that chain is at max depth
       const analysis = await tracker.analyzeChain(lastContract!.contract_id);
       
-      expect(analysis.depth).toBe(4); // depth 0-4 = 5 levels
+      expect(analysis.depth).toBe(5); // 5 contracts in chain
       expect(analysis.valid).toBe(true); // Still valid at max depth
       
       // Verify that attempting to add a child would fail
@@ -566,8 +568,8 @@ describe('DelegationChainTracker', () => {
       const stats = await tracker.getChainStatistics(contract.contract_id);
       
       expect(stats.total_contracts).toBe(1);
-      expect(stats.chain_depth).toBe(0);
-      expect(stats.max_depth).toBe(0);
+      expect(stats.chain_depth).toBe(1);
+      expect(stats.max_depth).toBe(1);
       expect(stats.unique_agents).toBe(2); // delegator + delegatee
       expect(stats.has_loops).toBe(false);
     });
@@ -608,7 +610,7 @@ describe('DelegationChainTracker', () => {
       const stats = await tracker.getChainStatistics(root.contract_id);
       
       expect(stats.total_contracts).toBe(3); // root + 2 children
-      expect(stats.chain_depth).toBe(0); // root has depth 0
+      expect(stats.chain_depth).toBe(1); // one contract in root chain
       expect(stats.max_depth).toBe(1); // children have depth 1
       expect(stats.unique_agents).toBeGreaterThanOrEqual(4);
       expect(stats.firebreak_count).toBeGreaterThan(0); // child1 has human_required

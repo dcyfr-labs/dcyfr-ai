@@ -11,6 +11,8 @@
  * @date 2026-02-13
  */
 
+import type { AgentCapability } from './agent-capabilities';
+
 /**
  * TLP (Traffic Light Protocol) classification levels
  */
@@ -49,7 +51,7 @@ export interface DelegationAgent {
   reputation_score?: number;
   current_workload?: number;
   max_concurrent_tasks?: number;
-  capabilities?: string[];
+  capabilities?: AgentCapability[] | string[];
   last_active?: string;
 }
 
@@ -266,11 +268,11 @@ export interface DelegationContract {
   /** Depth in delegation chain (0 = top-level) */
   delegation_depth?: number;
   
-  /** Required capabilities for task completion */
-  required_capabilities?: {
+  /** Required capabilities for task completion (string[] or object[] format supported) */
+  required_capabilities?: (string | {
     capability_id: string;
     min_confidence?: number;
-  }[];
+  })[];
   
   /** 
    * Whether the delegatee must verify context sufficiency before acting.

@@ -25,6 +25,7 @@ import type {
  * Contract creation request
  */
 export interface CreateDelegationContractRequest {
+  contract_id?: string;  // Optional: allow explicit contract ID for testing
   delegator: DelegationAgent;
   delegatee: DelegationAgent;
   task_id: string;
@@ -32,6 +33,7 @@ export interface CreateDelegationContractRequest {
   verification_policy: string;
   success_criteria: SuccessCriteria;
   timeout_ms: number;
+  priority?: number;  // 1=highest, 5=lowest, default=3
   permission_tokens?: Array<{
     token_id: string;
     scopes: string[];
@@ -40,6 +42,8 @@ export interface CreateDelegationContractRequest {
   }>;
   parent_contract_id?: string;
   tlp_classification?: string;
+  status?: DelegationContractStatus;  // Optional: for testing, default='pending'
+  created_at?: string;  // Optional: for testing, default=now
 }
 
 /**
@@ -54,11 +58,12 @@ export interface ContractQueryOptions {
   delegatee_id?: string;
   task_id?: string;
   status?: DelegationContractStatus | DelegationContractStatus[];
+  priority?: number;
   delegation_depth?: number;
   parent_contract_id?: string;
   limit?: number;
   offset?: number;
-  sort_by?: 'created_at' | 'updated_at' | 'completed_at' | 'timeout_ms';
+  sort_by?: 'created_at' | 'updated_at' | 'completed_at' | 'timeout_ms' | 'priority';
   sort_order?: 'asc' | 'desc';
 }
 
@@ -71,6 +76,7 @@ export interface ContractUpdateOptions {
   activated_at?: string;
   completed_at?: string;
   verification_result?: VerificationResult;
+  metadata?: Record<string, any>;
 }
 
 /**
@@ -132,6 +138,8 @@ export class DelegationContractManager extends EventEmitter {
         success_criteria TEXT NOT NULL,
         timeout_ms INTEGER NOT NULL,
         permission_tokens TEXT,
+        priority INTEGER DEFAULT 3,
+        metadata TEXT,
         status TEXT NOT NULL DEFAULT 'pending',
         created_at TEXT NOT NULL,
         activated_at TEXT,
@@ -154,8 +162,10 @@ export class DelegationContractManager extends EventEmitter {
    * Create a new delegation contract
    */
   async createContract(request: CreateDelegationContractRequest): Promise<DelegationContract> {
-    const contract_id = `contract-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-    const created_at = new Date().toISOString();
+    // Use explicit contract_id if provided (for testing), otherwise generate
+    const contract_id = request.contract_id || `contract-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+    const created_at = request.created_at || new Date().toISOString();
+    const status = request.status || 'pending';
     
     // Cache agent names for later retrieval
     this.agentNames.set(request.delegator.agent_id, request.delegator.agent_name);
@@ -167,12 +177,12 @@ export class DelegationContractManager extends EventEmitter {
       const parent = this.getContractById(request.parent_contract_id);
       if (parent) {
         delegation_depth = (parent.delegation_depth ?? 0) + 1;
-        
-        // Check max depth
-        if (delegation_depth >= this.maxDelegationDepth) {
-          throw new Error('Maximum delegation depth exceeded');
-        }
       }
+    }
+    
+    // Validate max delegation depth
+    if (delegation_depth >= this.maxDelegationDepth) {
+      throw new Error(`Maximum delegation depth exceeded (max: ${this.maxDelegationDepth}, attempted: ${delegation_depth})`);
     }
     
     // Insert contract
@@ -180,10 +190,10 @@ export class DelegationContractManager extends EventEmitter {
       INSERT INTO delegation_contracts (
         contract_id, delegator_agent_id, delegatee_agent_id,
         task_id, task_description, verification_policy,
-        success_criteria, timeout_ms, permission_tokens,
-        parent_contract_id, delegation_depth, tlp_classification,
+        success_criteria, timeout_ms, priority, permission_tokens,
+        metadata, parent_contract_id, delegation_depth, tlp_classification,
         status, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     
     stmt.run(
@@ -195,11 +205,13 @@ export class DelegationContractManager extends EventEmitter {
       request.verification_policy,
       JSON.stringify(request.success_criteria),
       request.timeout_ms,
+      request.priority ?? 3,
       request.permission_tokens ? JSON.stringify(request.permission_tokens) : null,
+      null,  // metadata initially null
       request.parent_contract_id ?? null,
       delegation_depth,
       request.tlp_classification ?? 'TLP:CLEAR',
-      'pending',
+      status,
       created_at
     );
     
@@ -260,6 +272,11 @@ export class DelegationContractManager extends EventEmitter {
     if (options.parent_contract_id) {
       conditions.push('parent_contract_id = ?');
       params.push(options.parent_contract_id);
+    }
+    
+    if (options.priority !== undefined) {
+      conditions.push('priority = ?');
+      params.push(options.priority);
     }
     
     let query = 'SELECT * FROM delegation_contracts';
@@ -341,6 +358,11 @@ export class DelegationContractManager extends EventEmitter {
       params.push(JSON.stringify(updates.verification_result));
     }
     
+    if (updates.metadata) {
+      fields.push('metadata = ?');
+      params.push(JSON.stringify(updates.metadata));
+    }
+    
     if (fields.length === 0) {
       return existing;
     }
@@ -383,6 +405,52 @@ export class DelegationContractManager extends EventEmitter {
     
     if (this.debug) {
       console.log(`[ContractManager] Deleted contract ${contract_id}: ${reason ?? 'no reason'}`);
+    }
+  }
+
+  /**
+   * Update contract status (convenience method)
+   */
+  async updateContractStatus(
+    contract_id: string,
+    status: DelegationContractStatus,
+    options?: { metadata?: Record<string, any>; verification_result?: VerificationResult }
+  ): Promise<DelegationContract> {
+    const updates: ContractUpdateOptions = { contract_id, status };
+    
+    // Add verification_result if provided
+    if (options?.verification_result) {
+      updates.verification_result = options.verification_result;
+    }
+    
+    // Merge metadata if provided
+    if (options?.metadata) {
+      // Get existing contract to merge metadata
+      const existing = this.getContractById(contract_id);
+      const existingMetadata = existing?.metadata || {};
+      updates.metadata = { ...existingMetadata, ...options.metadata };
+    }
+    
+    return this.updateContract(updates);
+  }
+
+  /**
+   * Cancel a contract (convenience method for cancellation)
+   */
+  async cancelContract(contract_id: string, reason?: string): Promise<void> {
+    const contract = this.getContractById(contract_id);
+    if (!contract) {
+      throw new Error(`Contract not found: ${contract_id}`);
+    }
+    
+    await this.updateContract({
+      contract_id,
+      status: 'cancelled' as DelegationContractStatus,
+      metadata: reason ? { cancellation_reason: reason } : undefined,
+    });
+    
+    if (this.debug) {
+      console.log(`[ContractManager] Cancelled contract ${contract_id}: ${reason ?? 'no reason'}`);
     }
   }
 
@@ -490,6 +558,7 @@ export class DelegationContractManager extends EventEmitter {
       verification_policy: row.verification_policy as VerificationPolicy,
       success_criteria: JSON.parse(row.success_criteria),
       timeout_ms: row.timeout_ms,
+      priority: row.priority,
       permission_tokens: row.permission_tokens ? JSON.parse(row.permission_tokens) : undefined,
       status: row.status as DelegationContractStatus,
       created_at: row.created_at,
@@ -499,6 +568,7 @@ export class DelegationContractManager extends EventEmitter {
       parent_contract_id: row.parent_contract_id ?? undefined,
       delegation_depth: row.delegation_depth ?? 0,
       tlp_classification: row.tlp_classification ?? 'CLEAR',
+      metadata: row.metadata ? JSON.parse(row.metadata) : {},
     };
   }
 }

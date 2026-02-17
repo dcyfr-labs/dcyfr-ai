@@ -273,12 +273,18 @@ export class LiabilityFirebreakEnforcer {
     context: FirebreakValidationContext
   ): FirebreakResult {
     // Use default values for missing context properties
+    // Empty array means single delegation (1 hop)
+    const hasChainAgents = context.chain_agents && context.chain_agents.length > 0;
+    const defaultChainAgents = hasChainAgents 
+      ? context.chain_agents! 
+      : []; // Empty means single delegation
+    
     const validationContext = {
       delegation_depth: Math.max(context.delegation_depth || 1, 1),
       estimated_value: Math.max(context.estimated_value || 0, 0),
       involves_critical_systems: context.involves_critical_systems || false,
       is_external_delegation: context.is_external_delegation || false,
-      chain_agents: context.chain_agents || [primaryAgent, secondaryAgent],
+      chain_agents: defaultChainAgents,
     };
     
     this.stats.total_validations++;
@@ -335,7 +341,7 @@ export class LiabilityFirebreakEnforcer {
       firebreaks_passed: firebreaksPassed,
       blocking_firebreaks: blockingFirebreaks,
       liability_level: liabilityLevel,
-      chain_length: validationContext.chain_agents.length,
+      chain_length: validationContext.chain_agents.length || 1, // Default to 1 for empty
       manual_override_available: !firebreaksPassed,
       required_authority: requiredAuthority,
       validation_timestamp: new Date().toISOString(),
@@ -370,17 +376,21 @@ export class LiabilityFirebreakEnforcer {
    * Check depth limits
    */
   private checkDepthLimits(depth: number): { allowed: boolean } {
-    return { allowed: depth <= Math.max(...Object.values(this.config.depth_thresholds)) };
+    // Block if depth EXCEEDS supervisor threshold (not equal to)
+    const requiresApproval = depth > this.config.depth_thresholds.supervisor;
+    return { allowed: !requiresApproval };
   }
   
   /**
    * Get required authority for given depth
    */
   private getAuthorityForDepth(depth: number): OverrideAuthority {
-    if (depth <= this.config.depth_thresholds.supervisor) return 'supervisor';
-    if (depth <= this.config.depth_thresholds.manager) return 'manager';
-    if (depth <= this.config.depth_thresholds.executive) return 'executive';
-    return 'emergency';
+    // Depths beyond executive threshold require emergency authority
+    if (depth > this.config.depth_thresholds.executive) return 'emergency';
+    if (depth > this.config.depth_thresholds.manager) return 'manager';
+    if (depth > this.config.depth_thresholds.supervisor) return 'supervisor';
+    // At or below supervisor threshold requires agent only
+    return 'agent';
   }
   
   /**
@@ -698,8 +708,13 @@ export class LiabilityFirebreakEnforcer {
       if (reqContext.estimated_value > this.config.liability_thresholds.high_value_limit) {
         requiredAuthority = this.escalateAuthority(requiredAuthority, 'manager');
       }
+      // Check all depth thresholds
       if (reqContext.delegation_depth > this.config.depth_thresholds.executive) {
         requiredAuthority = this.escalateAuthority(requiredAuthority, 'emergency');
+      } else if (reqContext.delegation_depth > this.config.depth_thresholds.manager) {
+        requiredAuthority = this.escalateAuthority(requiredAuthority, 'manager');
+      } else if (reqContext.delegation_depth > this.config.depth_thresholds.supervisor) {
+        requiredAuthority = this.escalateAuthority(requiredAuthority, 'supervisor');
       }
     }
     
@@ -767,7 +782,7 @@ export class LiabilityFirebreakEnforcer {
       status: 'pending',
       expires_at: reqExpiresAt,
       created_at: new Date().toISOString(),
-      required_approvals: requiredLevel > 0 ? [requiredAuthority] : undefined,
+      required_approvals: requiredAuthority !== 'agent' ? [requiredAuthority] : undefined,
       auto_approved: false,
     };
 

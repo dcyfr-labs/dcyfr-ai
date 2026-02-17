@@ -445,7 +445,8 @@ export class EnhancedCapabilityDetection extends EventEmitter {
    */
   private async updatePerformanceMetrics(contract: DelegationContract): Promise<void> {
     for (const requiredCapability of (contract.required_capabilities || [])) {
-      const metricKey = `${contract.delegatee_agent_id}:${requiredCapability.capability_id}`;
+      const capId = typeof requiredCapability === 'string' ? requiredCapability : requiredCapability.capability_id;
+      const metricKey = `${contract.delegatee_agent_id}:${capId}`;
       const metric = this.performanceMetrics.get(metricKey);
 
       if (metric) {
@@ -489,9 +490,10 @@ export class EnhancedCapabilityDetection extends EventEmitter {
     if (!manifest) return updates;
 
     const updatedCapabilities = manifest.capabilities.map(capability => {
-      const wasUsed = (contract.required_capabilities || []).some(
-        req => req.capability_id === capability.capability_id
-      );
+      const wasUsed = (contract.required_capabilities || []).some(req => {
+        const reqId = typeof req === 'string' ? req : req.capability_id;
+        return reqId === capability.capability_id;
+      });
 
       if (wasUsed) {
         const oldConfidence = capability.confidence_level;

@@ -32,29 +32,48 @@ describe('SecurityThreatValidator', () => {
     });
   });
 
-  const createMockContract = (overrides: Partial<DelegationContract> = {}): DelegationContract => ({
-    contract_id: `test_contract_${Date.now()}`,
-    task_id: 'test_task',
-    delegator: {
-      agent_id: 'delegator_agent',
-      agent_name: 'Delegator Agent',
-    },
-    delegatee: {
-      agent_id: 'delegatee_agent', 
-      agent_name: 'Delegatee Agent',
-    },
-    permission_token: {
-      token_id: 'test_token',
-      scopes: ['read'],
-      actions: ['view'],
-    },
-    verification_policy: 'manual',
-    success_criteria: ['task_completed'],
-    created_at: new Date().toISOString(),
-    status: 'pending',
-    tlp_classification: 'TLP:CLEAR',
-    ...overrides,
-  });
+  const createMockContract = (overrides: Partial<DelegationContract> = {}): DelegationContract => {
+    const baseContract = {
+      contract_id: `test_contract_${Date.now()}`,
+      task_id: 'test_task',
+      delegator: {
+        agent_id: 'delegator_agent',
+        agent_name: 'Delegator Agent',
+      },
+      delegatee: {
+        agent_id: 'delegatee_agent', 
+        agent_name: 'Delegatee Agent',
+      },
+      permission_token: {
+        token_id: 'test_token',
+        scopes: ['read'],
+        actions: ['view'],
+        resources: [],
+      },
+      verification_policy: 'manual' as const,
+      success_criteria: ['task_completed'],
+      created_at: new Date().toISOString(),
+      status: 'pending' as const,
+      tlp_classification: 'TLP:CLEAR' as const,
+    };
+    
+    // Merge permission_token if provided in overrides
+    const finalContract = {
+      ...baseContract,
+      ...overrides,
+      permission_token: overrides.permission_token ? {
+        ...baseContract.permission_token,
+        ...overrides.permission_token,
+      } : baseContract.permission_token,
+    };
+    
+    // Populate convenience accessors from nested objects
+    return {
+      ...finalContract,
+      delegator_agent_id: finalContract.delegator?.agent_id || 'delegator_agent',
+      delegatee_agent_id: finalContract.delegatee?.agent_id || 'delegatee_agent',
+    } as DelegationContract;
+  };
 
   describe('Permission Escalation Detection', () => {
     it('should detect high-privilege scope requests', async () => {

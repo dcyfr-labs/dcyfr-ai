@@ -11,7 +11,7 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { ContractManager } from '../../contract-manager.js';
+import { ContractManager } from '../contract-manager.js';
 import type { DelegationContract } from '../../../types/delegation-contracts.js';
 
 describe('ContractManager Security Integration', () => {

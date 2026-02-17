@@ -11,7 +11,11 @@
  */
 
 import type { AgentRuntime } from '../runtime/agent-runtime';
-import { DelegationTelemetryEngine } from './delegation-telemetry';
+import { 
+  DelegationTelemetryEngine,
+  ConsoleTelemetrySink,
+  InMemoryTelemetrySink 
+} from './delegation-telemetry';
 import type { DelegationTelemetryConfig, DelegationPerformanceMetrics } from './delegation-telemetry';
 import type { DelegationContract } from '../types/delegation-contracts';
 import type { TaskExecutionContext, TaskExecutionResult } from '../runtime/agent-runtime';
@@ -472,8 +476,6 @@ export function createDefaultTelemetryIntegration(
   agentId: string,
   options?: Partial<RuntimeTelemetryIntegrationConfig>
 ): RuntimeTelemetryIntegration {
-  const { ConsoleTelemetrySink, InMemoryTelemetrySink } = require('./delegation-telemetry');
-  
   const config: RuntimeTelemetryIntegrationConfig = {
     telemetry_config: {
       agent_id: agentId,

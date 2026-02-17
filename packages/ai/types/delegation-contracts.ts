@@ -36,7 +36,8 @@ export type DelegationContractStatus =
   | 'completed'    // Successfully completed and verified
   | 'failed'       // Work failed verification
   | 'timeout'      // Exceeded timeout deadline
-  | 'revoked';     // Contract cancelled/revoked
+  | 'cancelled'    // Contract cancelled by delegator
+  | 'revoked';     // Contract revoked (system/security)
 
 /**
  * Success criteria for delegation verification
@@ -138,6 +139,9 @@ export interface DelegationContract {
   
   /** Maximum time allowed for completion (milliseconds) */
   timeout_ms: number;
+  
+  /** Priority level (1=highest, 5=lowest, default=3) */
+  priority?: number;
   
   /** Permission tokens granted for this delegation */
   permission_tokens?: PermissionToken[];

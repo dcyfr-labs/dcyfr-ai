@@ -381,9 +381,10 @@ export class DelegationCapabilityIntegration extends EventEmitter {
 
     const updatedCapabilities = manifest.capabilities.map(capability => {
       // Check if this capability was used in the contract
-      const wasUsed = (contract.required_capabilities || []).some(
-        req => req.capability_id === capability.capability_id
-      );
+      const wasUsed = (contract.required_capabilities || []).some(req => {
+        const reqId = typeof req === 'string' ? req : req.capability_id;
+        return reqId === capability.capability_id;
+      });
 
       if (wasUsed) {
         // Increase confidence slightly on successful completion

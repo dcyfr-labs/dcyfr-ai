@@ -30,7 +30,9 @@ describe('Delegation Workflow Integration', () => {
   let firebreakEnforcer: LiabilityFirebreakEnforcer;
 
   beforeEach(async () => {
-    contractManager = new ContractManager();
+    // Use higher maxDelegationDepth (20) to allow testing tracker's chain depth detection
+    // Tracker can detect excessive chains even when individual contracts are valid
+    contractManager = new ContractManager({ maxDelegationDepth: 20 });
     chainTracker = new DelegationChainTracker(contractManager);
     capabilityRegistry = new CapabilityRegistry();
     tlpEngine = new TLPEnforcementEngine();

@@ -437,15 +437,16 @@ export class CapabilityRegistry extends EventEmitter implements ICapabilityRegis
 
   /**
    * Find agents by capability (convenience wrapper for queryCapabilities)
+   * Returns capability match objects with nested capability data for integration tests
    */
   findByCapability(
     capabilityId: string,
     options: { minConfidence?: number } = {}
-  ): AgentCapabilityManifest[] {
-    const results: AgentCapabilityManifest[] = [];
+  ): Array<{ agent_id: string; agent_name: string; capability: { capability_id: string; confidence_level: number } }> {
+    const results: Array<{ agent_id: string; agent_name: string; capability: { capability_id: string; confidence_level: number } }> = [];
 
     for (const manifest of this.manifests.values()) {
-      const hasCapability = manifest.capabilities.some(cap => {
+      const matchingCap = manifest.capabilities.find(cap => {
         const capName = cap.capability_id || (cap as any).capability;
         const confidence = cap.confidence_level || (cap as any).confidence || 0;
         
@@ -455,8 +456,18 @@ export class CapabilityRegistry extends EventEmitter implements ICapabilityRegis
         return true;
       });
 
-      if (hasCapability) {
-        results.push(manifest);
+      if (matchingCap) {
+        const capName = matchingCap.capability_id || (matchingCap as any).capability;
+        const confidence = matchingCap.confidence_level || (matchingCap as any).confidence || 0;
+        
+        results.push({
+          agent_id: manifest.agent_id,
+          agent_name: manifest.agent_name,
+          capability: {
+            capability_id: capName,
+            confidence_level: confidence,
+          },
+        });
       }
     }
 
@@ -535,8 +546,8 @@ export class CapabilityRegistry extends EventEmitter implements ICapabilityRegis
   rankAgents(
     requiredCapabilities: string[],
     options: { confidenceWeight?: number; considerWorkload?: boolean } = {}
-  ): (AgentCapabilityManifest & { score: number })[] {
-    const results: (AgentCapabilityManifest & { score: number })[] = [];
+  ): Array<{ agent_id: string; agent_name: string; match_score: number; score: number }> {
+    const results: Array<{ agent_id: string; agent_name: string; match_score: number; score: number }> = [];
 
     for (const manifest of this.manifests.values()) {
       let score = this.calculateMatchScore(manifest.agent_id, requiredCapabilities);
@@ -547,19 +558,24 @@ export class CapabilityRegistry extends EventEmitter implements ICapabilityRegis
       }
       
       if (score > 0) {
-        results.push({ ...manifest, score });
+        results.push({
+          agent_id: manifest.agent_id,
+          agent_name: manifest.agent_name,
+          match_score: score,
+          score,
+        });
       }
     }
 
     // Sort by calculated score (higher is better)
     results.sort((a, b) => {
       if (options?.considerWorkload) {
-        const workloadA = a.current_workload || 0;
-        const workloadB = b.current_workload || 0;
-        return (b.score - workloadB * 0.1) - (a.score - workloadA * 0.1);
+        const workloadA = this.getWorkload(a.agent_id);
+        const workloadB = this.getWorkload(b.agent_id);
+        return (b.match_score - workloadB * 0.1) - (a.match_score - workloadA * 0.1);
       }
       
-      return b.score - a.score;
+      return b.match_score - a.match_score;
     });
 
     return results;

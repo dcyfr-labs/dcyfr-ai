@@ -320,7 +320,7 @@ export class AgentRuntime extends EventEmitter {
       agent_id: this.config.agent_id,
       agent_name: this.config.agent_name,
       version: this.config.version,
-      capabilities: this.config.capabilities?.capabilities?.map(c => c.name) || [],
+      capabilities: this.config.capabilities?.capabilities || [],
       reputation_score: this.calculateCurrentReputation(),
       current_workload: this.currentTasks.size,
       max_concurrent_tasks: this.config.max_concurrent_tasks || 5,
@@ -672,9 +672,12 @@ export class AgentRuntime extends EventEmitter {
       assessment.resource_availability = 1;
     }
     
-    // Check capability requirements
+    //  Check capability requirements
     if (contract.required_capabilities && contract.required_capabilities.length > 0) {
-      const capabilityIds = contract.required_capabilities.map(cap => cap.capability_id);
+      // Handle both string[] and object[] formats for required_capabilities
+      const capabilityIds = contract.required_capabilities.map(cap => 
+        typeof cap === 'string' ? cap : cap.capability_id
+      );
       const capabilityCheck = this.checkCapabilityRequirements(capabilityIds);
       if (!capabilityCheck.canMeet) {
         return { 
@@ -1545,6 +1548,9 @@ export class AgentRuntime extends EventEmitter {
         console.error('[AgentRuntime] Error during telemetry cleanup:', error);
       }
     }
+    
+    // Emit shutdown event before removing listeners
+    this.emit('shutdown');
     
     // Remove all event listeners
     this.removeAllListeners();
