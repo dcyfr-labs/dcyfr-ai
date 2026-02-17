@@ -850,7 +850,7 @@ export class AgentRuntime {
         }
         
         // Use validated input
-        action.input = validationResult.data;
+        action.input = validationResult.data as Record<string, unknown>;
       }
       
       // Build tool execution context

@@ -117,7 +117,7 @@ server.addTool({
     contractId: z.string().describe('Delegation contract identifier'),
     agentId: z.string().optional().describe('Agent involved in the event'),
     metadata: z
-      .record(z.unknown())
+      .record(z.string(), z.unknown())
       .optional()
       .describe('Additional event metadata (JSON object)'),
   }),
@@ -392,7 +392,7 @@ server.addTool({
       .describe('Escalation priority level'),
     requestedReviewer: z.string().optional().describe('Specific human reviewer to assign'),
     additionalContext: z
-      .record(z.unknown())
+      .record(z.string(), z.unknown())
       .optional()
       .describe('Additional context for reviewer'),
   }),

@@ -42,8 +42,8 @@ export const DesignTokenConfigSchema = z.object({
       'SEMANTIC_COLORS.primary',
       'SEMANTIC_COLORS.success',
     ]),
-  }).default({}),
-}).default({});
+  }).optional(),
+}).optional();
 
 /**
  * Barrel export configuration
@@ -61,7 +61,7 @@ export const BarrelExportConfigSchema = z.object({
     'src/app/**/layout.tsx',
     'src/app/**/page.tsx',
   ]),
-}).default({});
+}).optional();
 
 /**
  * PageLayout enforcement configuration
@@ -76,7 +76,7 @@ export const PageLayoutConfigSchema = z.object({
     'ErrorLayout',
   ]),
   strictMode: z.boolean().default(true),
-}).default({});
+}).optional();
 
 /**
  * Test data guardian configuration
@@ -91,14 +91,14 @@ export const TestDataConfigSchema = z.object({
     tokens: z.boolean().default(true),
     emails: z.boolean().default(true),
     urls: z.boolean().default(true),
-  }).default({}),
+  }).optional(),
   allowedPrefixes: z.array(z.string()).default([
     'MOCK_',
     'TEST_',
     'FAKE_',
     'FIXTURE_',
   ]),
-}).default({});
+}).optional();
 
 /**
  * Plugin configuration
@@ -108,7 +108,7 @@ export const PluginConfigSchema = z.object({
   enabled: z.boolean().default(true),
   timeout: z.number().positive().default(30000),
   failureMode: FailureModeSchema.default('warn'),
-  config: z.record(z.unknown()).default({}),
+  config: z.record(z.string(), z.unknown()).optional(),
 });
 
 /**
@@ -132,7 +132,13 @@ export const TelemetryConfigSchema = z.object({
   storagePath: z.string().default('.dcyfr/telemetry'),
   retentionDays: z.number().positive().default(30),
   sampling: z.number().min(0).max(1).default(1.0),
-}).default({});
+}).default({
+  enabled: true,
+  storage: 'file',
+  storagePath: '.dcyfr/telemetry',
+  retentionDays: 30,
+  sampling: 1.0,
+});
 
 /**
  * Provider configuration
@@ -143,14 +149,21 @@ export const ProviderConfigSchema = z.object({
   fallback: z.array(z.string()).default(['groq', 'msty', 'ollama', 'copilot']),
   timeout: z.number().positive().default(30000),
   retries: z.number().min(0).default(3),
-  providers: z.record(z.object({
+  providers: z.record(z.string(), z.object({
     enabled: z.boolean().default(true),
     apiKey: z.string().optional(),
     baseUrl: z.string().optional(),
     model: z.string().optional(),
     maxTokens: z.number().positive().optional(),
-  })).default({}),
-}).default({});
+  })).optional(),
+}).default({
+  enabled: true,
+  primary: 'claude',
+  fallback: ['groq', 'msty', 'ollama', 'copilot'],
+  timeout: 30000,
+  retries: 3,
+  providers: {},
+});
 
 /**
  * Agent category schema
@@ -243,7 +256,7 @@ export const AgentRegistryConfigSchema = z.object({
   public: AgentTierConfigSchema.default({ enabled: true, source: '@dcyfr/ai/agents-builtin' }),
   private: AgentTierConfigSchema.default({ enabled: false }),
   project: AgentTierConfigSchema.default({ enabled: true, paths: ['.claude/agents', '.github/agents'] }),
-}).default({});
+}).optional();
 
 /**
  * Agent routing rule schema
@@ -262,7 +275,7 @@ export const AgentRouterConfigSchema = z.object({
   routingRules: z.array(AgentRoutingRuleSchema).default([]),
   delegationEnabled: z.boolean().default(true),
   maxDelegationDepth: z.number().min(0).default(3),
-}).default({});
+}).optional();
 
 /**
  * MCP transport schema
@@ -278,7 +291,7 @@ export const MCPServerConfigSchema = z.object({
   transport: MCPTransportSchema,
   command: z.string().optional(),
   args: z.array(z.string()).optional(),
-  env: z.record(z.string()).optional(),
+  env: z.record(z.string(), z.string()).optional(),
   url: z.string().optional(),
   enabled: z.boolean().default(true),
   tier: AgentTierSchema.optional(),
@@ -294,7 +307,7 @@ export const MCPRegistryConfigSchema = z.object({
   configFileName: z.string().default('.mcp.json'),
   healthCheckInterval: z.number().positive().default(60000),
   healthMonitoring: z.boolean().default(false),
-}).default({});
+}).optional();
 
 /**
  * Main framework configuration schema
@@ -314,7 +327,12 @@ export const FrameworkConfigSchema = z.object({
     parallel: z.boolean().default(true),
     failFast: z.boolean().default(false),
     gates: z.array(ValidationGateConfigSchema).default([]),
-  }).default({}),
+  }).default({
+    enabled: true,
+    parallel: true,
+    failFast: false,
+    gates: [],
+  }),
   
   // Plugins
   plugins: z.array(PluginConfigSchema).default([]),
@@ -325,7 +343,34 @@ export const FrameworkConfigSchema = z.object({
     barrelExports: BarrelExportConfigSchema,
     pageLayout: PageLayoutConfigSchema,
     testData: TestDataConfigSchema,
-  }).default({}),
+  }).default({
+    designTokens: {
+      enabled: true,
+      tokenFile: 'src/lib/design-tokens.ts',
+      compliance: 0.90,
+      autofix: false,
+      strictMode: true,
+    },
+    barrelExports: {
+      enabled: true,
+      barrelPaths: ['@/components', '@/lib', '@/utils'],
+      allowRelativeWithin: false,
+      strictMode: true,
+      exceptions: ['src/app/**/layout.tsx', 'src/app/**/page.tsx'],
+    },
+    pageLayout: {
+      enabled: true,
+      targetUsage: 0.90,
+      pagePattern: 'src/app/**/page.tsx',
+      exceptions: ['ArticleLayout', 'ArchiveLayout', 'ErrorLayout'],
+      strictMode: true,
+    },
+    testData: {
+      enabled: true,
+      testPattern: '**/*.{test,spec}.{ts,tsx,js,jsx}',
+      allowedPrefixes: ['MOCK_', 'TEST_', 'FAKE_', 'FIXTURE_'],
+    },
+  }),
   
   // Project settings
   project: z.object({
@@ -337,7 +382,11 @@ export const FrameworkConfigSchema = z.object({
       'build/**',
       '.next/**',
     ]),
-  }).default({}),
+  }).default({
+    root: process.cwd(),
+    include: ['src/**/*.{ts,tsx,js,jsx}'],
+    exclude: ['node_modules/**', 'dist/**', 'build/**', '.next/**'],
+  }),
 
   // Agent registry configuration
   agentRegistry: AgentRegistryConfigSchema,

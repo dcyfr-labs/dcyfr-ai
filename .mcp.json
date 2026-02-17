@@ -14,7 +14,7 @@
       "args": [
         "-y",
         "@modelcontextprotocol/server-filesystem",
-        "/Users/drew/DCYFR/workspace/dcyfr-labs"
+        "/Users/drew/DCYFR/code/dcyfr-workspace/dcyfr-labs"
       ],
       "type": "stdio"
     },
@@ -102,6 +102,19 @@
         "PERPLEXITY_API_KEY": "${PERPLEXITY_API_KEY}"
       }
     },
+    "sonarqube": {
+      "type": "stdio",
+      "command": "bash",
+      "args": [
+        "/Users/drew/DCYFR/code/dcyfr-workspace/scripts/sonarqube-mcp-launcher.sh"
+      ],
+      "env": {
+        "SONARQUBE_TOKEN": "${SONAR_TOKEN}",
+        "SONARQUBE_ORG": "${SONAR_ORGANIZATION}",
+        "SONARQUBE_IDE_PORT": "${SONARQUBE_IDE_PORT}",
+        "SONARQUBE_URL": "${SONARQUBE_URL}"
+      }
+    },
     "dcyfr-analytics": {
       "type": "stdio",
       "command": "npx",
@@ -144,6 +157,13 @@
       "cwd": "/Users/drew/DCYFR/code/dcyfr-labs",
       "env": {
         "PROMPTINTEL_API_KEY": "${PROMPTINTEL_API_KEY}"
+      }
+    },
+    "msty-sidecar": {
+      "type": "http",
+      "url": "${MSTY_SIDECAR_URL}",
+      "headers": {
+        "Authorization": "Bearer ${MSTY_SIDECAR_TOKEN}"
       }
     }
   }

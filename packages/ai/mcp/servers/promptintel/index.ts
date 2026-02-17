@@ -249,10 +249,10 @@ server.addTool({
       .enum(['critical', 'high', 'medium', 'low'])
       .describe('Severity level'),
     findings: z
-      .record(z.unknown())
+      .record(z.string(), z.unknown())
       .describe('Structured findings data (JSON object)'),
     metadata: z
-      .record(z.unknown())
+      .record(z.string(), z.unknown())
       .optional()
       .describe('Additional metadata'),
   }),
