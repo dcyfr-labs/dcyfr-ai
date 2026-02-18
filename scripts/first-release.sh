@@ -10,7 +10,7 @@ echo "=============================="
 echo ""
 
 # Check if we're in the right directory
-if [ ! -f "package.json" ]; then
+if [[ ! -f "package.json" ]]; then
   echo "❌ Error: package.json not found"
   echo "Please run this script from the dcyfr-ai root directory"
   exit 1
@@ -114,7 +114,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
   echo ""
   
   # Check for uncommitted changesets
-  if [ -n "$(ls -A .changeset/*.md 2>/dev/null | grep -v README.md)" ]; then
+  if [[ -n "$(ls -A .changeset/*.md 2>/dev/null | grep -v README.md)" ]]; then
     git add .changeset/*.md
     git add .github/workflows/*.yml
     git add docs/RELEASE*.md

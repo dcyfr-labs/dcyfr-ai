@@ -17,7 +17,7 @@ echo ""
 # 2. Build TypeScript
 echo "2️⃣  Building TypeScript..."
 npm run build
-if [ $? -eq 0 ]; then
+if [[ $? -eq 0 ]]; then
   echo "✅ Build successful"
 else
   echo "❌ Build failed"
@@ -28,7 +28,7 @@ echo ""
 # 3. Run tests
 echo "3️⃣  Running tests..."
 npm test
-if [ $? -eq 0 ]; then
+if [[ $? -eq 0 ]]; then
   echo "✅ Tests passed"
 else
   echo "❌ Tests failed"
@@ -39,7 +39,7 @@ echo ""
 # 4. Type check
 echo "4️⃣  Type checking..."
 npm run typecheck
-if [ $? -eq 0 ]; then
+if [[ $? -eq 0 ]]; then
   echo "✅ Type check passed"
 else
   echo "❌ Type check failed"
@@ -67,7 +67,7 @@ required_files=(
 )
 
 for file in "${required_files[@]}"; do
-  if [ -f "$file" ]; then
+  if [[ -f "$file" ]]; then
     echo "✅ $file"
   else
     echo "❌ Missing: $file"
@@ -78,12 +78,12 @@ echo ""
 
 # 7. Check dist exports
 echo "7️⃣  Validating exports..."
-if [ -f "dist/ai/config/loader.js" ] && \
-   [ -f "dist/ai/config/schema.js" ] && \
-   [ -f "dist/ai/telemetry/engine.js" ] && \
-   [ -f "dist/ai/providers/registry.js" ] && \
-   [ -f "dist/ai/plugins/plugin-loader.js" ] && \
-   [ -f "dist/ai/validation/validation-framework.js" ]; then
+if [[ -f "dist/ai/config/loader.js" ]] && \
+   [[ -f "dist/ai/config/schema.js" ]] && \
+   [[ -f "dist/ai/telemetry/engine.js" ]] && \
+   [[ -f "dist/ai/providers/registry.js" ]] && \
+   [[ -f "dist/ai/plugins/plugin-loader.js" ]] && \
+   [[ -f "dist/ai/validation/validation-framework.js" ]]; then
   echo "✅ All exports present"
 else
   echo "❌ Missing exports"
@@ -94,7 +94,7 @@ echo ""
 # 8. Test CLI
 echo "8️⃣  Testing CLI..."
 node bin/dcyfr-ai.js help > /dev/null 2>&1
-if [ $? -eq 0 ]; then
+if [[ $? -eq 0 ]]; then
   echo "✅ CLI functional"
 else
   echo "❌ CLI broken"
@@ -112,7 +112,7 @@ echo ""
 # 10. Dry run npm publish
 echo "🔟  Testing npm pack..."
 npm pack --dry-run > /dev/null 2>&1
-if [ $? -eq 0 ]; then
+if [[ $? -eq 0 ]]; then
   echo "✅ Package ready for publish"
 else
   echo "❌ Package validation failed"
