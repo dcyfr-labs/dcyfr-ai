@@ -342,7 +342,7 @@ export class HighPerformanceBatchProcessor<TInput = any, TOutput = any> extends 
       // Cache result if enabled
       if (this.config.enableCaching && this.cacheManager) {
         const cacheKey = this.generateBatchCacheKey(items);
-        await this.cacheManager.set(cacheKey, result, {
+        this.cacheManager.set(cacheKey, result, {
           ttl: 30 * 60 * 1000, // 30 minutes
           tags: ['batch_results'],
           priority: 6,

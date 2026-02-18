@@ -226,7 +226,7 @@ export class EnhancedCapabilityDetection extends EventEmitter {
     const bootstrapResult = await this.bootstrap.bootstrap(source);
     
     // Step 2: Register with registry
-    await this.registry.registerManifest(bootstrapResult.manifest);
+    this.registry.registerManifest(bootstrapResult.manifest);
     
     // Step 3: Initialize performance tracking
     const performanceBaseline = this.initializePerformanceMetrics(
@@ -351,7 +351,7 @@ export class EnhancedCapabilityDetection extends EventEmitter {
       reason: string;
     }>;
   }> {
-    const manifest = await this.registry.getManifest(agentId);
+    const manifest = this.registry.getManifest(agentId);
     if (!manifest) {
       return { updatedManifest: null, changes: [] };
     }
@@ -404,7 +404,7 @@ export class EnhancedCapabilityDetection extends EventEmitter {
     };
 
     if (changes.length > 0) {
-      await this.registry.updateManifest(agentId, updatedManifest);
+      this.registry.updateManifest(agentId, updatedManifest);
     }
 
     return { updatedManifest, changes };
@@ -485,7 +485,7 @@ export class EnhancedCapabilityDetection extends EventEmitter {
     contract: DelegationContract
   ): Promise<Array<{ capabilityId: string; oldConfidence: number; newConfidence: number; reason: string }>> {
     const updates: Array<{ capabilityId: string; oldConfidence: number; newConfidence: number; reason: string }> = [];
-    const manifest = await this.registry.getManifest(contract.delegatee_agent_id);
+    const manifest = this.registry.getManifest(contract.delegatee_agent_id);
     
     if (!manifest) return updates;
 
@@ -526,7 +526,7 @@ export class EnhancedCapabilityDetection extends EventEmitter {
     });
 
     if (updates.length > 0) {
-      await this.registry.updateManifest(contract.delegatee_agent_id, {
+      this.registry.updateManifest(contract.delegatee_agent_id, {
         capabilities: updatedCapabilities,
       });
     }
@@ -651,7 +651,7 @@ export class EnhancedCapabilityDetection extends EventEmitter {
     averageSuccessRate: number;
     topPerformingCapabilities: Array<{ capabilityId: string; successRate: number }>;
   }> {
-    const allManifests = await this.registry.listManifests();
+    const allManifests = this.registry.listManifests();
     const allMetrics = Array.from(this.performanceMetrics.values());
     
     const totalSuccessRate = allMetrics.reduce((sum, metric) => sum + metric.successRate, 0);

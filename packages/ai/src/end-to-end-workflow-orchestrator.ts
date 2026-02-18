@@ -536,7 +536,7 @@ export class EndToEndWorkflowOrchestrator extends EventEmitter {
                 );
                 
                 // Cache the results
-                await this.cacheManager.set(cacheKey, {
+                this.cacheManager.set(cacheKey, {
                   detectionResult,
                   onboardingResult,
                 }, {
@@ -646,7 +646,7 @@ export class EndToEndWorkflowOrchestrator extends EventEmitter {
               
               // Cache successful results
               if (taskResult.status === 'completed') {
-                await this.cacheManager.set(taskCacheKey, taskResult, {
+                this.cacheManager.set(taskCacheKey, taskResult, {
                   ttl: 15 * 60 * 1000, // 15 minutes
                   tags: ['task-results', task.taskId],
                   priority: task.priority || 5,

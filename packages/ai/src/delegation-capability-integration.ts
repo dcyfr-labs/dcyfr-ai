@@ -167,7 +167,7 @@ export class DelegationCapabilityIntegration extends EventEmitter {
       // Step 2: Auto-register if enabled
       if (this.config.autoRegisterAgents) {
         try {
-          await this.registry.registerManifest(bootstrapResult.manifest);
+          this.registry.registerManifest(bootstrapResult.manifest);
           result.registered = true;
           
           this.emit('agent_onboarded', {
@@ -190,7 +190,7 @@ export class DelegationCapabilityIntegration extends EventEmitter {
    * Find optimal agent for task delegation based on capabilities
    */
   async findOptimalAgent(requiredCapabilities: DelegationCapability[]): Promise<DelegationRecommendation[]> {
-    const matches = await this.registry.findMatches({
+    const matches = this.registry.findMatches({
       required_capabilities: requiredCapabilities.map(cap => cap.capability_id),
       min_confidence: this.config.minimumDelegationConfidence,
     });
@@ -198,11 +198,11 @@ export class DelegationCapabilityIntegration extends EventEmitter {
     const recommendations: DelegationRecommendation[] = [];
 
     for (const match of matches) {
-      const manifest = await this.registry.getManifest(match.agent_id);
+      const manifest = this.registry.getManifest(match.agent_id);
       if (!manifest) continue;
 
       // Calculate workload factor based on active contracts
-      const activeContracts = await this.contractManager.queryContracts({
+      const activeContracts = this.contractManager.queryContracts({
         delegatee_agent_id: match.agent_id,
         status: ['active', 'pending'],
       });
@@ -376,7 +376,7 @@ export class DelegationCapabilityIntegration extends EventEmitter {
       return;
     }
 
-    const manifest = await this.registry.getManifest(contract.delegatee_agent_id);
+    const manifest = this.registry.getManifest(contract.delegatee_agent_id);
     if (!manifest) return;
 
     const updatedCapabilities = manifest.capabilities.map(capability => {
@@ -398,7 +398,7 @@ export class DelegationCapabilityIntegration extends EventEmitter {
       return capability;
     });
 
-    await this.registry.updateManifest(contract.delegatee_agent_id, {
+    this.registry.updateManifest(contract.delegatee_agent_id, {
       capabilities: updatedCapabilities,
     });
 
@@ -443,8 +443,8 @@ export class DelegationCapabilityIntegration extends EventEmitter {
     averageConfidence: number;
     topCapabilities: Array<{ capability: string; agentCount: number }>;
   }> {
-    const allManifests = await this.registry.listManifests();
-    const activeContracts = await this.contractManager.queryContracts({
+    const allManifests = this.registry.listManifests();
+    const activeContracts = this.contractManager.queryContracts({
       status: ['active', 'pending'],
     });
 
@@ -480,7 +480,7 @@ export class DelegationCapabilityIntegration extends EventEmitter {
    */
   async shutdown(): Promise<void> {
     this.removeAllListeners();
-    await this.contractManager.clearAll();
+    this.contractManager.clearAll();
   }
 }
 
