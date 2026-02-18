@@ -147,6 +147,30 @@ export class FeatureFlagManager {
     this.configs.set(config.flag, config);
   }
   
+  private checkUserOverride(
+    flag: DelegationFeatureFlag,
+    config: FeatureFlagConfig,
+    context: FeatureFlagContext
+  ): FeatureEvaluation | null {
+    if (!context.userId || !config.users) return null;
+    if (config.users.includes(context.userId)) {
+      return { flag, enabled: true, reason: 'Enabled for specific user', overrideSource: 'user' };
+    }
+    return { flag, enabled: false, reason: 'User not in allowed users list' };
+  }
+
+  private checkTenantOverride(
+    flag: DelegationFeatureFlag,
+    config: FeatureFlagConfig,
+    context: FeatureFlagContext
+  ): FeatureEvaluation | null {
+    if (!context.tenantId || !config.tenants) return null;
+    if (config.tenants.includes(context.tenantId)) {
+      return { flag, enabled: true, reason: 'Enabled for specific tenant', overrideSource: 'tenant' };
+    }
+    return { flag, enabled: false, reason: 'Tenant not in allowed tenants list' };
+  }
+
   /**
    * Evaluate whether a feature is enabled for given context
    */
@@ -186,48 +210,12 @@ export class FeatureFlagManager {
     }
     
     // Check user-specific override
-    if (context.userId) {
-      if (config.users) {
-        const userEnabled = config.users.includes(context.userId);
-        if (userEnabled) {
-          return {
-            flag,
-            enabled: true,
-            reason: 'Enabled for specific user',
-            overrideSource: 'user'
-          };
-        } else {
-          // User not in whitelist
-          return {
-            flag,
-            enabled: false,
-            reason: 'User not in allowed users list'
-          };
-        }
-      }
-    }
+    const userOverride = this.checkUserOverride(flag, config, context);
+    if (userOverride !== null) return userOverride;
     
     // Check tenant-specific override
-    if (context.tenantId) {
-      if (config.tenants) {
-        const tenantEnabled = config.tenants.includes(context.tenantId);
-        if (tenantEnabled) {
-          return {
-            flag,
-            enabled: true,
-            reason: 'Enabled for specific tenant',
-            overrideSource: 'tenant'
-          };
-        } else {
-          // Tenant not in whitelist
-          return {
-            flag,
-            enabled: false,
-            reason: 'Tenant not in allowed tenants list'
-          };
-        }
-      }
-    }
+    const tenantOverride = this.checkTenantOverride(flag, config, context);
+    if (tenantOverride !== null) return tenantOverride;
     
     // Check environment
     if (config.environment && context.environment) {

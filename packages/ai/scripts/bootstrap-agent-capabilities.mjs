@@ -23,6 +23,21 @@ const AGENTS_DIR = join(__dirname, '../../../../.ai/agents');
 const OUTPUT_DIR = join(__dirname, '../manifests/capabilities');
 
 /**
+ * Safely parse an array literal from YAML frontmatter (no eval)
+ */
+function parseArrayValue(str) {
+  try {
+    return JSON.parse(str);
+  } catch (_e) {
+    const fixed = str.replace(/'/g, '"');
+    try { return JSON.parse(fixed); } catch (_e2) { /* ignore */ }
+    const matches = str.match(/'([^']+)'/g) || str.match(/"([^"]+)"/g);
+    if (matches) return matches.map(m => m.replace(/'/g, '').replace(/"/g, ''));
+    return [];
+  }
+}
+
+/**
  * Parse agent frontmatter
  */
 function parseAgentFrontmatter(content) {
@@ -46,12 +61,7 @@ function parseAgentFrontmatter(content) {
     } else if (trimmed.startsWith('description:')) {
       agent.description = trimmed.substring(12).trim();
     } else if (trimmed.startsWith('tools:')) {
-      const toolsStr = trimmed.substring(6).trim();
-      try {
-        agent.tools = JSON.parse(toolsStr);
-      } catch (e) {
-        agent.tools = eval(toolsStr); // Fallback for array literals
-      }
+      agent.tools = parseArrayValue(trimmed.substring(6).trim());
     } else if (trimmed.startsWith('model:')) {
       agent.model = trimmed.substring(6).trim();
     } else if (trimmed.startsWith('category:')) {
@@ -61,16 +71,50 @@ function parseAgentFrontmatter(content) {
     } else if (trimmed.startsWith('version:')) {
       agent.version = trimmed.substring(8).trim();
     } else if (trimmed.startsWith('delegatesTo:')) {
-      const delegatesStr = trimmed.substring(12).trim();
-      try {
-        agent.delegatesTo = JSON.parse(delegatesStr);
-      } catch (e) {
-        agent.delegatesTo = eval(delegatesStr);
-      }
+      agent.delegatesTo = parseArrayValue(trimmed.substring(12).trim());
     }
   }
 
   return agent;
+}
+
+/**
+ * Get capabilities based on agent tools list
+ */
+function getToolBasedCapabilities(tools) {
+  if (!tools) return [];
+  const result = [];
+  if (tools.includes('read') || tools.includes('search')) {
+    result.push({
+      name: 'Code Analysis',
+      description: 'Analyze and understand existing codebases',
+      category: 'code_review',
+      proficiency: 'advanced',
+      confidence: 0.80,
+      tags: ['analysis', 'research'],
+    });
+  }
+  if (tools.includes('edit')) {
+    result.push({
+      name: 'Code Modification',
+      description: 'Modify and update existing code',
+      category: 'code_generation',
+      proficiency: 'advanced',
+      confidence: 0.78,
+      tags: ['editing', 'implementation'],
+    });
+  }
+  if (tools.includes('execute')) {
+    result.push({
+      name: 'Testing and Validation',
+      description: 'Execute tests and validate implementations',
+      category: 'testing',
+      proficiency: 'advanced',
+      confidence: 0.82,
+      tags: ['testing', 'validation'],
+    });
+  }
+  return result;
 }
 
 /**
@@ -201,40 +245,7 @@ function inferCapabilities(agent) {
   }
 
   // Tool-based capabilities
-  if (agent.tools) {
-    if (agent.tools.includes('read') || agent.tools.includes('search')) {
-      capabilities.push({
-        name: 'Code Analysis',
-        description: 'Analyze and understand existing codebases',
-        category: 'code_review',
-        proficiency: 'advanced',
-        confidence: 0.80,
-        tags: ['analysis', 'research'],
-      });
-    }
-    
-    if (agent.tools.includes('edit')) {
-      capabilities.push({
-        name: 'Code Modification',
-        description: 'Modify and update existing code',
-        category: 'code_generation',
-        proficiency: 'advanced',
-        confidence: 0.78,
-        tags: ['editing', 'implementation'],
-      });
-    }
-    
-    if (agent.tools.includes('execute')) {
-      capabilities.push({
-        name: 'Testing and Validation',
-        description: 'Execute tests and validate implementations',
-        category: 'testing',
-        proficiency: 'advanced',
-        confidence: 0.82,
-        tags: ['testing', 'validation'],
-      });
-    }
-  }
+  capabilities.push(...getToolBasedCapabilities(agent.tools));
 
   // Remove duplicates by name
   const unique = [];

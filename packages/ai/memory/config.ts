@@ -209,18 +209,7 @@ export function loadMemoryConfig(): MemoryConfig {
   };
 }
 
-/**
- * Validate memory configuration
- * 
- * Ensures all required fields are present based on vector DB provider.
- * 
- * @param config - Configuration to validate
- * @throws Error if configuration is invalid or missing required fields
- */
-export function validateMemoryConfig(config: MemoryConfig): void {
-  const { vectorDB, llm } = config;
-
-  // Validate vector DB configuration
+function validateVectorDBConfig(vectorDB: MemoryConfig['vectorDB']): void {
   if (!vectorDB.provider) {
     throw new Error('VECTOR_DB_PROVIDER is required');
   }
@@ -250,8 +239,9 @@ export function validateMemoryConfig(config: MemoryConfig): void {
     default:
       throw new Error(`Unsupported vector DB provider: ${vectorDB.provider}`);
   }
+}
 
-  // Validate LLM configuration
+function validateLLMConfig(llm: MemoryConfig['llm']): void {
   if (!llm.provider) {
     throw new Error('LLM_PROVIDER is required');
   }
@@ -268,6 +258,19 @@ export function validateMemoryConfig(config: MemoryConfig): void {
   if ((llm.embeddingProvider || 'openai') === 'openai' && !effectiveEmbeddingApiKey) {
     throw new Error('LLM_EMBEDDING_API_KEY or OPENAI_API_KEY is required for OpenAI embeddings');
   }
+}
+
+/**
+ * Validate memory configuration
+ * 
+ * Ensures all required fields are present based on vector DB provider.
+ * 
+ * @param config - Configuration to validate
+ * @throws Error if configuration is invalid or missing required fields
+ */
+export function validateMemoryConfig(config: MemoryConfig): void {
+  validateVectorDBConfig(config.vectorDB);
+  validateLLMConfig(config.llm);
 
   // Validate caching configuration
   if (config.caching) {

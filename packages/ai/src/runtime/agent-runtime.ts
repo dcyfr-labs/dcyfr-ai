@@ -587,11 +587,43 @@ export class AgentRuntime extends EventEmitter {
     return !!this.verificationIntegration && !!this.config.enable_verification_formatting;
   }
   
+  /** Validate capability and timeout feasibility for a delegation contract */
+  private checkCapabilityAndTimeout(
+    contract: DelegationContract,
+    assessment: { capability_match: number; resource_availability: number; workload_capacity: number; reputation_compliance: boolean; firebreak_compliance: boolean }
+  ): { can_accept: boolean; reason?: string; updated_assessment: typeof assessment } {
+    const updatedAssessment = { ...assessment };
+
+    if (contract.required_capabilities && contract.required_capabilities.length > 0) {
+      const capabilityIds = contract.required_capabilities.map(cap =>
+        typeof cap === 'string' ? cap : cap.capability_id
+      );
+      const capabilityCheck = this.checkCapabilityRequirements(capabilityIds);
+      if (!capabilityCheck.canMeet) {
+        return { can_accept: false, reason: `Capability mismatch: ${capabilityCheck.reason}`, updated_assessment: updatedAssessment };
+      }
+      updatedAssessment.capability_match = capabilityCheck.match_score || 1;
+    } else {
+      updatedAssessment.capability_match = 0.8;
+    }
+
+    const estimatedTime = this.estimateTaskTime(contract.task_description || contract.metadata?.task_categories?.join(' ') || '');
+    if (contract.timeout_ms && estimatedTime > contract.timeout_ms) {
+      return {
+        can_accept: false,
+        reason: `Task may exceed timeout (estimated: ${estimatedTime}ms, limit: ${contract.timeout_ms}ms)`,
+        updated_assessment: updatedAssessment
+      };
+    }
+
+    return { can_accept: true, updated_assessment: updatedAssessment };
+  }
+
   /**
    * Check if agent can accept delegation contract with comprehensive validation
    */
   async canAcceptDelegationContract(contract: DelegationContract): Promise<ContractAcceptanceDecision> {
-    const assessment = {
+    let assessment = {
       capability_match: 0,
       resource_availability: 0,
       workload_capacity: 0,
@@ -622,10 +654,8 @@ export class AgentRuntime extends EventEmitter {
           assessment: { ...assessment, reputation_compliance: false }
         };
       }
-      assessment.reputation_compliance = true;
-    } else {
-      assessment.reputation_compliance = true;
     }
+    assessment.reputation_compliance = true;
     
     // Check permission tokens (if required)
     if (contract.permission_token) {
@@ -651,10 +681,8 @@ export class AgentRuntime extends EventEmitter {
           assessment: { ...assessment, firebreak_compliance: false }
         };
       }
-      assessment.firebreak_compliance = true;
-    } else {
-      assessment.firebreak_compliance = true;
     }
+    assessment.firebreak_compliance = true;
     
     // Check resource requirements
     if (contract.resource_requirements) {
@@ -671,39 +699,16 @@ export class AgentRuntime extends EventEmitter {
     } else {
       assessment.resource_availability = 1;
     }
-    
-    //  Check capability requirements
-    if (contract.required_capabilities && contract.required_capabilities.length > 0) {
-      // Handle both string[] and object[] formats for required_capabilities
-      const capabilityIds = contract.required_capabilities.map(cap => 
-        typeof cap === 'string' ? cap : cap.capability_id
-      );
-      const capabilityCheck = this.checkCapabilityRequirements(capabilityIds);
-      if (!capabilityCheck.canMeet) {
-        return { 
-          can_accept: false, 
-          reason: `Capability mismatch: ${capabilityCheck.reason}`,
-          confidence: 0,
-          assessment 
-        };
-      }
-      assessment.capability_match = capabilityCheck.match_score || 1;
-    } else {
-      assessment.capability_match = 0.8; // Default for tasks without specific requirements
-    }
-    
-    // Check timeout feasibility
-    const estimatedTime = this.estimateTaskTime(contract.task_description || contract.metadata?.task_categories?.join(' ') || '');
-    if (contract.timeout_ms && estimatedTime > contract.timeout_ms) {
-      return { 
-        can_accept: false, 
-        reason: `Task may exceed timeout (estimated: ${estimatedTime}ms, limit: ${contract.timeout_ms}ms)`,
-        confidence: 0,
-        assessment 
-      };
+
+    // Check capability requirements and timeout feasibility
+    const { can_accept, reason, updated_assessment } = this.checkCapabilityAndTimeout(contract, assessment);
+    assessment = updated_assessment;
+    if (!can_accept) {
+      return { can_accept: false, reason, confidence: 0, assessment };
     }
     
     // Calculate overall confidence
+    const estimatedTime = this.estimateTaskTime(contract.task_description || contract.metadata?.task_categories?.join(' ') || '');
     const confidence = this.calculateAcceptanceConfidence(assessment, contract);
     
     return { 
@@ -804,6 +809,20 @@ export class AgentRuntime extends EventEmitter {
     });
   }
   
+  /** Apply retry delay and emit retry events for a given attempt */
+  private async applyRetryDelay(context: TaskExecutionContext, attempt: number, retryPolicy?: RetryPolicy): Promise<void> {
+    const delay = this.calculateRetryDelay(attempt, retryPolicy);
+    if (delay > 0) {
+      this.emit('task:retry:delay', context, attempt, delay);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+    this.emit('task:retry:attempt', context, attempt);
+    if (this.config.debug) {
+      const max = retryPolicy?.max_retries || 0;
+      console.log(`[AgentRuntime] Retry attempt ${attempt}/${max} for task ${context.execution_id}`);
+    }
+  }
+
   private async performTaskExecutionWithRetry(
     context: TaskExecutionContext, 
     timeout: number, 
@@ -815,23 +834,9 @@ export class AgentRuntime extends EventEmitter {
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
         if (attempt > 0) {
-          // Apply retry delay
-          const delay = this.calculateRetryDelay(attempt, retryPolicy);
-          if (delay > 0) {
-            this.emit('task:retry:delay', context, attempt, delay);
-            await new Promise(resolve => setTimeout(resolve, delay));
-          }
+          await this.applyRetryDelay(context, attempt, retryPolicy);
         }
         
-        // Log retry attempt
-        if (attempt > 0) {
-          this.emit('task:retry:attempt', context, attempt);
-          if (this.config.debug) {
-            console.log(`[AgentRuntime] Retry attempt ${attempt}/${maxRetries} for task ${context.execution_id}`);
-          }
-        }
-        
-        // Perform the actual task execution
         const result = await this.performTaskExecution(context, timeout);
         
         if (attempt > 0) {
@@ -843,12 +848,10 @@ export class AgentRuntime extends EventEmitter {
       } catch (error) {
         lastError = error as Error;
         
-        // Check if error qualifies for retry
         if (attempt < maxRetries && this.shouldRetryError(error as Error, retryPolicy)) {
           this.emit('task:retry:error', context, attempt, error);
-          continue; // Try again
+          continue;
         } else {
-          // Final failure or non-retryable error
           if (attempt > 0) {
             this.emit('task:retry:exhausted', context, attempt);
           }
@@ -857,7 +860,6 @@ export class AgentRuntime extends EventEmitter {
       }
     }
     
-    // Should not reach here, but throw last error if we do
     throw lastError || new Error('Unknown retry error');
   }
   
@@ -940,6 +942,42 @@ export class AgentRuntime extends EventEmitter {
     };
   }
   
+  /** Apply verification integration outputs to result and update verificationResult accordingly */
+  private async applyVerificationIntegration(
+    result: TaskExecutionResult,
+    contract: DelegationContract,
+    verificationResult: VerificationResult
+  ): Promise<void> {
+    if (!this.verificationIntegration) return;
+    try {
+      const verificationOutputResult = await this.verificationIntegration.processTaskResult(
+        result,
+        contract,
+        { formats: this.config.verification_auto_formats, validate_strict: true }
+      );
+      result.verification_outputs = verificationOutputResult.parsedResult.formatted_outputs;
+      result.verification_report = verificationOutputResult.multiModalReport;
+      if (verificationOutputResult.validation && !verificationOutputResult.validation.valid) {
+        verificationResult.verified = false;
+        verificationResult.quality_score = Math.max(0, (verificationResult.quality_score ?? 0) - 0.2);
+        verificationResult.findings ??= [];
+        verificationResult.findings.push(...verificationOutputResult.validation.issues.map(issue => issue.message));
+      }
+      verificationResult.verification_details = JSON.stringify({
+        compliance_score: verificationOutputResult.parsedResult.compliance_analysis.compliance_score,
+        formats_generated: verificationOutputResult.parsedResult.formatted_outputs.map(o => o.format),
+        validation_summary: verificationOutputResult.validation?.summary,
+      });
+      if (this.config.debug) {
+        console.log(`[AgentRuntime] Generated ${verificationOutputResult.parsedResult.formatted_outputs.length} verification output formats`);
+      }
+    } catch (error) {
+      console.error('[AgentRuntime] Failed to generate verification outputs:', error);
+      verificationResult.findings ??= [];
+      verificationResult.findings.push('Failed to generate verification output formatting');
+    }
+  }
+
   private async performVerification(result: TaskExecutionResult, contract: DelegationContract): Promise<VerificationResult> {
     // Perform basic verification based on policy
     const verificationResult: VerificationResult = {
@@ -953,53 +991,7 @@ export class AgentRuntime extends EventEmitter {
         : ['task_failed'],
     };
     
-    // Generate verification output formatting if enabled
-    if (this.verificationIntegration) {
-      try {
-        const verificationOutputResult = await this.verificationIntegration.processTaskResult(
-          result,
-          contract,
-          {
-            formats: this.config.verification_auto_formats,
-            validate_strict: true,
-          }
-        );
-        
-        // Add formatted outputs to result
-        result.verification_outputs = verificationOutputResult.parsedResult.formatted_outputs;
-        result.verification_report = verificationOutputResult.multiModalReport;
-        
-        // Update verification result with compliance information
-        if (verificationOutputResult.validation && !verificationOutputResult.validation.valid) {
-          verificationResult.verified = false;
-          verificationResult.quality_score = Math.max(0, (verificationResult.quality_score ?? 0) - 0.2);
-          if (!verificationResult.findings) {
-            verificationResult.findings = [];
-          }
-          verificationResult.findings.push(
-            ...verificationOutputResult.validation.issues.map(issue => issue.message)
-          );
-        }
-        
-        // Include compliance score in verification details
-        verificationResult.verification_details = JSON.stringify({
-          compliance_score: verificationOutputResult.parsedResult.compliance_analysis.compliance_score,
-          formats_generated: verificationOutputResult.parsedResult.formatted_outputs.map(o => o.format),
-          validation_summary: verificationOutputResult.validation?.summary,
-        });
-        
-        if (this.config.debug) {
-          console.log(`[AgentRuntime] Generated ${verificationOutputResult.parsedResult.formatted_outputs.length} verification output formats`);
-        }
-      } catch (error) {
-        console.error('[AgentRuntime] Failed to generate verification outputs:', error);
-        // Add warning but don't fail verification
-        if (!verificationResult.findings) {
-          verificationResult.findings = [];
-        }
-        verificationResult.findings.push('Failed to generate verification output formatting');
-      }
-    }
+    await this.applyVerificationIntegration(result, contract, verificationResult);
     
     return verificationResult;
   }
@@ -1191,6 +1183,18 @@ export class AgentRuntime extends EventEmitter {
     return { canMeet: true, match_score: matchScore };
   }
   
+  private checkSpecializationRequirements(requirements: ReputationRequirements): { meets_requirements: boolean; reason?: string } {
+    if (!requirements.required_specializations || !this.config.capabilities) {
+      return { meets_requirements: true };
+    }
+    const mySpecs = this.config.capabilities.specializations || [];
+    const missing = requirements.required_specializations.filter(s => !mySpecs.includes(s));
+    if (missing.length > 0) {
+      return { meets_requirements: false, reason: `Missing required specializations: ${missing.join(', ')}` };
+    }
+    return { meets_requirements: true };
+  }
+
   private checkReputationRequirements(requirements: ReputationRequirements): { meets_requirements: boolean, reason?: string } {
     const currentReputation = this.calculateCurrentReputation();
     const taskHistory = this.getTaskHistory();
@@ -1230,20 +1234,7 @@ export class AgentRuntime extends EventEmitter {
       }
     }
     
-    if (requirements.required_specializations && this.config.capabilities) {
-      const mySpecializations = this.config.capabilities.specializations || [];
-      const missingSpecs = requirements.required_specializations.filter(spec => 
-        !mySpecializations.includes(spec)
-      );
-      if (missingSpecs.length > 0) {
-        return { 
-          meets_requirements: false, 
-          reason: `Missing required specializations: ${missingSpecs.join(', ')}` 
-        };
-      }
-    }
-    
-    return { meets_requirements: true };
+    return this.checkSpecializationRequirements(requirements);
   }
   
   private validatePermissionToken(token: PermissionToken): { valid: boolean, reason?: string } {
@@ -1274,62 +1265,49 @@ export class AgentRuntime extends EventEmitter {
     return { valid: true };
   }
   
+  private checkFirebreak(firebreak: Firebreak, contract: DelegationContract): { compliant: boolean; reason?: string } {
+    switch (firebreak.type) {
+      case 'max_depth': {
+        const depth = contract.metadata?.delegation_depth || 0;
+        if (firebreak.threshold && depth >= firebreak.threshold) {
+          return { compliant: false, reason: `Delegation depth ${depth} exceeds firebreak limit ${firebreak.threshold}` };
+        }
+        return { compliant: true };
+      }
+      case 'tlp_escalation': {
+        const tlp = contract.tlp_classification || 'TLP:CLEAR';
+        if (this.isTLPEscalation(tlp, firebreak)) {
+          return { compliant: false, reason: `TLP escalation beyond firebreak: ${tlp}` };
+        }
+        return { compliant: true };
+      }
+      case 'timeout': {
+        const est = this.estimateTaskTime(contract.task_description || '');
+        if (firebreak.threshold && est > firebreak.threshold) {
+          return { compliant: false, reason: `Estimated time ${est}ms exceeds firebreak limit ${firebreak.threshold}ms` };
+        }
+        return { compliant: true };
+      }
+      case 'resource_limit':
+        if (contract.resource_requirements) {
+          return this.checkFirebreakResourceLimits(contract.resource_requirements, firebreak);
+        }
+        return { compliant: true };
+      case 'human_review':
+        if (firebreak.action === 'require_approval') {
+          return { compliant: false, reason: 'Human review firebreak requires manual approval' };
+        }
+        return { compliant: true };
+      default:
+        return { compliant: true };
+    }
+  }
+
   private validateFirebreaks(firebreaks: Firebreak[], contract: DelegationContract): { compliant: boolean, reason?: string } {
     for (const firebreak of firebreaks) {
-      switch (firebreak.type) {
-        case 'max_depth':
-          const currentDepth = contract.metadata?.delegation_depth || 0;
-          if (firebreak.threshold && currentDepth >= firebreak.threshold) {
-            return { 
-              compliant: false, 
-              reason: `Delegation depth ${currentDepth} exceeds firebreak limit ${firebreak.threshold}` 
-            };
-          }
-          break;
-          
-        case 'tlp_escalation':
-          // Check if task would escalate TLP level beyond firebreak
-          const currentTLP = contract.tlp_classification || 'TLP:CLEAR';
-          const isEscalation = this.isTLPEscalation(currentTLP, firebreak);
-          if (isEscalation) {
-            return { 
-              compliant: false, 
-              reason: `TLP escalation beyond firebreak: ${currentTLP}` 
-            };
-          }
-          break;
-          
-        case 'timeout':
-          const estimatedTime = this.estimateTaskTime(contract.task_description || '');
-          if (firebreak.threshold && estimatedTime > firebreak.threshold) {
-            return { 
-              compliant: false, 
-              reason: `Estimated time ${estimatedTime}ms exceeds firebreak limit ${firebreak.threshold}ms` 
-            };
-          }
-          break;
-          
-        case 'resource_limit':
-          if (contract.resource_requirements) {
-            const resourceCheck = this.checkFirebreakResourceLimits(contract.resource_requirements, firebreak);
-            if (!resourceCheck.compliant) {
-              return resourceCheck;
-            }
-          }
-          break;
-          
-        case 'human_review':
-          // If human review required, reject automatic acceptance
-          if (firebreak.action === 'require_approval') {
-            return { 
-              compliant: false, 
-              reason: 'Human review firebreak requires manual approval' 
-            };
-          }
-          break;
-      }
+      const result = this.checkFirebreak(firebreak, contract);
+      if (!result.compliant) return result;
     }
-    
     return { compliant: true };
   }
   

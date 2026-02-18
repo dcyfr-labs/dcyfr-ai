@@ -217,6 +217,54 @@ export class CapabilityRegistry {
   /**
    * Match agents to task requirements
    */
+  private scoreCapabilityForCriteria(
+    capability: AgentCapability,
+    criteria: CapabilityMatchCriteria
+  ): { matches: boolean; score: number } {
+    let capabilityMatchScore = 0;
+    let matches = true;
+
+    // Category match
+    if (criteria.required_categories && criteria.required_categories.length > 0) {
+      if (!criteria.required_categories.includes(capability.category)) {
+        matches = false;
+      } else {
+        capabilityMatchScore += 0.3;
+      }
+    }
+
+    // Confidence threshold
+    if (criteria.min_confidence !== undefined) {
+      if (capability.confidence_level < criteria.min_confidence) {
+        matches = false;
+      } else {
+        capabilityMatchScore += 0.3 * (capability.confidence_level / criteria.min_confidence);
+      }
+    }
+
+    // Proficiency level
+    if (criteria.min_proficiency_level) {
+      const proficiencyScore = this.getProficiencyScore(capability.proficiency_level);
+      const minProficiencyScore = this.getProficiencyScore(criteria.min_proficiency_level);
+      if (proficiencyScore < minProficiencyScore) {
+        matches = false;
+      } else {
+        capabilityMatchScore += 0.2;
+      }
+    }
+
+    // Completion time
+    if (criteria.max_completion_time_ms !== undefined) {
+      if (capability.estimated_completion_time_ms > criteria.max_completion_time_ms) {
+        matches = false;
+      } else {
+        capabilityMatchScore += 0.2;
+      }
+    }
+
+    return { matches, score: capabilityMatchScore };
+  }
+
   matchAgents(criteria: CapabilityMatchCriteria): CapabilityMatchResult[] {
     const results: CapabilityMatchResult[] = [];
 
@@ -238,50 +286,10 @@ export class CapabilityRegistry {
       let totalMatchScore = 0;
 
       for (const capability of manifest.capabilities) {
-        let capabilityMatchScore = 0;
-        let matches = true;
-
-        // Category match
-        if (criteria.required_categories && criteria.required_categories.length > 0) {
-          if (!criteria.required_categories.includes(capability.category)) {
-            matches = false;
-          } else {
-            capabilityMatchScore += 0.3;
-          }
-        }
-
-        // Confidence threshold
-        if (criteria.min_confidence !== undefined) {
-          if (capability.confidence_level < criteria.min_confidence) {
-            matches = false;
-          } else {
-            capabilityMatchScore += 0.3 * (capability.confidence_level / criteria.min_confidence);
-          }
-        }
-
-        // Proficiency level
-        if (criteria.min_proficiency_level) {
-          const proficiencyScore = this.getProficiencyScore(capability.proficiency_level);
-          const minProficiencyScore = this.getProficiencyScore(criteria.min_proficiency_level);
-          if (proficiencyScore < minProficiencyScore) {
-            matches = false;
-          } else {
-            capabilityMatchScore += 0.2;
-          }
-        }
-
-        // Completion time
-        if (criteria.max_completion_time_ms !== undefined) {
-          if (capability.estimated_completion_time_ms > criteria.max_completion_time_ms) {
-            matches = false;
-          } else {
-            capabilityMatchScore += 0.2;
-          }
-        }
-
+        const { matches, score } = this.scoreCapabilityForCriteria(capability, criteria);
         if (matches) {
           matchedCapabilities.push(capability);
-          totalMatchScore += capabilityMatchScore;
+          totalMatchScore += score;
         }
       }
 

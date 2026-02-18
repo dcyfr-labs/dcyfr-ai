@@ -291,6 +291,54 @@ export function generatePerformanceSummary(
 /**
  * Find delegation chains with anomalies
  */
+type ChainAnomaly = {
+  chain_id: string;
+  anomaly_type: 'excessive_depth' | 'excessive_duration' | 'low_success_rate' | 'excessive_retries';
+  severity: 'warning' | 'critical';
+  details: Record<string, unknown>;
+};
+
+type AnomalyThresholds = {
+  max_depth_threshold: number;
+  max_duration_threshold_ms: number;
+  min_success_rate_threshold: number;
+  max_retry_threshold: number;
+};
+
+function checkChainForAnomalies(rootId: string, analysis: ReturnType<typeof analyzeDelegationChain>, thresholds: AnomalyThresholds): ChainAnomaly[] {
+  const anomalies: ChainAnomaly[] = [];
+
+  if (analysis.max_depth > thresholds.max_depth_threshold) {
+    anomalies.push({
+      chain_id: rootId, anomaly_type: 'excessive_depth',
+      severity: analysis.max_depth >= thresholds.max_depth_threshold * 1.5 ? 'critical' : 'warning',
+      details: { actual_depth: analysis.max_depth, threshold: thresholds.max_depth_threshold, participants: analysis.participants },
+    });
+  }
+  if (analysis.total_duration_ms > thresholds.max_duration_threshold_ms) {
+    anomalies.push({
+      chain_id: rootId, anomaly_type: 'excessive_duration',
+      severity: analysis.total_duration_ms >= thresholds.max_duration_threshold_ms * 2 ? 'critical' : 'warning',
+      details: { actual_duration_ms: analysis.total_duration_ms, threshold_duration_ms: thresholds.max_duration_threshold_ms, avg_execution_time_ms: analysis.performance_summary.avg_execution_time_ms },
+    });
+  }
+  if (analysis.success_rate < thresholds.min_success_rate_threshold) {
+    anomalies.push({
+      chain_id: rootId, anomaly_type: 'low_success_rate',
+      severity: analysis.success_rate <= thresholds.min_success_rate_threshold * 0.5 ? 'critical' : 'warning',
+      details: { actual_success_rate: analysis.success_rate, threshold_success_rate: thresholds.min_success_rate_threshold, total_contracts: analysis.total_contracts },
+    });
+  }
+  if (analysis.performance_summary.total_retries > thresholds.max_retry_threshold) {
+    anomalies.push({
+      chain_id: rootId, anomaly_type: 'excessive_retries',
+      severity: analysis.performance_summary.total_retries >= thresholds.max_retry_threshold * 2 ? 'critical' : 'warning',
+      details: { actual_retries: analysis.performance_summary.total_retries, threshold_retries: thresholds.max_retry_threshold, avg_confidence: analysis.performance_summary.avg_confidence },
+    });
+  }
+  return anomalies;
+}
+
 export function findChainAnomalies(
   events: DelegationTelemetryEvent[],
   options: {
@@ -299,13 +347,8 @@ export function findChainAnomalies(
     min_success_rate_threshold?: number;
     max_retry_threshold?: number;
   } = {}
-): Array<{
-  chain_id: string;
-  anomaly_type: 'excessive_depth' | 'excessive_duration' | 'low_success_rate' | 'excessive_retries';
-  severity: 'warning' | 'critical';
-  details: Record<string, unknown>;
-}> {
-  const thresholds = {
+): ChainAnomaly[] {
+  const thresholds: AnomalyThresholds = {
     max_depth_threshold: 10,
     max_duration_threshold_ms: 300000, // 5 minutes
     min_success_rate_threshold: 0.8,
@@ -313,69 +356,13 @@ export function findChainAnomalies(
     ...options,
   };
   
-  const anomalies: any[] = [];
-  
-  // Group events by root delegation ID
+  const anomalies: ChainAnomaly[] = [];
   const chainGroups = groupBy(events, event => event.chain_correlation.root_delegation_id);
   
   for (const [rootId, chainEvents] of Object.entries(chainGroups)) {
     const analysis = analyzeDelegationChain(events, rootId);
-    
-    // Check for excessive depth
-    if (analysis.max_depth > thresholds.max_depth_threshold) {
-      anomalies.push({
-        chain_id: rootId,
-        anomaly_type: 'excessive_depth',
-        severity: analysis.max_depth >= thresholds.max_depth_threshold * 1.5 ? 'critical' : 'warning',
-        details: {
-          actual_depth: analysis.max_depth,
-          threshold: thresholds.max_depth_threshold,
-          participants: analysis.participants,
-        },
-      });
-    }
-    
-    // Check for excessive duration
-    if (analysis.total_duration_ms > thresholds.max_duration_threshold_ms) {
-      anomalies.push({
-        chain_id: rootId,
-        anomaly_type: 'excessive_duration',
-        severity: analysis.total_duration_ms >= thresholds.max_duration_threshold_ms * 2 ? 'critical' : 'warning',
-        details: {
-          actual_duration_ms: analysis.total_duration_ms,
-          threshold_duration_ms: thresholds.max_duration_threshold_ms,
-          avg_execution_time_ms: analysis.performance_summary.avg_execution_time_ms,
-        },
-      });
-    }
-    
-    // Check for low success rate
-    if (analysis.success_rate < thresholds.min_success_rate_threshold) {
-      anomalies.push({
-        chain_id: rootId,
-        anomaly_type: 'low_success_rate',
-        severity: analysis.success_rate <= thresholds.min_success_rate_threshold * 0.5 ? 'critical' : 'warning',
-        details: {
-          actual_success_rate: analysis.success_rate,
-          threshold_success_rate: thresholds.min_success_rate_threshold,
-          total_contracts: analysis.total_contracts,
-        },
-      });
-    }
-    
-    // Check for excessive retries
-    if (analysis.performance_summary.total_retries > thresholds.max_retry_threshold) {
-      anomalies.push({
-        chain_id: rootId,
-        anomaly_type: 'excessive_retries',
-        severity: analysis.performance_summary.total_retries >= thresholds.max_retry_threshold * 2 ? 'critical' : 'warning',
-        details: {
-          actual_retries: analysis.performance_summary.total_retries,
-          threshold_retries: thresholds.max_retry_threshold,
-          avg_confidence: analysis.performance_summary.avg_confidence,
-        },
-      });
-    }
+    void chainEvents; // consumed via analyzeDelegationChain
+    anomalies.push(...checkChainForAnomalies(rootId, analysis, thresholds));
   }
   
   return anomalies;

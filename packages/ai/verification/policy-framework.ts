@@ -73,6 +73,37 @@ export class DirectInspectionVerifier implements Verifier {
     this.verifierId = verifierId;
   }
   
+  private applyQualityCheck(
+    context: VerificationContext,
+    findings: NonNullable<VerificationResult['findings']>
+  ): number {
+    if (context.success_criteria.quality_threshold === undefined) return 1.0;
+    const outputQuality = this.assessOutputQuality(context.task_output);
+    if (outputQuality >= context.success_criteria.quality_threshold) {
+      findings.passed_checks?.push('quality_threshold');
+      return 1.0;
+    }
+    findings.failed_checks?.push('quality_threshold');
+    return 0.5;
+  }
+
+  private applyRequiredChecks(
+    context: VerificationContext,
+    findings: NonNullable<VerificationResult['findings']>
+  ): number {
+    if (!context.success_criteria.required_checks?.length) return 1.0;
+    let scoreMultiplier = 1.0;
+    for (const check of context.success_criteria.required_checks) {
+      if (this.performCheck(check, context)) {
+        findings.passed_checks?.push(check);
+      } else {
+        findings.failed_checks?.push(check);
+        scoreMultiplier *= 0.8;
+      }
+    }
+    return scoreMultiplier;
+  }
+
   async verify(context: VerificationContext): Promise<VerificationResult> {
     const findings: VerificationResult['findings'] = {
       passed_checks: [],
@@ -83,31 +114,10 @@ export class DirectInspectionVerifier implements Verifier {
     let qualityScore = 1.0;
     
     // Check quality threshold
-    if (context.success_criteria.quality_threshold !== undefined) {
-      // In real implementation, this would analyze the output
-      // For now, we'll use a placeholder score
-      const outputQuality = this.assessOutputQuality(context.task_output);
-      
-      if (outputQuality >= context.success_criteria.quality_threshold) {
-        findings.passed_checks?.push('quality_threshold');
-      } else {
-        findings.failed_checks?.push('quality_threshold');
-        qualityScore *= 0.5;
-      }
-    }
+    qualityScore *= this.applyQualityCheck(context, findings);
     
     // Check required checks
-    if (context.success_criteria.required_checks?.length) {
-      for (const check of context.success_criteria.required_checks) {
-        const passed = this.performCheck(check, context);
-        if (passed) {
-          findings.passed_checks?.push(check);
-        } else {
-          findings.failed_checks?.push(check);
-          qualityScore *= 0.8;
-        }
-      }
-    }
+    qualityScore *= this.applyRequiredChecks(context, findings);
     
     // Check output schema
     if (context.success_criteria.output_schema) {

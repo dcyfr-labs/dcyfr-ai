@@ -640,6 +640,65 @@ export class LiabilityFirebreakEnforcer {
   /**
    * Request manual override for blocked delegation
    */
+  /** Normalize positional or object-based requestOverride params into a canonical shape */
+  private normalizeOverrideParams(
+    contractIdOrRequest: string | {
+      requesting_agent?: string; requesting_agent_id?: string; target_agent?: string;
+      authority_level?: OverrideAuthority; authority?: OverrideAuthority;
+      reason?: string; justification?: string; context?: FirebreakValidationContext;
+      expires_at?: string; business_impact?: OverrideRequest['business_impact'];
+      urgency?: OverrideRequest['urgency']; contract_id?: string;
+    },
+    requesting_agent_id?: string,
+    authority?: OverrideAuthority,
+    justification?: string,
+    business_impact?: OverrideRequest['business_impact'],
+    urgency?: OverrideRequest['urgency']
+  ): { reqAgent: string; reqAuthority: OverrideAuthority; reqJustification: string; reqReason?: string; reqContext?: FirebreakValidationContext; reqExpiresAt?: string; reqBusinessImpact?: OverrideRequest['business_impact']; reqUrgency?: OverrideRequest['urgency']; reqContractId?: string; reqTargetAgent?: string } {
+    if (typeof contractIdOrRequest === 'object') {
+      const req = contractIdOrRequest;
+      return {
+        reqAgent: req.requesting_agent || req.requesting_agent_id || 'unknown',
+        reqAuthority: req.authority_level || req.authority || 'agent',
+        reqJustification: req.justification || req.reason || '',
+        reqReason: req.reason,
+        reqContext: req.context,
+        reqExpiresAt: req.expires_at,
+        reqBusinessImpact: req.business_impact,
+        reqUrgency: req.urgency,
+        reqContractId: req.contract_id,
+        reqTargetAgent: req.target_agent,
+      };
+    }
+    return {
+      reqAgent: requesting_agent_id || 'unknown',
+      reqAuthority: authority || 'agent',
+      reqJustification: justification || '',
+      reqBusinessImpact: business_impact,
+      reqUrgency: urgency,
+      reqContractId: contractIdOrRequest,
+    };
+  }
+
+  /** Determine required override authority based on delegation context */
+  private determineRequiredAuthority(context: FirebreakValidationContext | undefined): OverrideAuthority {
+    let required: OverrideAuthority = 'agent';
+    if (!context) return required;
+    if (context.is_external_delegation)
+      required = this.escalateAuthority(required, 'executive');
+    if (context.involves_critical_systems)
+      required = this.escalateAuthority(required, 'manager');
+    if (context.estimated_value > this.config.liability_thresholds.high_value_limit)
+      required = this.escalateAuthority(required, 'manager');
+    if (context.delegation_depth > this.config.depth_thresholds.executive)
+      required = this.escalateAuthority(required, 'emergency');
+    else if (context.delegation_depth > this.config.depth_thresholds.manager)
+      required = this.escalateAuthority(required, 'manager');
+    else if (context.delegation_depth > this.config.depth_thresholds.supervisor)
+      required = this.escalateAuthority(required, 'supervisor');
+    return required;
+  }
+
   async requestOverride(
     contractIdOrRequest: string | {
       requesting_agent?: string;
@@ -662,61 +721,12 @@ export class LiabilityFirebreakEnforcer {
     urgency?: OverrideRequest['urgency']
   ): Promise<OverrideRequest & { rejection_reason?: string; required_approvals?: string[]; auto_approved?: boolean }> {
     const override_id = `override_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-    
-    // Support both object-based and positional parameter calling
-    let reqAgent: string;
-    let reqAuthority: OverrideAuthority;
-    let reqJustification: string;
-    let reqReason: string | undefined;
-    let reqContext: FirebreakValidationContext | undefined;
-    let reqExpiresAt: string | undefined;
-    let reqBusinessImpact: OverrideRequest['business_impact'] | undefined;
-    let reqUrgency: OverrideRequest['urgency'] | undefined;
-    let reqContractId: string | undefined;
-    let reqTargetAgent: string | undefined;
-    
-    if (typeof contractIdOrRequest === 'object') {
-      const req = contractIdOrRequest;
-      reqAgent = req.requesting_agent || req.requesting_agent_id || 'unknown';
-      reqAuthority = req.authority_level || req.authority || 'agent';
-      reqJustification = req.justification || req.reason || '';
-      reqReason = req.reason;
-      reqContext = req.context;
-      reqExpiresAt = req.expires_at;
-      reqBusinessImpact = req.business_impact;
-      reqUrgency = req.urgency;
-      reqContractId = req.contract_id;
-      reqTargetAgent = req.target_agent;
-    } else {
-      reqContractId = contractIdOrRequest;
-      reqAgent = requesting_agent_id || 'unknown';
-      reqAuthority = authority || 'agent';
-      reqJustification = justification || '';
-      reqBusinessImpact = business_impact;
-      reqUrgency = urgency;
-    }
-    
-    // Determine required authority level based on context
-    let requiredAuthority: OverrideAuthority = 'agent';
-    if (reqContext) {
-      if (reqContext.is_external_delegation) {
-        requiredAuthority = this.escalateAuthority(requiredAuthority, 'executive');
-      }
-      if (reqContext.involves_critical_systems) {
-        requiredAuthority = this.escalateAuthority(requiredAuthority, 'manager');
-      }
-      if (reqContext.estimated_value > this.config.liability_thresholds.high_value_limit) {
-        requiredAuthority = this.escalateAuthority(requiredAuthority, 'manager');
-      }
-      // Check all depth thresholds
-      if (reqContext.delegation_depth > this.config.depth_thresholds.executive) {
-        requiredAuthority = this.escalateAuthority(requiredAuthority, 'emergency');
-      } else if (reqContext.delegation_depth > this.config.depth_thresholds.manager) {
-        requiredAuthority = this.escalateAuthority(requiredAuthority, 'manager');
-      } else if (reqContext.delegation_depth > this.config.depth_thresholds.supervisor) {
-        requiredAuthority = this.escalateAuthority(requiredAuthority, 'supervisor');
-      }
-    }
+
+    const { reqAgent, reqAuthority, reqJustification, reqReason, reqContext, reqExpiresAt: initExpiresAt, reqBusinessImpact, reqUrgency, reqContractId, reqTargetAgent } =
+      this.normalizeOverrideParams(contractIdOrRequest, requesting_agent_id, authority, justification, business_impact, urgency);
+
+    let reqExpiresAt = initExpiresAt;
+    const requiredAuthority = this.determineRequiredAuthority(reqContext);
     
     // Check if requesting authority is sufficient
     const authority_levels: OverrideAuthority[] = ['agent', 'supervisor', 'manager', 'executive', 'emergency'];

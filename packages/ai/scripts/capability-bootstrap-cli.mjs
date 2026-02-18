@@ -124,40 +124,11 @@ MORE INFO:
 `);
 }
 
-async function bootstrapSingleAgent(
-  filePath: string,
-  options: CLIOptions,
-): Promise<void> {
-  const verbose = options.verbose || false;
-  const dryRun = options.dryRun || false;
-  
-  if (verbose) {
-    console.log(`\n🔍 Analyzing agent: ${filePath}`);
-  }
-  
-  // Configure bootstrap
-  const detectionConfig: CapabilityDetectionConfig = {
-    agentTier: options.tier || 'generic',
-    minimumKeywordMatches: 2,
-    fuzzyMatching: true,
-  };
-  
-  const confidenceConfig: ConfidenceInitConfig = {
-    initialConfidence: options.confidence || 0.50,
-    gradualValidation: options.gradual || false,
-  };
-  
-  const bootstrap = new CapabilityBootstrap(detectionConfig, confidenceConfig);
-  
-  // Bootstrap the agent
-  const source: AgentSource = { type: 'file', filePath };
-  const result = await bootstrap.bootstrap(source);
-  
-  // Display results
+function displayBootstrapResults(result, verbose) {
   console.log(`\n✅ ${result.agentId}`);
   console.log(`   Capabilities detected: ${result.detectedCapabilities.length}`);
   console.log(`   Overall confidence: ${result.manifest.overall_confidence?.toFixed(2)}`);
-  
+
   if (verbose) {
     console.log(`\n📋 Detected Capabilities:`);
     for (const detected of result.detectedCapabilities) {
@@ -167,16 +138,49 @@ async function bootstrapSingleAgent(
       }
     }
   }
-  
+
   if (result.warnings.length > 0) {
     console.log(`\n⚠️  Warnings:`);
     result.warnings.forEach(w => console.log(`   ${w}`));
   }
-  
+
   if (result.suggestions.length > 0 && verbose) {
     console.log(`\n💡 Suggestions:`);
     result.suggestions.forEach(s => console.log(`   ${s}`));
   }
+}
+
+async function bootstrapSingleAgent(
+  filePath,
+  options,
+) {
+  const verbose = options.verbose || false;
+  const dryRun = options.dryRun || false;
+  
+  if (verbose) {
+    console.log(`\n🔍 Analyzing agent: ${filePath}`);
+  }
+  
+  // Configure bootstrap
+  const detectionConfig = {
+    agentTier: options.tier || 'generic',
+    minimumKeywordMatches: 2,
+    fuzzyMatching: true,
+  };
+  
+  const confidenceConfig = {
+    initialConfidence: options.confidence || 0.50,
+    gradualValidation: options.gradual || false,
+  };
+  
+  const bootstrap = new CapabilityBootstrap(detectionConfig, confidenceConfig);
+  
+  // Bootstrap the agent
+  const source = { type: 'file', filePath };
+  const result = await bootstrap.bootstrap(source);
+  
+  // Display results
+  displayBootstrapResults(result, verbose);
   
   // Write manifest
   if (!dryRun) {

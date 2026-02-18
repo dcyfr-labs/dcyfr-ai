@@ -410,6 +410,70 @@ export class EndToEndWorkflowOrchestrator extends EventEmitter {
     }
   }
 
+  private async onboardAgentWithCache(agentDef: {
+    source: AgentSource;
+    agentId?: string;
+  }): Promise<{ agentId: string; onboarded: boolean; capabilitiesDetected: number; mcpServersConfigured: number }> {
+    let detectionResult: {
+      bootstrapResult: { detectedCapabilities: unknown[] };
+      mcpRecommendations?: unknown[];
+    };
+    let onboardingResult: { agentId: string; registered: boolean };
+
+    if (this.cacheManager) {
+      const cacheKey = `agent-onboarding:${JSON.stringify(agentDef.source)}:${agentDef.agentId}`;
+      const cached = this.cacheManager.get(cacheKey) as {
+        detectionResult: typeof detectionResult;
+        onboardingResult: typeof onboardingResult;
+      } | undefined;
+
+      if (cached) {
+        this.log(`Cache hit for agent ${agentDef.agentId || 'unknown'}`);
+        detectionResult = cached.detectionResult;
+        onboardingResult = cached.onboardingResult;
+      } else {
+        detectionResult = await this.capabilityDetection.detectAndRegisterCapabilities(agentDef.source, agentDef.agentId);
+        onboardingResult = await this.delegationIntegration.onboardAgent(agentDef.source, agentDef.agentId);
+        this.cacheManager.set(cacheKey, { detectionResult, onboardingResult }, {
+          ttl: 30 * 60 * 1000,
+          tags: ['agent-onboarding'],
+          priority: 8,
+        });
+      }
+    } else {
+      detectionResult = await this.capabilityDetection.detectAndRegisterCapabilities(agentDef.source, agentDef.agentId);
+      onboardingResult = await this.delegationIntegration.onboardAgent(agentDef.source, agentDef.agentId);
+    }
+
+    return {
+      agentId: onboardingResult.agentId,
+      onboarded: onboardingResult.registered,
+      capabilitiesDetected: detectionResult.bootstrapResult.detectedCapabilities.length,
+      mcpServersConfigured: detectionResult.mcpRecommendations?.length || 0,
+    };
+  }
+
+  private async executeTaskWithCaching(task: WorkflowTask): Promise<{ status?: string; assignedAgent?: string; confidence?: number }> {
+    if (this.cacheManager) {
+      const taskCacheKey = `task-execution:${task.taskId}:${JSON.stringify(task.requiredCapabilities)}`;
+      const cached = this.cacheManager.get(taskCacheKey) as { status?: string; assignedAgent?: string; confidence?: number } | undefined;
+      if (cached) {
+        this.log(`Cache hit for task ${task.taskId}`);
+        return cached;
+      }
+      const taskResult = await this.executeTaskWithOptimization(task);
+      if (taskResult.status === 'completed') {
+        this.cacheManager.set(taskCacheKey, taskResult, {
+          ttl: 15 * 60 * 1000,
+          tags: ['task-results', task.taskId],
+          priority: task.priority || 5,
+        });
+      }
+      return taskResult;
+    }
+    return this.executeTaskWithOptimization(task);
+  }
+
   /**
    * Execute complete end-to-end workflow with performance optimizations
    */
@@ -498,80 +562,14 @@ export class EndToEndWorkflowOrchestrator extends EventEmitter {
         // Process agents individually
         for (const agentDef of workflow.agents) {
           const agentTimerId = this.performanceProfiler?.startTimer(`agent-onboarding-${agentDef.agentId}`);
-          
           try {
-            // Check cache first
-            let detectionResult: any;
-            let onboardingResult: any;
-            
-            if (this.cacheManager) {
-              const cacheKey = `agent-onboarding:${JSON.stringify(agentDef.source)}:${agentDef.agentId}`;
-              const cached = this.cacheManager.get(cacheKey);
-              
-              if (cached) {
-                const cachedResult = cached as {
-                  detectionResult: {
-                    bootstrapResult?: { detectedCapabilities?: unknown[] };
-                    mcpRecommendations?: unknown[];
-                  };
-                  onboardingResult: {
-                    agentId: string;
-                    registered: boolean;
-                  };
-                };
-                detectionResult = cachedResult.detectionResult;
-                onboardingResult = cachedResult.onboardingResult;
-                this.log(`Cache hit for agent ${agentDef.agentId || 'unknown'}`);
-              } else {
-                // Step 2.1: Capability Detection & Registration
-                detectionResult = await this.capabilityDetection.detectAndRegisterCapabilities(
-                  agentDef.source,
-                  agentDef.agentId
-                );
-
-                // Step 2.2: Delegation System Integration
-                onboardingResult = await this.delegationIntegration.onboardAgent(
-                  agentDef.source,
-                  agentDef.agentId
-                );
-                
-                // Cache the results
-                this.cacheManager.set(cacheKey, {
-                  detectionResult,
-                  onboardingResult,
-                }, {
-                  ttl: 30 * 60 * 1000, // 30 minutes
-                  tags: ['agent-onboarding'],
-                  priority: 8,
-                });
-              }
-            } else {
-              // No caching - direct processing
-              detectionResult = await this.capabilityDetection.detectAndRegisterCapabilities(
-                agentDef.source,
-                agentDef.agentId
-              );
-
-              onboardingResult = await this.delegationIntegration.onboardAgent(
-                agentDef.source,
-                agentDef.agentId
-              );
-            }
-
-            result.agentResults.push({
-              agentId: onboardingResult.agentId,
-              onboarded: onboardingResult.registered,
-              capabilitiesDetected: detectionResult.bootstrapResult.detectedCapabilities.length,
-              mcpServersConfigured: detectionResult.mcpRecommendations?.length || 0,
-            });
-
-            this.log(`Agent ${onboardingResult.agentId}: Onboarded successfully`);
-            
+            const agentResult = await this.onboardAgentWithCache(agentDef);
+            result.agentResults.push(agentResult);
+            this.log(`Agent ${agentResult.agentId}: Onboarded successfully`);
           } catch (error) {
             const errorMsg = `Agent onboarding failed: ${getErrorMessage(error)}`;
             result.errors.push(errorMsg);
             this.log(errorMsg, 'error');
-            
             result.agentResults.push({
               agentId: agentDef.agentId || 'unknown',
               onboarded: false,
@@ -630,40 +628,14 @@ export class EndToEndWorkflowOrchestrator extends EventEmitter {
         const taskTimerId = this.performanceProfiler?.startTimer(`task-${task.taskId}`);
         
         try {
-          // Check task cache first
-          let taskResult: any;
-          
-          if (this.cacheManager) {
-            const taskCacheKey = `task-execution:${task.taskId}:${JSON.stringify(task.requiredCapabilities)}`;
-            const cachedTaskResult = this.cacheManager.get(taskCacheKey);
-            
-            if (cachedTaskResult) {
-              this.log(`Cache hit for task ${task.taskId}`);
-              taskResult = cachedTaskResult;
-            } else {
-              // Execute task
-              taskResult = await this.executeTaskWithOptimization(task);
-              
-              // Cache successful results
-              if (taskResult.status === 'completed') {
-                this.cacheManager.set(taskCacheKey, taskResult, {
-                  ttl: 15 * 60 * 1000, // 15 minutes
-                  tags: ['task-results', task.taskId],
-                  priority: task.priority || 5,
-                });
-              }
-            }
-          } else {
-            // No caching - direct execution
-            taskResult = await this.executeTaskWithOptimization(task);
-          }
+          const taskResult = await this.executeTaskWithCaching(task);
           
           const taskExecutionTime = Date.now() - taskStart;
           taskTimes.push(taskExecutionTime);
 
           result.taskResults.push({
             taskId: task.taskId,
-            status: taskResult.status || 'completed',
+            status: (taskResult.status || 'completed') as 'completed' | 'failed' | 'timeout',
             assignedAgent: taskResult.assignedAgent || 'optimized-execution',
             executionTime: taskExecutionTime,
             confidence: taskResult.confidence || 0.8,

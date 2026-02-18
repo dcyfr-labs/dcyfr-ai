@@ -313,6 +313,15 @@ export class DelegationChainTracker {
    * 
    * Permissions should only decrease (or stay the same) as delegation depth increases.
    */
+  private isScopeGrantedByParent(scope: string, parentScopes: Set<string>): boolean {
+    for (const parentScope of parentScopes) {
+      if (scope.startsWith(parentScope) || scope === parentScope) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   private checkPermissionAttenuation(contracts: DelegationContract[]): string[] {
     const violations: string[] = [];
     
@@ -324,22 +333,11 @@ export class DelegationChainTracker {
       const parentTokens = parent.permission_tokens;
       const childTokens = child.permission_tokens;
       if (parentTokens && parentTokens.length > 0 && childTokens && childTokens.length > 0) {
-        const parentScopes = new Set(
-          parentTokens[0].scopes || []
-        );
+        const parentScopes = new Set(parentTokens[0].scopes || []);
         const childScopes = childTokens[0].scopes || [];
         
         for (const scope of childScopes) {
-          // Check if child scope is more permissive than any parent scope
-          let foundParentScope = false;
-          for (const parentScope of parentScopes) {
-            if (scope.startsWith(parentScope) || scope === parentScope) {
-              foundParentScope = true;
-              break;
-            }
-          }
-          
-          if (!foundParentScope) {
+          if (!this.isScopeGrantedByParent(scope, parentScopes)) {
             violations.push(
               `Contract ${child.contract_id} has scope '${scope}' not granted by parent ${parent.contract_id}`
             );

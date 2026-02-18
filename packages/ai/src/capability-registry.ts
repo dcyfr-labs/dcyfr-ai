@@ -264,6 +264,22 @@ export class CapabilityRegistry extends EventEmitter implements ICapabilityRegis
     return Math.round((sum / capabilities.length) * 100) / 100;
   }
 
+  private checkPatternAndTagMatch(capability: AgentCapability, query: CapabilityQuery): boolean {
+    if (query.task_patterns) {
+      const hasPattern = query.task_patterns.some(p =>
+        capability.supported_patterns?.some(sp => sp.toLowerCase().includes(p.toLowerCase()))
+      );
+      if (!hasPattern) return false;
+    }
+    if (query.required_tags) {
+      const hasAllTags = query.required_tags.every(rt =>
+        capability.tags?.some(t => t.toLowerCase() === rt.toLowerCase())
+      );
+      if (!hasAllTags) return false;
+    }
+    return true;
+  }
+
   private matchesCapabilityQuery(capability: AgentCapability, query: CapabilityQuery): boolean {
     // Check required capabilities (support both capability_id and capability alias)
     if (query.required_capabilities) {
@@ -299,25 +315,7 @@ export class CapabilityRegistry extends EventEmitter implements ICapabilityRegis
       return false;
     }
 
-    // Check task patterns
-    if (query.task_patterns) {
-      const hasMatchingPattern = query.task_patterns.some(pattern =>
-        capability.supported_patterns?.some(supportedPattern =>
-          supportedPattern.toLowerCase().includes(pattern.toLowerCase())
-        )
-      );
-      if (!hasMatchingPattern) return false;
-    }
-
-    // Check required tags
-    if (query.required_tags) {
-      const hasAllTags = query.required_tags.every(requiredTag =>
-        capability.tags?.some(tag => tag.toLowerCase() === requiredTag.toLowerCase())
-      );
-      if (!hasAllTags) return false;
-    }
-
-    return true;
+    return this.checkPatternAndTagMatch(capability, query);
   }
 
   private calculateCapabilityScore(capability: AgentCapability, query: CapabilityQuery, manifest: AgentCapabilityManifest): number {

@@ -64,6 +64,87 @@ interface ModelBreakdown {
  */
 export class RuntimeValidator {
   
+  private async validateProviders(issues: string[]): Promise<{
+    configured: number;
+    available: number;
+    total: number;
+  }> {
+    console.log('📡 Checking Provider Configuration...');
+    const providerRegistry = new ProviderRegistry({
+      primaryProvider: 'openai',
+      fallbackChain: ['anthropic', 'ollama'],
+      autoReturn: false,
+      healthCheckInterval: 60000
+    });
+
+    const providerValidation = await providerRegistry.validate();
+    const envVars = ProviderRegistry.discoverEnvironmentVariables();
+
+    console.log(`   ✓ Found ${providerValidation.configured.length} configured providers`);
+    console.log(`   ✓ ${providerValidation.available.length} providers available`);
+
+    if (providerValidation.configured.length === 0) {
+      issues.push('No providers configured - set API keys for OpenAI, Anthropic, or setup Ollama');
+    }
+    if (providerValidation.available.length === 0) {
+      issues.push('No providers available - check API keys and network connectivity');
+    }
+
+    console.log('\n📊 Provider Status:');
+    const setupInstructions = ProviderRegistry.getProviderSetupInstructions();
+    for (const provider of Object.keys(envVars) as ProviderType[]) {
+      const available = providerValidation.available.includes(provider);
+      const configured = providerValidation.configured.includes(provider);
+      const status = available ? '🟢' : configured ? '🟡' : '🔴';
+      const statusText = available ? 'Available' : configured ? 'Configured' : 'Not configured';
+      console.log(`   ${status} ${provider}: ${statusText}`);
+      if (!configured && setupInstructions[provider]) {
+        console.log(`      Missing: ${setupInstructions[provider].environmentVariables.join(', ')}`);
+      }
+    }
+
+    if (providerValidation.errors.length > 0) {
+      console.log('\n⚠️  Provider Errors:');
+      for (const error of providerValidation.errors) {
+        console.log(`   • ${error.provider}: ${error.error}`);
+      }
+    }
+
+    return {
+      configured: providerValidation.configured.length,
+      available: providerValidation.available.length,
+      total: Object.keys(envVars).length,
+    };
+  }
+
+  private validateMemoryProviders(issues: string[]): boolean {
+    console.log('\n🧠 Checking Memory Configuration...');
+    let memoryConfigured = false;
+    try {
+      const hasUpstash = process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN;
+      const hasMem0 = process.env.MEM0_API_KEY;
+      if (hasUpstash) {
+        console.log('   ✓ Upstash Redis configured');
+        memoryConfigured = true;
+      } else {
+        console.log('   🔴 Upstash Redis not configured');
+      }
+      if (hasMem0) {
+        console.log('   ✓ Mem0 AI configured');
+        memoryConfigured = true;
+      } else {
+        console.log('   🔴 Mem0 AI not configured');
+      }
+      if (!memoryConfigured) {
+        issues.push('Memory system not configured - set up Upstash Redis or Mem0 AI');
+        console.log('   ⚠️  No memory providers configured');
+      }
+    } catch (error) {
+      issues.push(`Memory validation failed: ${error instanceof Error ? error.message : error}`);
+    }
+    return memoryConfigured;
+  }
+
   /**
    * Validate the complete runtime environment
    */
@@ -79,91 +160,10 @@ export class RuntimeValidator {
     console.log('🔍 Validating DCYFR Runtime Environment...\n');
 
     // 1. Validate Provider Configuration
-    console.log('📡 Checking Provider Configuration...');
-    const providerRegistry = new ProviderRegistry({
-      primaryProvider: 'openai',
-      fallbackChain: ['anthropic', 'ollama'],
-      autoReturn: false,
-      healthCheckInterval: 60000
-    });
-
-    const providerValidation = await providerRegistry.validate();
-    const envVars = ProviderRegistry.discoverEnvironmentVariables();
-    
-    console.log(`   ✓ Found ${providerValidation.configured.length} configured providers`);
-    console.log(`   ✓ ${providerValidation.available.length} providers available`);
-    
-    if (providerValidation.configured.length === 0) {
-      issues.push('No providers configured - set API keys for OpenAI, Anthropic, or setup Ollama');
-    }
-
-    if (providerValidation.available.length === 0) {
-      issues.push('No providers available - check API keys and network connectivity');
-    }
-
-    // Display provider status
-    console.log('\n📊 Provider Status:');
-    const setupInstructions = ProviderRegistry.getProviderSetupInstructions();
-    
-    for (const provider of Object.keys(envVars) as ProviderType[]) {
-      const env = envVars[provider];
-      const available = providerValidation.available.includes(provider);
-      const configured = providerValidation.configured.includes(provider);
-      
-      const status = available ? '🟢' : configured ? '🟡' : '🔴';
-      const statusText = available ? 'Available' : configured ? 'Configured' : 'Not configured';
-      
-      console.log(`   ${status} ${provider}: ${statusText}`);
-      
-      if (!configured && setupInstructions[provider]) {
-        console.log(`      Missing: ${setupInstructions[provider].environmentVariables.join(', ')}`);
-      }
-    }
-
-    if (providerValidation.errors.length > 0) {
-      console.log('\n⚠️  Provider Errors:');
-      for (const error of providerValidation.errors) {
-        console.log(`   • ${error.provider}: ${error.error}`);
-      }
-    }
+    const providerSummary = await this.validateProviders(issues);
 
     // 2. Validate Memory Configuration
-    console.log('\n🧠 Checking Memory Configuration...');
-    let memoryConfigured = false;
-    
-    try {
-      const memoryEnvVars = [
-        'UPSTASH_REDIS_REST_URL',
-        'UPSTASH_REDIS_REST_TOKEN',
-        'MEM0_API_KEY'
-      ];
-      
-      const hasUpstash = process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN;
-      const hasMem0 = process.env.MEM0_API_KEY;
-      
-      if (hasUpstash) {
-        console.log('   ✓ Upstash Redis configured');
-        memoryConfigured = true;
-      } else {
-        console.log('   🔴 Upstash Redis not configured');
-      }
-      
-      if (hasMem0) {
-        console.log('   ✓ Mem0 AI configured');
-        memoryConfigured = true;
-      } else {
-        console.log('   🔴 Mem0 AI not configured');
-      }
-      
-      if (!memoryConfigured) {
-        issues.push('Memory system not configured - set up Upstash Redis or Mem0 AI');
-        console.log('   ⚠️  No memory providers configured');
-      }
-    } catch (error) {
-      issues.push(`Memory validation failed: ${error instanceof Error ? error.message : error}`);
-    }
-
-    // 3. Validate Telemetry Configuration
+    const memoryConfigured = this.validateMemoryProviders(issues);
     console.log('\n📈 Checking Telemetry Configuration...');
     let telemetryConfigured = true;
     
@@ -192,11 +192,7 @@ export class RuntimeValidator {
 
     return {
       valid,
-      providers: {
-        configured: providerValidation.configured.length,
-        available: providerValidation.available.length,
-        total: Object.keys(envVars).length
-      },
+      providers: providerSummary,
       memory: { configured: memoryConfigured },
       telemetry: { configured: telemetryConfigured },
       issues

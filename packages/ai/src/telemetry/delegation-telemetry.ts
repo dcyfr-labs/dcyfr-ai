@@ -703,38 +703,36 @@ export class DelegationTelemetryEngine extends EventEmitter {
     return correlation;
   }
   
+  private checkpointThresholds: Record<string, Array<{ threshold: number; name: string }>> = {
+    negotiation: [
+      { threshold: 25, name: 'contract_validation' },
+      { threshold: 50, name: 'capability_assessment' },
+      { threshold: 75, name: 'resource_allocation' },
+      { threshold: 100, name: 'contract_accepted' },
+    ],
+    execution: [
+      { threshold: 25, name: 'task_started' },
+      { threshold: 50, name: 'halfway_milestone' },
+      { threshold: 75, name: 'near_completion' },
+      { threshold: 100, name: 'task_completed' },
+    ],
+    verification: [
+      { threshold: 50, name: 'output_validated' },
+      { threshold: 100, name: 'verification_complete' },
+    ],
+    completion: [
+      { threshold: 100, name: 'delegation_finalized' },
+    ],
+  };
+
   private getCompletedCheckpoints(
     phase: string,
     progressPercentage: number
   ): string[] {
-    const checkpoints: string[] = [];
-    
-    switch (phase) {
-      case 'negotiation':
-        if (progressPercentage > 25) checkpoints.push('contract_validation');
-        if (progressPercentage > 50) checkpoints.push('capability_assessment');
-        if (progressPercentage > 75) checkpoints.push('resource_allocation');
-        if (progressPercentage >= 100) checkpoints.push('contract_accepted');
-        break;
-        
-      case 'execution':
-        if (progressPercentage > 25) checkpoints.push('task_started');
-        if (progressPercentage > 50) checkpoints.push('halfway_milestone');
-        if (progressPercentage >= 75) checkpoints.push('near_completion');
-        if (progressPercentage >= 100) checkpoints.push('task_completed');
-        break;
-        
-      case 'verification':
-        if (progressPercentage > 50) checkpoints.push('output_validated');
-        if (progressPercentage >= 100) checkpoints.push('verification_complete');
-        break;
-        
-      case 'completion':
-        if (progressPercentage >= 100) checkpoints.push('delegation_finalized');
-        break;
-    }
-    
-    return checkpoints;
+    const thresholds = this.checkpointThresholds[phase] ?? [];
+    return thresholds
+      .filter(({ threshold }) => progressPercentage >= threshold)
+      .map(({ name }) => name);
   }
 }
 

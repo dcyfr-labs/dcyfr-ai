@@ -379,6 +379,29 @@ export abstract class BaseVerificationFormatter {
     };
   }
   
+  private validatePropertySchema(
+    key: string,
+    value: unknown,
+    propSchema: { type?: string; minimum?: number; maximum?: number }
+  ): { valid: boolean; details?: string } {
+    const expectedType = propSchema.type;
+    if (expectedType === 'string' && typeof value !== 'string') {
+      return { valid: false, details: `Property '${key}' must be a string` };
+    }
+    if (expectedType === 'number' && typeof value !== 'number') {
+      return { valid: false, details: `Property '${key}' must be a number` };
+    }
+    if (expectedType === 'number' && typeof value === 'number') {
+      if (propSchema.minimum !== undefined && value < propSchema.minimum) {
+        return { valid: false, details: `Property '${key}' must be >= ${propSchema.minimum}` };
+      }
+      if (propSchema.maximum !== undefined && value > propSchema.maximum) {
+        return { valid: false, details: `Property '${key}' must be <= ${propSchema.maximum}` };
+      }
+    }
+    return { valid: true };
+  }
+
   protected validateOutputSchema(output: unknown, schema: Record<string, unknown>): { valid: boolean; details?: string } {
     // Basic schema validation (would use proper JSON schema validator in production)
     try {
@@ -399,27 +422,11 @@ export abstract class BaseVerificationFormatter {
         
         // Check property types if properties are defined
         if (schema.properties) {
-          const properties = schema.properties as Record<string, any>;
+          const properties = schema.properties as Record<string, { type?: string; minimum?: number; maximum?: number }>;
           for (const [key, propSchema] of Object.entries(properties)) {
             if (key in outputObj) {
-              const value = outputObj[key];
-              const expectedType = propSchema.type;
-              
-              if (expectedType === 'string' && typeof value !== 'string') {
-                return { valid: false, details: `Property '${key}' must be a string` };
-              } else if (expectedType === 'number' && typeof value !== 'number') {
-                return { valid: false, details: `Property '${key}' must be a number` };
-              }
-              
-              // Check number constraints
-              if (expectedType === 'number' && typeof value === 'number') {
-                if (propSchema.minimum !== undefined && value < propSchema.minimum) {
-                  return { valid: false, details: `Property '${key}' must be >= ${propSchema.minimum}` };
-                }
-                if (propSchema.maximum !== undefined && value > propSchema.maximum) {
-                  return { valid: false, details: `Property '${key}' must be <= ${propSchema.maximum}` };
-                }
-              }
+              const propResult = this.validatePropertySchema(key, outputObj[key], propSchema);
+              if (!propResult.valid) return propResult;
             }
           }
         }

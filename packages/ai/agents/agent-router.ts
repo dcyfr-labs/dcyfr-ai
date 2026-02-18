@@ -250,6 +250,59 @@ export class AgentRouter {
     return toAgent;
   }
 
+  private async runAgentExecution(
+    agent: Agent,
+    context: AgentExecutionContext,
+    wasFallback: boolean,
+    primaryAgentName: string
+  ): Promise<AgentExecutionResult> {
+    if (agent.onBeforeExecute) {
+      await agent.onBeforeExecute(context);
+    }
+
+    const runtime = new AgentRuntime(
+      agent.manifest.name,
+      this.providerRegistry,
+      this.memory,
+      this.telemetry,
+      {
+        maxIterations: 10,
+        timeout: 120000,
+        memoryEnabled: true,
+        systemPrompt: agent.systemPrompt || agent.instructions,
+      }
+    );
+
+    const taskContext: RuntimeTaskContext = {
+      task: context.task.description,
+      userId: context.metadata?.userId as string,
+      sessionId: context.metadata?.sessionId as string,
+      agentId: agent.manifest.name,
+      tools: [],
+      metadata: context.metadata,
+    };
+
+    const runtimeResult = await runtime.execute(taskContext);
+
+    const result: AgentExecutionResult = {
+      success: runtimeResult.success,
+      agentName: agent.manifest.name,
+      executionTime: runtimeResult.executionTime,
+      fallbackUsed: wasFallback,
+      originalAgent: wasFallback ? primaryAgentName : undefined,
+      filesModified: [],
+      violations: [],
+      warnings: [],
+      error: runtimeResult.error ? new Error(runtimeResult.error) : undefined,
+    };
+
+    if (agent.onAfterExecute) {
+      await agent.onAfterExecute(context, result);
+    }
+
+    return result;
+  }
+
   /**
    * Execute task with automatic fallback
    */
@@ -265,77 +318,22 @@ export class AgentRouter {
       const startTime = Date.now();
 
       try {
-        // Call onBeforeExecute hook
-        if (agent.onBeforeExecute) {
-          await agent.onBeforeExecute(context);
-        }
+        const result = await this.runAgentExecution(agent, context, i > 0, primaryAgent.manifest.name);
 
-        // Create AgentRuntime instance for this agent
-        const runtime = new AgentRuntime(
-          agent.manifest.name,
-          this.providerRegistry,
-          this.memory,
-          this.telemetry,
-          {
-            maxIterations: 10,
-            timeout: 120000, // 2 minutes
-            memoryEnabled: true,
-            systemPrompt: agent.systemPrompt || agent.instructions,
-          }
-        );
-
-        // Convert AgentExecutionContext to TaskContext
-        const taskContext: RuntimeTaskContext = {
-          task: context.task.description,
-          userId: context.metadata?.userId as string,
-          sessionId: context.metadata?.sessionId as string,
-          agentId: agent.manifest.name,
-          tools: [], // TODO: Extract from manifest.tools and resolve
-          metadata: context.metadata,
-        };
-
-        // Execute via AgentRuntime
-        const runtimeResult = await runtime.execute(taskContext);
-
-        // Convert back to AgentExecutionResult
-        const result: AgentExecutionResult = {
-          success: runtimeResult.success,
-          agentName: agent.manifest.name,
-          executionTime: runtimeResult.executionTime,
-          fallbackUsed: i > 0,
-          originalAgent: i > 0 ? primaryAgent.manifest.name : undefined,
-          filesModified: [], // TODO: Extract from tool observations
-          violations: [], // TODO: Extract from quality gates
-          warnings: [], // TODO: Extract from runtime warnings
-          error: runtimeResult.error ? new Error(runtimeResult.error) : undefined,
-        };
-
-        // Call onAfterExecute hook
-        if (agent.onAfterExecute) {
-          await agent.onAfterExecute(context, result);
-        }
-
-        // Return on success
         if (result.success) {
           return result;
         }
 
-        // If this was the last agent, return the failed result
         if (i === agents.length - 1) {
           return result;
         }
 
-        // Log fallback attempt
-        console.warn(
-          `⚠️  Agent '${agent.manifest.name}' failed, trying fallback...`
-        );
+        console.warn(`⚠️  Agent '${agent.manifest.name}' failed, trying fallback...`);
       } catch (error) {
-        // Call onError hook
         if (agent.onError) {
           await agent.onError(error as Error, context);
         }
 
-        // If this was the last agent, return failure
         if (i === agents.length - 1) {
           return {
             success: false,
@@ -350,14 +348,12 @@ export class AgentRouter {
           };
         }
 
-        // Try next fallback
         console.warn(
           `⚠️  Agent '${agent.manifest.name}' failed with error: ${(error as Error).message}, trying fallback...`
         );
       }
     }
 
-    // Should never reach here
     throw new Error('No agents available for execution');
   }
 

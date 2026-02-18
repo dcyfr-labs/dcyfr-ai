@@ -446,6 +446,26 @@ function inferTLPClearance(
 }
 
 /**
+ * Parse the tools value from a YAML-style tools line
+ */
+function parseToolsValue(toolsStr: string): string[] | undefined {
+  try {
+    return JSON.parse(toolsStr);
+  } catch (_e) {
+    try {
+      const fixed = toolsStr.replace(/'/g, '"');
+      return JSON.parse(fixed);
+    } catch (_e2) {
+      const matches = toolsStr.match(/'([^']+)'/g);
+      if (matches) {
+        return matches.map(m => m.replace(/'/g, ''));
+      }
+    }
+  }
+  return undefined;
+}
+
+/**
  * Parse agent definition from frontmatter
  */
 export function parseAgentDefinition(frontmatter: string): AgentDefinition {
@@ -461,20 +481,9 @@ export function parseAgentDefinition(frontmatter: string): AgentDefinition {
       definition.description = trimmed.substring(12).trim();
     } else if (trimmed.startsWith('tools:')) {
       const toolsStr = trimmed.substring(6).trim();
-      try {
-        definition.tools = JSON.parse(toolsStr);
-      } catch (e) {
-        // Try with single quotes replaced
-        try {
-          const fixed = toolsStr.replace(/'/g, '"');
-          definition.tools = JSON.parse(fixed);
-        } catch (e2) {
-          // Fallback: parse as array literal
-          const matches = toolsStr.match(/'([^']+)'/g);
-          if (matches) {
-            definition.tools = matches.map(m => m.replace(/'/g, ''));
-          }
-        }
+      const parsed = parseToolsValue(toolsStr);
+      if (parsed) {
+        definition.tools = parsed;
       }
     } else if (trimmed.startsWith('model:')) {
       definition.model = trimmed.substring(6).trim();

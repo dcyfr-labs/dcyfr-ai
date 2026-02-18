@@ -216,6 +216,43 @@ export class AgentRuntime {
    * @param context - Task context with description, tools, and metadata
    * @returns Execution result with output, cost, and telemetry data
    */
+  private async handlePermissionDenied(
+    error: PermissionDeniedError,
+    hookContext: HookContext,
+    startTime: number
+  ): Promise<AgentExecutionResult> {
+    const executionTime = Date.now() - startTime;
+    const result: AgentExecutionResult = {
+      success: false,
+      error: error.message,
+      outcome: 'error',
+      executionTime,
+      cost: 0,
+      iterations: 0,
+    };
+    await this.runAfterExecuteHooks(hookContext, result);
+    return result;
+  }
+
+  private async runBeforeExecuteHooks(
+    hookContext: HookContext,
+    startTime: number
+  ): Promise<AgentExecutionResult | null> {
+    for (const hook of this.beforeExecuteHooks) {
+      try {
+        await hook(hookContext);
+      } catch (error) {
+        if (error instanceof PermissionDeniedError) {
+          return this.handlePermissionDenied(error, hookContext, startTime);
+        }
+        const hookError = error instanceof Error ? error : new Error(String(error));
+        (hookError as any).isHookError = true;
+        throw hookError;
+      }
+    }
+    return null;
+  }
+
   async execute(context: TaskContext): Promise<AgentExecutionResult> {
     const startTime = Date.now();
     let sessionManager: TelemetrySessionManager | undefined;
@@ -233,33 +270,8 @@ export class AgentRuntime {
       };
 
       // Run before-execution hooks
-      for (const hook of this.beforeExecuteHooks) {
-        try {
-          await hook(hookContext);
-        } catch (error) {
-          // Check if permission was denied
-          if (error instanceof PermissionDeniedError) {
-            const executionTime = Date.now() - startTime;
-            const result: AgentExecutionResult = {
-              success: false,
-              error: error.message,
-              outcome: 'error',
-              executionTime,
-              cost: 0,
-              iterations: 0,
-            };
-
-            // Run after-execution hooks even on permission denial
-            await this.runAfterExecuteHooks(hookContext, result);
-
-            return result;
-          }
-          // Mark as hook error and re-throw
-          const hookError = error instanceof Error ? error : new Error(String(error));
-          (hookError as any).isHookError = true;
-          throw hookError;
-        }
-      }
+      const earlyResult = await this.runBeforeExecuteHooks(hookContext, startTime);
+      if (earlyResult !== null) return earlyResult;
 
       // Create telemetry session
       // Note: startSession expects AgentType, but we have agentName as string
@@ -490,6 +502,33 @@ export class AgentRuntime {
   /**
    * Execute iteration loop until completion or max iterations
    */
+  private async processDecisionAction(
+    decision: { action?: unknown; thought?: string },
+    context: TaskContext,
+    state: RuntimeState
+  ): Promise<void> {
+    if (decision.action) {
+      const observation = await this.executeTool(
+        decision.action as { tool: string; input: Record<string, unknown> },
+        context,
+        state
+      );
+      state.observations.push(observation);
+      state.steps[state.steps.length - 1].observation = observation.success
+        ? String(observation.output)
+        : observation.error?.message || 'Tool execution failed';
+      state.messages.push({
+        role: 'tool',
+        content: observation.success
+          ? JSON.stringify(observation.output)
+          : `Error: ${observation.error?.message}`,
+        name: observation.tool,
+      });
+    } else {
+      state.isFinished = true;
+    }
+  }
+
   private async executeIterations(
     state: RuntimeState,
     context: TaskContext,
@@ -528,26 +567,7 @@ export class AgentRuntime {
       });
 
       // Execute action if present
-      if (decision.action) {
-        const observation = await this.executeTool(decision.action, context, state);
-        
-        state.observations.push(observation);
-        state.steps[state.steps.length - 1].observation = observation.success
-          ? String(observation.output)
-          : observation.error?.message || 'Tool execution failed';
-
-        // Add observation to messages
-        state.messages.push({
-          role: 'tool',
-          content: observation.success
-            ? JSON.stringify(observation.output)
-            : `Error: ${observation.error?.message}`,
-          name: observation.tool,
-        });
-      } else {
-        // No action means agent is done
-        state.isFinished = true;
-      }
+      await this.processDecisionAction(decision, context, state);
 
       // Check for periodic summarization
       if (

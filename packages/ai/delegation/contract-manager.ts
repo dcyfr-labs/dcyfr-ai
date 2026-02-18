@@ -161,48 +161,37 @@ export class DelegationContractManager extends EventEmitter {
     `);
   }
 
-  /**
-   * Create a new delegation contract
-   */
-  async createContract(request: CreateDelegationContractRequest): Promise<DelegationContract> {
-    const legacyRequest = request as unknown as Record<string, any>;
-
-    // Backward-compatible normalization for legacy contract shapes used by older tests
-    const normalizedDelegator = request.delegator || {
+  /** Normalize agents from legacy or current request shapes */
+  private normalizeContractAgents(
+    request: CreateDelegationContractRequest,
+    legacyRequest: Record<string, any>,
+  ): { delegator: DelegationAgent; delegatee: DelegationAgent } {
+    const delegator = request.delegator || {
       agent_id: legacyRequest?.delegator_agent_id || legacyRequest?.delegator?.agent_id || 'delegator-agent',
       agent_name: legacyRequest?.delegator?.agent_name || legacyRequest?.delegator?.agent_id || 'Delegator Agent',
       capabilities: legacyRequest?.delegator?.capabilities,
     };
-    const normalizedDelegatee = request.delegatee || {
+    const delegatee = request.delegatee || {
       agent_id: legacyRequest?.delegatee_agent_id || legacyRequest?.delegatee?.agent_id || 'delegatee-agent',
       agent_name: legacyRequest?.delegatee?.agent_name || legacyRequest?.delegatee?.agent_id || 'Delegatee Agent',
       capabilities: legacyRequest?.delegatee?.capabilities,
     };
-    const normalizedTaskDescription = request.task_description || legacyRequest?.description || request.task_id || 'Delegated task';
-    const normalizedTimeout = request.timeout_ms ?? legacyRequest?.timeout_ms ?? 30000;
-    const normalizedSuccessCriteria = Array.isArray(request.success_criteria)
-      ? { required_checks: request.success_criteria }
-      : (request.success_criteria || {});
+    return { delegator, delegatee };
+  }
 
-    const rawVerificationPolicy = request.verification_policy || legacyRequest?.verification_policy || 'direct_inspection';
-    const normalizedVerificationPolicy =
-      rawVerificationPolicy === 'manual'
-        ? 'human_required'
-        : rawVerificationPolicy === 'automated' || rawVerificationPolicy === 'capability_match'
-          ? 'direct_inspection'
-          : rawVerificationPolicy;
+  /** Normalize verification policy from legacy/current values */
+  private normalizeVerificationPolicy(raw: string): string {
+    if (raw === 'manual') return 'human_required';
+    if (raw === 'automated' || raw === 'capability_match') return 'direct_inspection';
+    return raw;
+  }
 
-    const normalizedPermissionTokens = request.permission_tokens ||
-      (legacyRequest?.permission_token
-        ? [{
-            token_id: legacyRequest.permission_token.token_id,
-            scopes: legacyRequest.permission_token.scopes || [],
-            delegatable: legacyRequest.permission_token.delegatable,
-            max_delegation_depth: legacyRequest.permission_token.max_delegation_depth,
-          }]
-        : undefined);
-
-    // Security threat validation (lightweight compatibility layer)
+  /** Run security validation, emit threat event and throw if a threat is detected */
+  private validateContractSecurity(
+    request: CreateDelegationContractRequest,
+    legacyRequest: Record<string, any>,
+    normalizedPermissionTokens: Array<{ token_id: string; scopes: string[]; delegatable?: boolean; max_delegation_depth?: number }> | undefined,
+  ): void {
     this.securityValidationCount++;
     const threat = this.detectSecurityThreat({
       permission_token: legacyRequest?.permission_token,
@@ -226,6 +215,37 @@ export class DelegationContractManager extends EventEmitter {
       this.emit('security_threat_detected', threatEvent);
       throw new Error(`Security threat detected: ${threat.threat_type}`);
     }
+  }
+
+  /**
+   * Create a new delegation contract
+   */
+  async createContract(request: CreateDelegationContractRequest): Promise<DelegationContract> {
+    const legacyRequest = request as unknown as Record<string, any>;
+
+    const { delegator: normalizedDelegator, delegatee: normalizedDelegatee } =
+      this.normalizeContractAgents(request, legacyRequest);
+
+    const normalizedTaskDescription = request.task_description || legacyRequest?.description || request.task_id || 'Delegated task';
+    const normalizedTimeout = request.timeout_ms ?? legacyRequest?.timeout_ms ?? 30000;
+    const normalizedSuccessCriteria = Array.isArray(request.success_criteria)
+      ? { required_checks: request.success_criteria }
+      : (request.success_criteria || {});
+
+    const rawVerificationPolicy = request.verification_policy || legacyRequest?.verification_policy || 'direct_inspection';
+    const normalizedVerificationPolicy = this.normalizeVerificationPolicy(rawVerificationPolicy);
+
+    const normalizedPermissionTokens = request.permission_tokens ||
+      (legacyRequest?.permission_token
+        ? [{
+            token_id: legacyRequest.permission_token.token_id,
+            scopes: legacyRequest.permission_token.scopes || [],
+            delegatable: legacyRequest.permission_token.delegatable,
+            max_delegation_depth: legacyRequest.permission_token.max_delegation_depth,
+          }]
+        : undefined);
+
+    this.validateContractSecurity(request, legacyRequest, normalizedPermissionTokens);
 
     // Use explicit contract_id if provided (for testing), otherwise generate
     const contract_id = request.contract_id || `contract-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -295,82 +315,76 @@ export class DelegationContractManager extends EventEmitter {
   /**
    * Query contracts with filters
    */
-  queryContracts(options: ContractQueryOptions = {}): DelegationContract[] {
+  /** Build WHERE clause and params from query options */
+  private buildQueryFromOptions(options: ContractQueryOptions): { query: string; params: any[] } {
     const conditions: string[] = [];
     const params: any[] = [];
-    
-    // Support both full and short aliases for agent IDs
+
     const delegatorId = options.delegator_agent_id ?? options.delegator_id;
     const delegateeId = options.delegatee_agent_id ?? options.delegatee_id;
-    
-    if (delegatorId) {
-      conditions.push('delegator_agent_id = ?');
-      params.push(delegatorId);
-    }
-    
-    if (delegateeId) {
-      conditions.push('delegatee_agent_id = ?');
-      params.push(delegateeId);
-    }
-    
-    if (options.task_id) {
-      conditions.push('task_id = ?');
-      params.push(options.task_id);
-    }
-    
+
+    if (delegatorId) { conditions.push('delegator_agent_id = ?'); params.push(delegatorId); }
+    if (delegateeId) { conditions.push('delegatee_agent_id = ?'); params.push(delegateeId); }
+    if (options.task_id) { conditions.push('task_id = ?'); params.push(options.task_id); }
+
     if (options.status) {
       if (Array.isArray(options.status)) {
-        const placeholders = options.status.map(() => '?').join(',');
-        conditions.push(`status IN (${placeholders})`);
+        conditions.push(`status IN (${options.status.map(() => '?').join(',')})`);
         params.push(...options.status);
       } else {
         conditions.push('status = ?');
         params.push(options.status);
       }
     }
-    
-    if (options.delegation_depth !== undefined) {
-      conditions.push('delegation_depth = ?');
-      params.push(options.delegation_depth);
-    }
-    
-    if (options.parent_contract_id) {
-      conditions.push('parent_contract_id = ?');
-      params.push(options.parent_contract_id);
-    }
-    
-    if (options.priority !== undefined) {
-      conditions.push('priority = ?');
-      params.push(options.priority);
-    }
-    
+
+    if (options.delegation_depth !== undefined) { conditions.push('delegation_depth = ?'); params.push(options.delegation_depth); }
+    if (options.parent_contract_id) { conditions.push('parent_contract_id = ?'); params.push(options.parent_contract_id); }
+    if (options.priority !== undefined) { conditions.push('priority = ?'); params.push(options.priority); }
+
     let query = 'SELECT * FROM delegation_contracts';
-    if (conditions.length > 0) {
-      query += ' WHERE ' + conditions.join(' AND ');
-    }
-    
-    // Sorting
-    if (options.sort_by) {
-      query += ` ORDER BY ${options.sort_by} ${options.sort_order === 'asc' ? 'ASC' : 'DESC'}`;
-    }
-    
-    // Pagination
-    if (options.limit !== undefined) {
-      query += ' LIMIT ?';
-      params.push(options.limit);
-    }
-    
+    if (conditions.length > 0) query += ' WHERE ' + conditions.join(' AND ');
+    if (options.sort_by) query += ` ORDER BY ${options.sort_by} ${options.sort_order === 'asc' ? 'ASC' : 'DESC'}`;
+
+    if (options.limit !== undefined) { query += ' LIMIT ?'; params.push(options.limit); }
     if (options.offset !== undefined) {
-      if (options.limit === undefined) {
-        // SQLite requires LIMIT before OFFSET
-        query += ' LIMIT -1';
-      }
+      if (options.limit === undefined) query += ' LIMIT -1';
       query += ' OFFSET ?';
       params.push(options.offset);
     }
-    
+
+    return { query, params };
+  }
+
+  queryContracts(options: ContractQueryOptions = {}): DelegationContract[] {
+    const { query, params } = this.buildQueryFromOptions(options);
     const rows = this.db.prepare(query).all(...params) as any[];
     return rows.map(row => this.rowToContract(row));
+  }
+
+  /** Build SQL fields/params for an updateContract call */
+  private buildUpdateFields(updates: ContractUpdateOptions): { fields: string[]; params: any[] } {
+    const fields: string[] = [];
+    const params: any[] = [];
+
+    if (updates.status) {
+      fields.push('status = ?');
+      params.push(updates.status);
+      if (updates.status === 'active' && !updates.activated_at) {
+        fields.push('activated_at = ?');
+        params.push(new Date().toISOString());
+      }
+      if ((updates.status === 'completed' || updates.status === 'revoked') && !updates.completed_at) {
+        fields.push('completed_at = ?');
+        params.push(new Date().toISOString());
+      }
+    }
+
+    if (updates.activated_at) { fields.push('activated_at = ?'); params.push(updates.activated_at); }
+    if (updates.completed_at) { fields.push('completed_at = ?'); params.push(updates.completed_at); }
+    if (updates.verification_result) { fields.push('verification_result = ?'); params.push(JSON.stringify(updates.verification_result)); }
+    if (updates.metadata) { fields.push('metadata = ?'); params.push(JSON.stringify(updates.metadata)); }
+
+    return { fields, params };
   }
 
   /**
@@ -383,50 +397,12 @@ export class DelegationContractManager extends EventEmitter {
   ): Promise<DelegationContract> {
     const { contract_id } = updates;
     
-    // Verify contract exists
     const existing = this.getContractById(contract_id);
     if (!existing) {
       throw new Error(`Contract not found: ${contract_id}`);
     }
     
-    const fields: string[] = [];
-    const params: any[] = [];
-    
-    if (updates.status) {
-      fields.push('status = ?');
-      params.push(updates.status);
-      
-      // Auto-set timestamps based on status
-      if (updates.status === 'active' && !updates.activated_at) {
-        fields.push('activated_at = ?');
-        params.push(new Date().toISOString());
-      }
-      
-      if ((updates.status === 'completed' || updates.status === 'revoked') && !updates.completed_at) {
-        fields.push('completed_at = ?');
-        params.push(new Date().toISOString());
-      }
-    }
-    
-    if (updates.activated_at) {
-      fields.push('activated_at = ?');
-      params.push(updates.activated_at);
-    }
-    
-    if (updates.completed_at) {
-      fields.push('completed_at = ?');
-      params.push(updates.completed_at);
-    }
-    
-    if (updates.verification_result) {
-      fields.push('verification_result = ?');
-      params.push(JSON.stringify(updates.verification_result));
-    }
-    
-    if (updates.metadata) {
-      fields.push('metadata = ?');
-      params.push(JSON.stringify(updates.metadata));
-    }
+    const { fields, params } = this.buildUpdateFields(updates);
     
     if (fields.length === 0) {
       return existing;
@@ -652,6 +628,21 @@ export class DelegationContractManager extends EventEmitter {
     return this.securityThreatEvents.slice(-limit).reverse();
   }
 
+  /** Build security recommendations based on threat statistics */
+  private buildSecurityRecommendations(stats: ReturnType<typeof this.getSecurityThreatStatistics>, threatRate: number): string[] {
+    const recommendations: string[] = [];
+    if (stats.threats_detected > 0) {
+      recommendations.push('Review and audit blocked delegation contracts for threat patterns.');
+    }
+    if (threatRate > 0.25) {
+      recommendations.push('Threat detection rate is elevated; consider tightening delegation policies.');
+    }
+    if (recommendations.length === 0) {
+      recommendations.push('Maintain periodic security review of delegation contracts and policies.');
+    }
+    return recommendations;
+  }
+
   /**
    * Get security status summary (legacy compatibility helper)
    */
@@ -664,20 +655,7 @@ export class DelegationContractManager extends EventEmitter {
   } {
     const stats = this.getSecurityThreatStatistics();
     const totalContracts = this.getContractCount();
-    const threatRate = stats.total_validations > 0
-      ? stats.threats_detected / stats.total_validations
-      : 0;
-
-    const recommendations: string[] = [];
-    if (stats.threats_detected > 0) {
-      recommendations.push('Review and audit blocked delegation contracts for threat patterns.');
-    }
-    if (threatRate > 0.25) {
-      recommendations.push('Threat detection rate is elevated; consider tightening delegation policies.');
-    }
-    if (recommendations.length === 0) {
-      recommendations.push('Maintain periodic security review of delegation contracts and policies.');
-    }
+    const threatRate = stats.total_validations > 0 ? stats.threats_detected / stats.total_validations : 0;
 
     return {
       tlp_enforcement_enabled: true,
@@ -692,7 +670,7 @@ export class DelegationContractManager extends EventEmitter {
         action_distribution: stats.action_distribution,
       },
       recent_security_events: this.getRecentSecurityThreats(10),
-      security_recommendations: recommendations,
+      security_recommendations: this.buildSecurityRecommendations(stats, threatRate),
     };
   }
 

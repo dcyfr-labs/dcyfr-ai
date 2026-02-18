@@ -197,38 +197,42 @@ export class SecurityThreatValidator {
   /**
    * Detect permission escalation attempts through delegation chains
    */
+  /** Check privilege scopes and return risk delta + patterns */
+  private checkPrivilegeScopes(contract: DelegationContract): { risk: number; patterns: string[] } {
+    const patterns: string[] = [];
+    let risk = 0;
+    if (!contract.permission_token?.scopes) return { risk, patterns };
+    const highPriv = ['admin', 'root', 'execute', 'delete', 'modify_system'];
+    const escalated = contract.permission_token.scopes.filter(s =>
+      highPriv.some(p => s.toLowerCase().includes(p.toLowerCase()))
+    );
+    if (escalated.length > 0) {
+      patterns.push(`High-privilege scopes requested: ${escalated.join(', ')}`);
+      risk += Math.min(0.3 * escalated.length, 0.7);
+    }
+    if (contract.permission_token.actions && contract.permission_token.actions.length > 5) {
+      patterns.push(`Excessive permission actions requested: ${contract.permission_token.actions.length} actions`);
+      risk += 0.6;
+    }
+    return { risk, patterns };
+  }
+
   private async detectPermissionEscalation(contract: DelegationContract): Promise<ThreatDetectionResult> {
     if (!this.config.permission_escalation_detection) {
       return { threat_detected: false, threat_type: 'none', severity: 'low', description: 'Permission escalation detection disabled', action: 'allow', evidence: {}, confidence: 0 };
     }
 
-    const suspicious_patterns = [];
+    const suspicious_patterns: string[] = [];
     let risk_score = 0;
 
-    // Check for scope expansion beyond authorized levels
-    if (contract.permission_token?.scopes) {
-      const high_privilege_scopes = ['admin', 'root', 'execute', 'delete', 'modify_system'];
-      const escalated_scopes = contract.permission_token.scopes.filter(scope => 
-        high_privilege_scopes.some(privilege => scope.toLowerCase().includes(privilege.toLowerCase()))
-      );
-      
-      if (escalated_scopes.length > 0) {
-        suspicious_patterns.push(`High-privilege scopes requested: ${escalated_scopes.join(', ')}`);
-        // Scale risk based on number and severity of escalated scopes
-        risk_score += Math.min(0.3 * escalated_scopes.length, 0.7);
-      }
-    }
-
-    // Check for unusual permission combinations
-    if (contract.permission_token?.actions && contract.permission_token.actions.length > 5) {
-      suspicious_patterns.push(`Excessive permission actions requested: ${contract.permission_token.actions.length} actions`);
-      risk_score += 0.6; // Must exceed 0.5 threshold (> 0.5, not >= 0.5)
-    }
+    const scopeCheck = this.checkPrivilegeScopes(contract);
+    risk_score += scopeCheck.risk;
+    suspicious_patterns.push(...scopeCheck.patterns);
 
     // Check delegation chain depth for escalation patterns
     if (contract.metadata?.delegation_depth !== undefined && contract.metadata.delegation_depth > this.config.max_chain_depth) {
       suspicious_patterns.push(`Delegation chain exceeds safe depth: ${contract.metadata.delegation_depth} > ${this.config.max_chain_depth}`);
-      risk_score += 0.6; // Must exceed 0.5 threshold (> 0.5, not >= 0.5)
+      risk_score += 0.6;
     }
 
     // Check TLP escalation without proper clearance
@@ -259,44 +263,37 @@ export class SecurityThreatValidator {
     return { threat_detected: false, threat_type: 'none', severity: 'low', description: 'No permission escalation detected', action: 'allow', evidence: {}, confidence: 0.1 };
   }
 
+  /** Check for circular delegation and rapid success patterns */
+  private checkReputationPatterns(contract: DelegationContract): { risk: number; patterns: string[] } {
+    const patterns: string[] = [];
+    let risk = 0;
+    const delegator_activity = this.agentActivities.get(contract.delegator_agent_id);
+    const delegatee_activity = this.agentActivities.get(contract.delegatee_agent_id);
+
+    if (delegator_activity && delegatee_activity) {
+      const mutual = this.checkMutualDelegations(contract.delegator_agent_id, contract.delegatee_agent_id);
+      if (mutual > 3) { patterns.push('Circular delegation pattern detected'); risk += 0.3; }
+    }
+
+    if (delegatee_activity) {
+      const success_rate = delegatee_activity.contracts_completed / (delegatee_activity.contracts_accepted || 1);
+      if (success_rate > 0.95 && delegatee_activity.contracts_completed > 10) {
+        patterns.push('Unusually high success rate suggesting gaming'); risk += 0.2;
+      }
+      if (delegatee_activity.contracts_accepted < 3) {
+        const agent_age = Date.now() - new Date(delegatee_activity.first_seen).getTime();
+        if (agent_age < 12 * 60 * 60 * 1000) { patterns.push('Delegation to very new agent'); risk += 0.05; }
+      }
+    }
+    return { risk, patterns };
+  }
+
   /**
    * Detect reputation gaming attempts
    */
   private async detectReputationGaming(contract: DelegationContract): Promise<ThreatDetectionResult> {
-    const delegator_activity = this.agentActivities.get(contract.delegator_agent_id);
-    const delegatee_activity = this.agentActivities.get(contract.delegatee_agent_id);
-    
-    const suspicious_patterns = [];
-    let risk_score = 0;
+    const { risk: risk_score, patterns: suspicious_patterns } = this.checkReputationPatterns(contract);
 
-    // Check for circular delegation patterns
-    if (delegator_activity && delegatee_activity) {
-      const mutual_delegations = this.checkMutualDelegations(contract.delegator_agent_id, contract.delegatee_agent_id);
-      if (mutual_delegations > 3) {
-        suspicious_patterns.push('Circular delegation pattern detected');
-        risk_score += 0.3;
-      }
-    }
-
-    // Check for rapid success/failure patterns
-    if (delegatee_activity) {
-      const success_rate = delegatee_activity.contracts_completed / (delegatee_activity.contracts_accepted || 1);
-      if (success_rate > 0.95 && delegatee_activity.contracts_completed > 10) {
-        suspicious_patterns.push('Unusually high success rate suggesting gaming');
-        risk_score += 0.2;
-      }
-    }
-
-    // Check for delegation to newly created agents (only flag if there are other concerns)
-    if (delegatee_activity && delegatee_activity.contracts_accepted < 3) {
-      const agent_age = Date.now() - new Date(delegatee_activity.first_seen).getTime();
-      if (agent_age < 12 * 60 * 60 * 1000) { // Less than 12 hours old
-        suspicious_patterns.push('Delegation to very new agent');
-        risk_score += 0.05; // Reduced from 0.1 - this alone isn't enough to flag
-      }
-    }
-
-    // Only report if risk exceeds threshold by meaningful margin
     if (risk_score > 0.2) {
       return {
         threat_detected: true,
@@ -315,6 +312,18 @@ export class SecurityThreatValidator {
     return { threat_detected: false, threat_type: 'none', severity: 'low', description: 'No reputation gaming detected', action: 'allow', evidence: {}, confidence: 0.1 };
   }
 
+  /** Check resource requirements for abuse patterns */
+  private checkResourceAbuse(contract: DelegationContract): { risk: number; patterns: string[] } {
+    const patterns: string[] = [];
+    let risk = 0;
+    if (!contract.resource_requirements) return { risk, patterns };
+    const { memory_mb, cpu_cores, disk_space_mb } = contract.resource_requirements;
+    if (memory_mb && memory_mb > 8192) { patterns.push('Excessive memory requirement'); risk += 0.2; }
+    if (cpu_cores && cpu_cores > 4) { patterns.push('Excessive CPU requirement'); risk += 0.2; }
+    if (disk_space_mb && disk_space_mb > 102400) { patterns.push('Excessive disk space requirement'); risk += 0.2; }
+    return { risk, patterns };
+  }
+
   /**
    * Detect delegation abuse patterns
    */
@@ -325,10 +334,9 @@ export class SecurityThreatValidator {
       return { threat_detected: false, threat_type: 'none', severity: 'low', description: 'No activity history available', action: 'allow', evidence: {}, confidence: 0 };
     }
 
-    const suspicious_patterns = [];
+    const suspicious_patterns: string[] = [];
     let risk_score = 0;
 
-    // Check for excessive delegation frequency
     const recent_hour = Date.now() - 60 * 60 * 1000;
     const recent_contracts = delegator_activity.recent_activity.filter(
       activity => new Date(activity.timestamp).getTime() > recent_hour
@@ -339,22 +347,9 @@ export class SecurityThreatValidator {
       risk_score += 0.4;
     }
 
-    // Check for resource exhaustion patterns
-    if (contract.resource_requirements) {
-      const { memory_mb, cpu_cores, disk_space_mb } = contract.resource_requirements;
-      if (memory_mb && memory_mb > 8192) { // > 8GB
-        suspicious_patterns.push('Excessive memory requirement');
-        risk_score += 0.2;
-      }
-      if (cpu_cores && cpu_cores > 4) {
-        suspicious_patterns.push('Excessive CPU requirement');
-        risk_score += 0.2;
-      }
-      if (disk_space_mb && disk_space_mb > 102400) { // > 100GB
-        suspicious_patterns.push('Excessive disk space requirement');
-        risk_score += 0.2;
-      }
-    }
+    const resourceCheck = this.checkResourceAbuse(contract);
+    risk_score += resourceCheck.risk;
+    suspicious_patterns.push(...resourceCheck.patterns);
 
     if (risk_score > 0.3) {
       return {
@@ -374,62 +369,57 @@ export class SecurityThreatValidator {
     return { threat_detected: false, threat_type: 'none', severity: 'low', description: 'No abuse patterns detected', action: 'allow', evidence: {}, confidence: 0.1 };
   }
 
+  /** Check if execution time is anomalous compared to historical average */
+  private checkExecutionTimeAnomaly(contract: DelegationContract, activity: { contracts_created: number; average_execution_time: number }): { isAnomaly: boolean } {
+    if (!contract.metadata?.estimated_duration_ms || activity.average_execution_time <= 0) return { isAnomaly: false };
+    const estimated = contract.metadata.estimated_duration_ms as number;
+    const total = activity.contracts_created;
+    const historicalAvg = total > 1
+      ? ((activity.average_execution_time * total) - estimated) / (total - 1)
+      : activity.average_execution_time;
+    return { isAnomaly: estimated > historicalAvg * 3 };
+  }
+
+  /** Check for unusual time-of-day patterns */
+  private checkTimeOfDay(activity: { recent_activity: Array<{ timestamp: string }> }): boolean {
+    const current_hour = new Date().getHours();
+    const usual_hours = activity.recent_activity
+      .map(a => new Date(a.timestamp).getHours())
+      .reduce((acc, hour) => { acc[hour] = (acc[hour] || 0) + 1; return acc; }, {} as Record<number, number>);
+    return usual_hours[current_hour] === undefined && Object.keys(usual_hours).length > 5;
+  }
+
   /**
    * Detect anomalous delegation behavior
    */
   private async detectAnomalies(contract: DelegationContract): Promise<ThreatDetectionResult> {
     const delegator_activity = this.agentActivities.get(contract.delegator_agent_id);
     
-    // Lower threshold for anomaly detection to be more sensitive
     if (!delegator_activity || delegator_activity.contracts_created < 5) {
       return { threat_detected: false, threat_type: 'none', severity: 'low', description: 'Insufficient data for anomaly detection', action: 'allow', evidence: {}, confidence: 0 };
     }
 
-    const suspicious_patterns = [];
+    const suspicious_patterns: string[] = [];
     let anomaly_score = 0;
 
-    // Check for unusual TLP level requests (stronger signal)
-    // Use historical data BEFORE the current request was added
-    const historical_tlp_levels = delegator_activity.tlp_level_requests.slice(0, -1).slice(-20);
-    const usual_tlp_levels = new Set(historical_tlp_levels);
+    const historical_tlp = delegator_activity.tlp_level_requests.slice(0, -1).slice(-20);
+    const usual_tlp = new Set(historical_tlp);
     const requested_tlp = contract.tlp_classification || 'TLP:CLEAR';
-    
-    if (requested_tlp !== 'TLP:CLEAR' && !usual_tlp_levels.has(requested_tlp)) {
+    if (requested_tlp !== 'TLP:CLEAR' && !usual_tlp.has(requested_tlp)) {
       suspicious_patterns.push('Unusual TLP level requested');
-      anomaly_score += 0.4; // Increased from 0.2 for stronger signal
+      anomaly_score += 0.4;
     }
 
-    // Check for unusual execution time patterns (stronger signal)
-    if (contract.metadata?.estimated_duration_ms && delegator_activity.average_execution_time > 0) {
-      const estimated_time = contract.metadata.estimated_duration_ms;
-      const total_contracts = delegator_activity.contracts_created;
-      
-      // Recalculate average BEFORE current duration was added
-      const historical_average = total_contracts > 1 
-        ? ((delegator_activity.average_execution_time * total_contracts) - estimated_time) / (total_contracts - 1)
-        : delegator_activity.average_execution_time;
-      
-      if (estimated_time > historical_average * 3) {
-        suspicious_patterns.push('Unusually long execution time estimated');
-        anomaly_score += 0.4; // Must exceed 0.3 threshold (> 0.3, not >= 0.3)
-      }
+    if (this.checkExecutionTimeAnomaly(contract, delegator_activity).isAnomaly) {
+      suspicious_patterns.push('Unusually long execution time estimated');
+      anomaly_score += 0.4;
     }
 
-    // Check for unusual time-of-day patterns
-    const current_hour = new Date().getHours();
-    const usual_hours = delegator_activity.recent_activity
-      .map(activity => new Date(activity.timestamp).getHours())
-      .reduce((acc, hour) => {
-        acc[hour] = (acc[hour] || 0) + 1;
-        return acc;
-      }, {} as Record<number, number>);
-
-    if (usual_hours[current_hour] === undefined && Object.keys(usual_hours).length > 5) {
+    if (this.checkTimeOfDay(delegator_activity)) {
       suspicious_patterns.push('Unusual time-of-day activity');
-      anomaly_score += 0.2; // Increased from 0.1
+      anomaly_score += 0.2;
     }
 
-    // Lower threshold for detection but ensure strong signals
     if (anomaly_score > 0.3) {
       return {
         threat_detected: true,
@@ -583,56 +573,70 @@ export class SecurityThreatValidator {
    * - High-complexity tasks without success criteria
    * - Cross-package tasks without explicit scope boundaries
    */
+  /** Check task criteria coverage for complex tasks */
+  private checkTaskCriteriaGaps(contract: DelegationContract, complexity: number): { risk: number; patterns: string[] } {
+    const patterns: string[] = [];
+    let risk = 0;
+    if (complexity <= 5) return { risk, patterns };
+    if (!contract.success_criteria?.required_checks || contract.success_criteria.required_checks.length === 0) {
+      patterns.push('Complex task delegated without success criteria — delegatee will have to guess expected outcomes');
+      risk += 0.25;
+    }
+    if (!contract.required_capabilities || contract.required_capabilities.length === 0) {
+      patterns.push('Complex task delegated without required capabilities — agent match will be assumption-based');
+      risk += 0.15;
+    }
+    return { risk, patterns };
+  }
+
+  /** Check for cross-package task without explicit resource scope */
+  private checkCrossPackageScope(contract: DelegationContract): { risk: number; patterns: string[] } {
+    const patterns: string[] = [];
+    let risk = 0;
+    const taskCategories = contract.metadata?.task_categories;
+    if (!Array.isArray(taskCategories)) return { risk, patterns };
+    const crossPkg = taskCategories.filter((cat: unknown) => {
+      if (typeof cat !== 'string') return false;
+      return cat.includes('cross-package') || cat.includes('multi-project') || cat.includes('workspace-wide');
+    });
+    if (crossPkg.length > 0 && !contract.permission_token?.resources?.length) {
+      patterns.push('Cross-package task without explicit resource scope — agents may assume boundaries');
+      risk += 0.2;
+    }
+    return { risk, patterns };
+  }
+
   private async detectContextInsufficiency(contract: DelegationContract): Promise<ThreatDetectionResult> {
     const suspicious_patterns: string[] = [];
     let risk_score = 0;
 
-    // Check if context verification is required but threshold is suspiciously low
-    if (contract.context_verification_required && 
-        contract.minimum_context_confidence !== undefined && 
+    if (contract.context_verification_required &&
+        contract.minimum_context_confidence !== undefined &&
         contract.minimum_context_confidence < 0.3) {
       suspicious_patterns.push('Context verification required but confidence threshold is dangerously low');
       risk_score += 0.3;
     }
 
-    // Check for vague or missing task description
     if (!contract.task_description || contract.task_description.trim().length < 20) {
       suspicious_patterns.push('Task description is missing or too vague for informed decision-making');
       risk_score += 0.3;
     }
 
-    // Check for missing success criteria on complex tasks
-    const estimatedComplexity = contract.metadata?.estimated_complexity;
-    if (estimatedComplexity && estimatedComplexity > 5) {
-      if (!contract.success_criteria?.required_checks || contract.success_criteria.required_checks.length === 0) {
-        suspicious_patterns.push('Complex task delegated without success criteria — delegatee will have to guess expected outcomes');
-        risk_score += 0.25;
-      }
-      
-      if (!contract.required_capabilities || contract.required_capabilities.length === 0) {
-        suspicious_patterns.push('Complex task delegated without required capabilities — agent match will be assumption-based');
-        risk_score += 0.15;
-      }
-    }
+    const estimatedComplexity = contract.metadata?.estimated_complexity as number | undefined;
+    if (estimatedComplexity) {
+      const criteriaCheck = this.checkTaskCriteriaGaps(contract, estimatedComplexity);
+      risk_score += criteriaCheck.risk;
+      suspicious_patterns.push(...criteriaCheck.patterns);
 
-    // Check for cross-package scope without explicit boundaries
-    const taskCategories = contract.metadata?.task_categories;
-    if (taskCategories && Array.isArray(taskCategories)) {
-      const crossPackageIndicators = taskCategories.filter((cat: unknown) => {
-        if (typeof cat !== 'string') return false;
-        return cat.includes('cross-package') || cat.includes('multi-project') || cat.includes('workspace-wide');
-      });
-      if (crossPackageIndicators.length > 0 && !contract.permission_token?.resources?.length) {
-        suspicious_patterns.push('Cross-package task without explicit resource scope — agents may assume boundaries');
+      if (estimatedComplexity > 7 && !contract.context_verification_required) {
+        suspicious_patterns.push('High-complexity task does not require context verification — assumption risk is elevated');
         risk_score += 0.2;
       }
     }
 
-    // Check for context_verification_required not set on high-complexity tasks
-    if (estimatedComplexity && estimatedComplexity > 7 && !contract.context_verification_required) {
-      suspicious_patterns.push('High-complexity task does not require context verification — assumption risk is elevated');
-      risk_score += 0.2;
-    }
+    const scopeCheck = this.checkCrossPackageScope(contract);
+    risk_score += scopeCheck.risk;
+    suspicious_patterns.push(...scopeCheck.patterns);
 
     if (risk_score > 0.3) {
       return {
@@ -642,10 +646,10 @@ export class SecurityThreatValidator {
         description: `Context insufficiency risk detected (score: ${risk_score.toFixed(2)}) — delegatee agent may make assumption-based decisions`,
         action: risk_score > 0.7 ? 'block' : 'warn',
         evidence: {
-          metrics: { 
-            risk_score, 
+          metrics: {
+            risk_score,
             pattern_count: suspicious_patterns.length,
-            estimated_complexity: estimatedComplexity as number ?? 0,
+            estimated_complexity: estimatedComplexity ?? 0,
             has_success_criteria: (contract.success_criteria?.required_checks?.length ?? 0) > 0 ? 1 : 0,
             context_verification_required: contract.context_verification_required ? 1 : 0,
           },
@@ -660,14 +664,14 @@ export class SecurityThreatValidator {
       };
     }
 
-    return { 
-      threat_detected: false, 
-      threat_type: 'none', 
-      severity: 'low', 
-      description: 'Sufficient context provided for delegation', 
-      action: 'allow', 
-      evidence: {}, 
-      confidence: 0.1 
+    return {
+      threat_detected: false,
+      threat_type: 'none',
+      severity: 'low',
+      description: 'Sufficient context provided for delegation',
+      action: 'allow',
+      evidence: {},
+      confidence: 0.1
     };
   }
 
@@ -809,63 +813,59 @@ export class SecurityThreatValidator {
     return { threat_detected: false, threat_type: 'none', severity: 'low', description: 'No prompt injection detected', action: 'allow', evidence: {}, confidence: 0.1 };
   }
 
+  /** Check contract timeout and metadata for excessive resource limits */
+  private checkResourceLimits(contract: DelegationContract, timeoutMs: number): { risk: number; indicators: string[] } {
+    const indicators: string[] = [];
+    let risk = 0;
+
+    if (timeoutMs > 600000) {
+      risk += 0.3;
+      indicators.push(`Excessive timeout: ${timeoutMs}ms`);
+    }
+    if (timeoutMs > 1800000) {
+      risk += 0.4;
+      indicators.push('Extremely high timeout value');
+    }
+
+    const meta = contract.metadata;
+    if (!meta) return { risk, indicators };
+
+    if (typeof meta.iterations === 'number' && meta.iterations > 10_000_000) {
+      risk += 0.5;
+      indicators.push(`Excessive iterations: ${meta.iterations}`);
+    }
+    if (typeof meta.max_memory === 'number' && meta.max_memory > 1_000_000_000) {
+      risk += 0.3;
+      indicators.push(`Excessive memory: ${meta.max_memory} bytes`);
+    }
+
+    return { risk, indicators };
+  }
+
+  /** Scan task description for resource-exhaustion keywords */
+  private checkExhaustionKeywords(taskDescription: string): { risk: number; indicators: string[] } {
+    const exhaustionPatterns = [
+      'infinite loop', 'recursive calls', 'unlimited', 'maximum resources',
+      'all available memory', 'exhaust', 'ddos', 'flood'
+    ];
+    const detected = exhaustionPatterns.filter(p => taskDescription.includes(p));
+    return {
+      risk: detected.length * 0.2,
+      indicators: detected.map(p => `Resource exhaustion pattern: ${p}`)
+    };
+  }
+
   /**
    * Detect resource exhaustion attempts
    */
   private async detectResourceExhaustion(contract: DelegationContract): Promise<ThreatDetectionResult> {
-    let riskScore = 0;
-    const indicators: string[] = [];
     const timeoutMs = contract.timeout_ms ?? 0;
 
-    // Check timeout values
-    if (timeoutMs > 600000) { // > 10 minutes
-      riskScore += 0.3;
-      indicators.push(`Excessive timeout: ${timeoutMs}ms`);
-    }
+    const limits = this.checkResourceLimits(contract, timeoutMs);
+    const keywords = this.checkExhaustionKeywords(contract.task_description?.toLowerCase() ?? '');
 
-    if (timeoutMs > 1800000) { // > 30 minutes
-      riskScore += 0.4; // Additional penalty
-      indicators.push('Extremely high timeout value');
-    }
-
-    // Check metadata for resource indicators
-    if (contract.metadata) {
-      if (contract.metadata.iterations && typeof contract.metadata.iterations === 'number') {
-        if (contract.metadata.iterations > 10000000) { // > 10M iterations
-          riskScore += 0.5;
-          indicators.push(`Excessive iterations: ${contract.metadata.iterations}`);
-        }
-      }
-
-      if (contract.metadata.max_memory && typeof contract.metadata.max_memory === 'number') {
-        if (contract.metadata.max_memory > 1000000000) { // > 1GB
-          riskScore += 0.3;
-          indicators.push(`Excessive memory: ${contract.metadata.max_memory} bytes`);
-        }
-      }
-    }
-
-    // Check task description for resource exhaustion patterns
-    const taskDescription = contract.task_description?.toLowerCase() || '';
-    const exhaustionPatterns = [
-      'infinite loop',
-      'recursive calls',
-      'unlimited',
-      'maximum resources',
-      'all available memory',
-      'exhaust',
-      'ddos',
-      'flood'
-    ];
-
-    const detectedPatterns = exhaustionPatterns.filter(pattern => 
-      taskDescription.includes(pattern)
-    );
-
-    if (detectedPatterns.length > 0) {
-      riskScore += detectedPatterns.length * 0.2;
-      indicators.push(...detectedPatterns.map(p => `Resource exhaustion pattern: ${p}`));
-    }
+    const riskScore = limits.risk + keywords.risk;
+    const indicators = [...limits.indicators, ...keywords.indicators];
 
     if (riskScore > 0.4) {
       return {

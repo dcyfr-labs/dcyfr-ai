@@ -348,45 +348,17 @@ export class CapabilityDetector {
       ...this.config.customKeywordMappings,
     };
     
-    // Check each capability for keyword matches
     for (const [capabilityId, keywords] of Object.entries(allKeywordMappings)) {
-      const matchedKeywords: string[] = [];
-      
-      for (const keyword of keywords) {
-        const keywordLower = keyword.toLowerCase();
-        
-        if (this.config.fuzzyMatching) {
-          // Fuzzy matching: check if content contains keyword or keyword is in content
-          if (contentLower.includes(keywordLower)) {
-            matchedKeywords.push(keyword);
-          }
-        } else {
-          // Exact matching: word boundary required
-          const regex = new RegExp(`\\b${this.escapeRegex(keywordLower)}\\b`, 'i');
-          if (regex.test(contentLower)) {
-            matchedKeywords.push(keyword);
-          }
-        }
-      }
-      
-      // Calculate detection confidence based on keyword matches
+      const matchedKeywords = this.matchKeywords(keywords, contentLower);
       const matchCount = matchedKeywords.length;
-      const totalKeywords = keywords.length;
-      const detectionConfidence = Math.min(matchCount / totalKeywords, 1.0);
-      
-      // Apply capability detection rules
+      const detectionConfidence = Math.min(matchCount / keywords.length, 1.0);
+
       if (matchCount >= this.config.minimumKeywordMatches) {
         capabilities.push({ capabilityId, detectionConfidence, matchedKeywords });
-      }
-      // Special case: agent name matches capability
-      else if (matchCount >= 1) {
-        if (nameLower.includes(capabilityId.replace(/_/g, '-')) || 
-            nameLower.includes(capabilityId.replace(/_/g, ' '))) {
-          capabilities.push({ 
-            capabilityId, 
-            detectionConfidence: 0.75, 
-            matchedKeywords: [...matchedKeywords, `name:${agentName}`] 
-          });
+      } else if (matchCount >= 1) {
+        const idVariants = [capabilityId.replace(/_/g, '-'), capabilityId.replace(/_/g, ' ')];
+        if (idVariants.some(v => nameLower.includes(v))) {
+          capabilities.push({ capabilityId, detectionConfidence: 0.75, matchedKeywords: [...matchedKeywords, `name:${agentName}`] });
         }
       }
     }
@@ -403,6 +375,15 @@ export class CapabilityDetector {
     }
     
     return capabilities;
+  }
+
+  /** Return keywords from the list that match the content string */
+  private matchKeywords(keywords: string[], contentLower: string): string[] {
+    return keywords.filter(keyword => {
+      const kl = keyword.toLowerCase();
+      if (this.config.fuzzyMatching) return contentLower.includes(kl);
+      return new RegExp(`\\b${this.escapeRegex(kl)}\\b`, 'i').test(contentLower);
+    });
   }
   
   private escapeRegex(str: string): string {

@@ -451,56 +451,43 @@ export class IntelligentCacheManager extends EventEmitter {
     return value;
   }
 
+  /** Collect cache keys matching a given invalidation pattern */
+  private collectKeysForPattern(pattern: InvalidationPattern): string[] {
+    switch (pattern.type) {
+      case 'tag': {
+        const tagKeys = this.tagIndex.get(pattern.pattern as string);
+        return tagKeys ? Array.from(tagKeys) : [];
+      }
+      case 'key_prefix': {
+        const prefix = pattern.pattern as string;
+        return Array.from(this.cache.keys()).filter(k => k.startsWith(prefix));
+      }
+      case 'key_regex': {
+        const regex = pattern.pattern as RegExp;
+        return Array.from(this.cache.keys()).filter(k => regex.test(k));
+      }
+      case 'dependency': {
+        const depKeys = this.dependencyIndex.get(pattern.pattern as string);
+        return depKeys ? Array.from(depKeys) : [];
+      }
+      case 'time_based': {
+        const cutoff = new Date(pattern.pattern as string);
+        return Array.from(this.cache.entries())
+          .filter(([, entry]) => entry.createdAt < cutoff)
+          .map(([k]) => k);
+      }
+      default:
+        return [];
+    }
+  }
+
   /**
    * Invalidate cache entries by pattern
    */
   invalidate(pattern: InvalidationPattern): number {
+    const keysToDelete = this.collectKeysForPattern(pattern);
     let invalidatedCount = 0;
-    const keysToDelete: string[] = [];
 
-    switch (pattern.type) {
-      case 'tag':
-        const tagKeys = this.tagIndex.get(pattern.pattern as string);
-        if (tagKeys) {
-          keysToDelete.push(...Array.from(tagKeys));
-        }
-        break;
-
-      case 'key_prefix':
-        for (const key of this.cache.keys()) {
-          if (key.startsWith(pattern.pattern as string)) {
-            keysToDelete.push(key);
-          }
-        }
-        break;
-
-      case 'key_regex':
-        const regex = pattern.pattern as RegExp;
-        for (const key of this.cache.keys()) {
-          if (regex.test(key)) {
-            keysToDelete.push(key);
-          }
-        }
-        break;
-
-      case 'dependency':
-        const dependencyKeys = this.dependencyIndex.get(pattern.pattern as string);
-        if (dependencyKeys) {
-          keysToDelete.push(...Array.from(dependencyKeys));
-        }
-        break;
-
-      case 'time_based':
-        const cutoffTime = new Date(pattern.pattern as string);
-        for (const [key, entry] of this.cache.entries()) {
-          if (entry.createdAt < cutoffTime) {
-            keysToDelete.push(key);
-          }
-        }
-        break;
-    }
-
-    // Delete identified keys
     for (const key of keysToDelete) {
       if (this.delete(key)) {
         invalidatedCount++;
@@ -753,6 +740,14 @@ export class IntelligentCacheManager extends EventEmitter {
     }
   }
 
+  /** Remove a single key from an index map, deleting the bucket if empty */
+  private removeKeyFromIndexMap(indexMap: Map<string, Set<string>>, indexKey: string, cacheKey: string): void {
+    const bucket = indexMap.get(indexKey);
+    if (!bucket) return;
+    bucket.delete(cacheKey);
+    if (bucket.size === 0) indexMap.delete(indexKey);
+  }
+
   /**
    * Remove key from all indexes
    */
@@ -760,27 +755,13 @@ export class IntelligentCacheManager extends EventEmitter {
     const entry = this.cache.get(key);
     if (!entry) return;
 
-    // Remove from tag index
     for (const tag of entry.tags) {
-      const tagKeys = this.tagIndex.get(tag);
-      if (tagKeys) {
-        tagKeys.delete(key);
-        if (tagKeys.size === 0) {
-          this.tagIndex.delete(tag);
-        }
-      }
+      this.removeKeyFromIndexMap(this.tagIndex, tag, key);
     }
 
-    // Remove from dependency index
     if (entry.dependencies) {
-      for (const dependency of entry.dependencies) {
-        const depKeys = this.dependencyIndex.get(dependency);
-        if (depKeys) {
-          depKeys.delete(key);
-          if (depKeys.size === 0) {
-            this.dependencyIndex.delete(dependency);
-          }
-        }
+      for (const dep of entry.dependencies) {
+        this.removeKeyFromIndexMap(this.dependencyIndex, dep, key);
       }
     }
   }

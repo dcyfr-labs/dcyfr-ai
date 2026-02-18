@@ -144,6 +144,33 @@ export class StandardVerificationFormatter extends BaseVerificationFormatter imp
     return this.objectToYaml(data);
   }
   
+  private formatContractRequirementsMarkdown(contract: DelegationContract): string {
+    let section = `## Contract Requirements\n\n`;
+    section += `- **Verification Policy:** ${contract.verification_policy}\n`;
+    if (contract.tlp_classification) {
+      section += `- **TLP Classification:** ${contract.tlp_classification}\n`;
+    }
+    if (contract.timeout_ms) {
+      section += `- **Timeout:** ${contract.timeout_ms}ms\n`;
+    }
+
+    const criteria = contract.success_criteria;
+    if (criteria.quality_threshold !== undefined) {
+      section += `- **Quality Threshold:** ${(criteria.quality_threshold * 100).toFixed(1)}%\n`;
+    }
+    if (criteria.performance_requirements) {
+      section += `- **Performance Requirements:**\n`;
+      const perf = criteria.performance_requirements;
+      if (perf.max_execution_time_ms) {
+        section += `  - Max Execution Time: ${perf.max_execution_time_ms}ms\n`;
+      }
+      if (perf.max_memory_mb) {
+        section += `  - Max Memory: ${perf.max_memory_mb}MB\n`;
+      }
+    }
+    return section;
+  }
+
   private async formatAsMarkdown(result: TaskExecutionResult, contract: DelegationContract): Promise<string> {
     const status = result.success ? '✅ SUCCESS' : '❌ FAILED';
     const complianceScore = this.calculateComplianceScore(result, contract);
@@ -198,31 +225,7 @@ export class StandardVerificationFormatter extends BaseVerificationFormatter imp
       markdown += `\n`;
     }
     
-    // Contract Requirements
-    markdown += `## Contract Requirements\n\n`;
-    markdown += `- **Verification Policy:** ${contract.verification_policy}\n`;
-    if (contract.tlp_classification) {
-      markdown += `- **TLP Classification:** ${contract.tlp_classification}\n`;
-    }
-    if (contract.timeout_ms) {
-      markdown += `- **Timeout:** ${contract.timeout_ms}ms\n`;
-    }
-    
-    // Success Criteria Details
-    const criteria = contract.success_criteria;
-    if (criteria.quality_threshold !== undefined) {
-      markdown += `- **Quality Threshold:** ${(criteria.quality_threshold * 100).toFixed(1)}%\n`;
-    }
-    if (criteria.performance_requirements) {
-      markdown += `- **Performance Requirements:**\n`;
-      const perf = criteria.performance_requirements;
-      if (perf.max_execution_time_ms) {
-        markdown += `  - Max Execution Time: ${perf.max_execution_time_ms}ms\n`;
-      }
-      if (perf.max_memory_mb) {
-        markdown += `  - Max Memory: ${perf.max_memory_mb}MB\n`;
-      }
-    }
+    markdown += this.formatContractRequirementsMarkdown(contract);
     
     return markdown;
   }
