@@ -938,7 +938,7 @@ export class AgentRuntime {
    * Hash input object for cache key
    */
   private hashInput(input: Record<string, unknown>): string {
-    const sorted = Object.keys(input).sort().reduce((acc, key) => {
+    const sorted = Object.keys(input).sort((a, b) => a.localeCompare(b)).reduce((acc, key) => {
       acc[key] = input[key];
       return acc;
     }, {} as Record<string, unknown>);

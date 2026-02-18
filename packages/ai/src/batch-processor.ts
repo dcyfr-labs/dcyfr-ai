@@ -476,7 +476,7 @@ export class HighPerformanceBatchProcessor<TInput = any, TOutput = any> extends 
    * Generate cache key for batch
    */
   private generateBatchCacheKey(items: BatchItem<TInput>[]): string {
-    const itemKeys = items.map(item => `${item.id}:${JSON.stringify(item.data)}`).sort();
+    const itemKeys = items.map(item => `${item.id}:${JSON.stringify(item.data)}`).sort((a, b) => a.localeCompare(b));
     return `batch:${itemKeys.join('|')}`;
   }
 
