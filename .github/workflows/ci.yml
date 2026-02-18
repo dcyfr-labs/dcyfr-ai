@@ -11,6 +11,8 @@ on:
       - '**.md'
       - '.changeset/**'
 
+permissions: {}
+
 env:
   NODE_VERSION: '24.13.0'
 
@@ -18,6 +20,8 @@ jobs:
   validate:
     name: Validate
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     timeout-minutes: 10
 
     steps:
@@ -54,9 +58,11 @@ jobs:
 
       - name: Check Changeset (PR only)
         if: github.event_name == 'pull_request'
+        env:
+          HEAD_REF: ${{ github.head_ref }}
         run: |
           # Skip for release PRs created by changesets
-          if [[ "${{ github.head_ref }}" == "changeset-release/main" ]]; then
+          if [[ "$HEAD_REF" == "changeset-release/main" ]]; then
             echo "✅ This is a release PR, skipping changeset check"
             exit 0
           fi
