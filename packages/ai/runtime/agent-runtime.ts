@@ -246,7 +246,7 @@ export class AgentRuntime {
           return this.handlePermissionDenied(error, hookContext, startTime);
         }
         const hookError = error instanceof Error ? error : new Error(String(error));
-        (hookError as any).isHookError = true;
+        Object.assign(hookError, { isHookError: true });
         throw hookError;
       }
     }
@@ -277,7 +277,7 @@ export class AgentRuntime {
       // Note: startSession expects AgentType, but we have agentName as string
       // For now, we'll use 'claude' as default - this should be configurable
       sessionManager = this.telemetry.startSession(
-        'claude' as any, // TODO: Make agentType configurable
+        'claude' as const, // TODO: Make agentType configurable
         {
           taskType: 'feature',
           description: context.task,
@@ -387,7 +387,7 @@ export class AgentRuntime {
     startTime: number
   ): Promise<AgentExecutionResult> {
     // Re-throw hook errors to propagate them properly
-    if (error && typeof error === 'object' && (error as any).isHookError) {
+    if (error && typeof error === 'object' && 'isHookError' in error && error.isHookError) {
       throw error;
     }
 
@@ -678,10 +678,11 @@ export class AgentRuntime {
 
     // Track token usage for cost calculation
     if (result.data && typeof result.data === 'object') {
-      const data = result.data as any;
-      const usage = data.usage;
+      const data = result.data as Record<string, unknown>;
+      const usage = data.usage as { inputTokens?: number; outputTokens?: number } | undefined;
       if (usage) {
-        const currentTokens = (state.workingMemory.get('tokens') as any) || {
+        type TokenData = { input: number; output: number };
+        const currentTokens = (state.workingMemory.get('tokens') as TokenData | undefined) || {
           input: 0,
           output: 0,
         };
@@ -738,7 +739,7 @@ export class AgentRuntime {
     try {
       // Try parsing as structured tool_use response first
       if (typeof response === 'object' && response !== null) {
-        const resp = response as any;
+        const resp = response as Record<string, unknown>;
         
         // Check for tool_use format (Anthropic-style)
         if (resp.content && Array.isArray(resp.content)) {
@@ -759,13 +760,15 @@ export class AgentRuntime {
         // Check for direct action format
         if (resp.action) {
           return {
-            thought: resp.thought || 'Decision made',
-            action: resp.action,
+            thought: typeof resp.thought === 'string' ? resp.thought : 'Decision made',
+            action: resp.action as { tool: string; input: Record<string, unknown> },
           };
         }
         
         // Extract text content for text-based parsing
-        const textContent = resp.content || resp.text || String(response);
+        const textContent = typeof resp.content === 'string' ? resp.content : 
+                           typeof resp.text === 'string' ? resp.text :
+                           String(response);
         return this.parseTextDecision(textContent);
       }
       
@@ -939,7 +942,7 @@ export class AgentRuntime {
     action: { tool: string; input: Record<string, unknown> },
     startTime: number
   ): Observation | null {
-    if (!tool.schema || typeof (tool.schema as any).safeParse !== 'function') {
+    if (!tool.schema || typeof (tool.schema as { safeParse?: unknown }).safeParse !== 'function') {
       return null;
     }
     const schema = tool.schema as ZodSchema;
@@ -1174,7 +1177,7 @@ export class AgentRuntime {
    * Calculate execution cost from token usage
    */
   private calculateCost(state: RuntimeState): number {
-    const tokens = state.workingMemory.get('tokens') as any;
+    type TokenData = { input: number; output: number }; const tokens = state.workingMemory.get('tokens') as TokenData | undefined;
     const provider = state.workingMemory.get('provider') as string;
     
     if (!tokens) {

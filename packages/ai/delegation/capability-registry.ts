@@ -200,9 +200,16 @@ export class CapabilityRegistry {
     // Sort results
     if (query.sort_by) {
       results.sort((a, b) => {
-        const aVal = (a as unknown as Record<string, number>)[query.sort_by!] ?? 0;
-        const bVal = (b as unknown as Record<string, number>)[query.sort_by!] ?? 0;
-        return query.sort_order === 'desc' ? bVal - aVal : aVal - bVal;
+        const getSortValue = (cap: AgentCapability): number => {
+          switch (query.sort_by) {
+            case 'confidence_level': return cap.confidence_level;
+            case 'estimated_completion_time_ms': return cap.estimated_completion_time_ms;
+            case 'success_rate': return cap.performance?.success_rate ?? 0;
+            default: return 0;
+          }
+        };
+        const diff = getSortValue(a) - getSortValue(b);
+        return query.sort_order === 'desc' ? -diff : diff;
       });
     }
 

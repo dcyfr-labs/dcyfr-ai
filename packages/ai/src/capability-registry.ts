@@ -19,6 +19,9 @@ import type {
   AgentCapability,
 } from './types/agent-capabilities';
 
+/** Extended capability type that supports both full and simplified legacy fields */
+type CapabilityCompat = AgentCapability & { confidence?: number; capability?: string };
+
 /**
  * In-memory capability registry with event-driven updates
  */
@@ -42,9 +45,10 @@ export class CapabilityRegistry extends EventEmitter implements ICapabilityRegis
 
     // Validate capabilities structure (support both full and simplified formats)
     for (const capability of manifest.capabilities) {
-      const conf = (capability as any).confidence_level ?? (capability as any).confidence;
+      const cap = capability as CapabilityCompat;
+      const conf = cap.confidence_level ?? cap.confidence;
       if (conf !== undefined && (conf < 0 || conf > 1)) {
-        const capId = (capability as any).capability_id || (capability as any).capability;
+        const capId = cap.capability_id || cap.capability;
         throw new Error(`Invalid confidence level for capability ${capId}: must be 0-1`);
       }
     }
@@ -283,14 +287,14 @@ export class CapabilityRegistry extends EventEmitter implements ICapabilityRegis
   private matchesCapabilityQuery(capability: AgentCapability, query: CapabilityQuery): boolean {
     // Check required capabilities (support both capability_id and capability alias)
     if (query.required_capabilities) {
-      const capName = capability.capability_id || (capability as any).capability;
-      if (!query.required_capabilities.includes(capName)) {
+      const capName = capability.capability_id || ( capability as CapabilityCompat).capability;
+      if (!capName || !query.required_capabilities.includes(capName)) {
         return false;
       }
     }
 
     // Check minimum confidence (support both confidence_level and confidence alias)
-    const confidenceValue = capability.confidence_level ?? (capability as any).confidence ?? 0;
+    const confidenceValue = capability.confidence_level ?? ( capability as CapabilityCompat).confidence ?? 0;
     if (query.min_confidence && confidenceValue < query.min_confidence) {
       return false;
     }
@@ -319,7 +323,7 @@ export class CapabilityRegistry extends EventEmitter implements ICapabilityRegis
   }
 
   private calculateCapabilityScore(capability: AgentCapability, query: CapabilityQuery, manifest: AgentCapabilityManifest): number {
-    let score = capability.confidence_level ?? (capability as any).confidence ?? 0;
+    let score = capability.confidence_level ?? ( capability as CapabilityCompat).confidence ?? 0;
 
     // Bonus for success rate
     if (capability.success_rate) {
@@ -445,8 +449,8 @@ export class CapabilityRegistry extends EventEmitter implements ICapabilityRegis
 
     for (const manifest of this.manifests.values()) {
       const matchingCap = manifest.capabilities.find(cap => {
-        const capName = cap.capability_id || (cap as any).capability;
-        const confidence = cap.confidence_level || (cap as any).confidence || 0;
+        const capName = cap.capability_id || ( cap as CapabilityCompat).capability;
+        const confidence = cap.confidence_level || ( cap as CapabilityCompat).confidence || 0;
         
         if (capName !== capabilityId) return false;
         if (options?.minConfidence && confidence < options.minConfidence) return false;
@@ -455,8 +459,10 @@ export class CapabilityRegistry extends EventEmitter implements ICapabilityRegis
       });
 
       if (matchingCap) {
-        const capName = matchingCap.capability_id || (matchingCap as any).capability;
-        const confidence = matchingCap.confidence_level || (matchingCap as any).confidence || 0;
+        const capName = matchingCap.capability_id || ( matchingCap as CapabilityCompat).capability;
+        const confidence = matchingCap.confidence_level || ( matchingCap as CapabilityCompat).confidence || 0;
+        
+        if (!capName) continue;
         
         results.push({
           agent_id: manifest.agent_id,
@@ -486,8 +492,8 @@ export class CapabilityRegistry extends EventEmitter implements ICapabilityRegis
       // Check if agent has all required capabilities
       const hasAll = capabilityIds.every(reqCap =>
         manifest.capabilities.some(cap => {
-          const capName = cap.capability_id || (cap as any).capability;
-          const confidence = cap.confidence_level ?? (cap as any).confidence ?? 0;
+          const capName = cap.capability_id || ( cap as CapabilityCompat).capability;
+          const confidence = cap.confidence_level ?? ( cap as CapabilityCompat).confidence ?? 0;
           if (capName !== reqCap) return false;
           if (options.minConfidence && confidence < options.minConfidence) return false;
           return true;
@@ -625,7 +631,7 @@ export class CapabilityRegistry extends EventEmitter implements ICapabilityRegis
     if (!manifest) return false;
 
     const capabilityEntry = manifest.capabilities.find(cap => {
-      const capName = cap.capability_id || (cap as any).capability;
+      const capName = cap.capability_id || ( cap as CapabilityCompat).capability;
       return capName === capability;
     });
 
@@ -635,7 +641,7 @@ export class CapabilityRegistry extends EventEmitter implements ICapabilityRegis
     if ('confidence_level' in capabilityEntry) {
       capabilityEntry.confidence_level = newConfidence;
     } else {
-      (capabilityEntry as any).confidence = newConfidence;
+      (capabilityEntry as CapabilityCompat).confidence = newConfidence;
     }
 
     // Recalculate overall confidence
@@ -676,12 +682,12 @@ export class CapabilityRegistry extends EventEmitter implements ICapabilityRegis
 
     for (const reqCap of requiredCapabilities) {
       const capability = manifest.capabilities.find(cap => {
-        const capName = cap.capability_id || (cap as any).capability;
+        const capName = cap.capability_id || ( cap as CapabilityCompat).capability;
         return capName === reqCap;
       });
 
       if (capability) {
-        const confidence = capability.confidence_level || (capability as any).confidence || 0;
+        const confidence = capability.confidence_level || ( capability as CapabilityCompat).confidence || 0;
         totalScore += confidence;
         matchedCount++;
       }

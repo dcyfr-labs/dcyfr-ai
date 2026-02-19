@@ -221,7 +221,18 @@ export class DelegationContractManager extends EventEmitter {
    * Create a new delegation contract
    */
   async createContract(request: CreateDelegationContractRequest): Promise<DelegationContract> {
-    const legacyRequest = request as unknown as Record<string, any>;
+    type LegacyContractFields = { 
+      description?: string; 
+      timeout_ms?: number;
+      permission_token?: string | string[] | {
+        token_id?: string;
+        scopes?: string[];
+        delegatable?: boolean;
+        max_delegation_depth?: number;
+      };
+      verification_policy?: string;
+    };
+    const legacyRequest = request as typeof request & LegacyContractFields;
 
     const { delegator: normalizedDelegator, delegatee: normalizedDelegatee } =
       this.normalizeContractAgents(request, legacyRequest);
@@ -236,12 +247,12 @@ export class DelegationContractManager extends EventEmitter {
     const normalizedVerificationPolicy = this.normalizeVerificationPolicy(rawVerificationPolicy);
 
     const normalizedPermissionTokens = request.permission_tokens ||
-      (legacyRequest?.permission_token
+      (legacyRequest?.permission_token && typeof legacyRequest.permission_token === 'object' && !Array.isArray(legacyRequest.permission_token)
         ? [{
-            token_id: legacyRequest.permission_token.token_id,
+            token_id: legacyRequest.permission_token.token_id ?? '',
             scopes: legacyRequest.permission_token.scopes || [],
-            delegatable: legacyRequest.permission_token.delegatable,
-            max_delegation_depth: legacyRequest.permission_token.max_delegation_depth,
+            delegatable: legacyRequest.permission_token.delegatable ?? false,
+            max_delegation_depth: legacyRequest.permission_token.max_delegation_depth ?? 0,
           }]
         : undefined);
 
@@ -357,8 +368,8 @@ export class DelegationContractManager extends EventEmitter {
 
   queryContracts(options: ContractQueryOptions = {}): DelegationContract[] {
     const { query, params } = this.buildQueryFromOptions(options);
-    const rows = this.db.prepare(query).all(...params) as any[];
-    return rows.map(row => this.rowToContract(row));
+    type ContractRow = Record<string, unknown>; const rows = this.db.prepare(query).all(...params) as ContractRow[];
+    return rows.map(row => this.rowToContract(row as Parameters<typeof this.rowToContract>[0]));
   }
 
   /** Build SQL fields/params for an updateContract call */
@@ -542,16 +553,16 @@ export class DelegationContractManager extends EventEmitter {
       params.push(agent_id);
     }
     
-    const stats = this.db.prepare(query).get(...params) as any;
+    type StatsRow = Record<string, unknown>; const stats = this.db.prepare(query).get(...params) as StatsRow | undefined;
     
-    const total = stats.total || 0;
-    const completed = stats.completed || 0;
-    const failed = stats.failed || 0;
+    const total = (stats?.total as number | undefined) || 0;
+    const completed = (stats?.completed as number | undefined) || 0;
+    const failed = (stats?.failed as number | undefined) || 0;
     const decidedTotal = completed + failed;
     
     return {
       total,
-      active: stats.active || 0,
+      active: (stats?.active as number | undefined) || 0,
       completed,
       failed,
       success_rate: decidedTotal > 0

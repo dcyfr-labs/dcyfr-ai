@@ -447,7 +447,15 @@ export class ReputationEngine {
       SELECT * FROM agent_reputation WHERE agent_id = ?
     `);
     
-    const row = stmt.get(agent_id) as any;
+    type ReputationRow = {
+      agent_id: string; agent_name: string; confidence_score: number;
+      reliability_score: number; speed_score: number; quality_score: number;
+      security_score: number; total_tasks: number; successful_tasks: number;
+      failed_tasks: number; success_rate: number; avg_completion_time_ms: number;
+      min_completion_time_ms: number; max_completion_time_ms: number;
+      last_updated_at: string;
+    };
+    const row = stmt.get(agent_id) as ReputationRow | undefined;
     
     if (!row) {
       return null;
@@ -511,7 +519,15 @@ export class ReputationEngine {
     }
     
     const stmt = this.db.prepare(sql);
-    const rows = stmt.all(...params) as any[];
+    type ReputationRow = {
+      agent_id: string; agent_name: string; confidence_score: number;
+      reliability_score: number; speed_score: number; quality_score: number;
+      security_score: number; total_tasks: number; successful_tasks: number;
+      failed_tasks: number; success_rate: number; avg_completion_time_ms: number;
+      min_completion_time_ms: number; max_completion_time_ms: number;
+      last_updated_at: string;
+    };
+    const rows = stmt.all(...params) as ReputationRow[];
     
     return rows.map(row => ({
       agent_id: row.agent_id,
@@ -548,7 +564,13 @@ export class ReputationEngine {
     
     const stmt = this.db.prepare(sql);
     const params = limit !== undefined ? [agent_id, limit] : [agent_id];
-    const rows = stmt.all(...params) as any[];
+    type AuditRow = {
+      event_id: string; event_type: string; timestamp: string;
+      agent_id: string; agent_name: string; event_data: string;
+      task_id: string | null;
+      delegation_contract_id?: string;
+    };
+    const rows = stmt.all(...params) as AuditRow[];
     
     return rows.map(row => ({
       event_id: row.event_id,
@@ -557,7 +579,7 @@ export class ReputationEngine {
       agent_id: row.agent_id,
       agent_name: row.agent_name,
       event_data: row.event_data,
-      task_id: row.task_id,
+      task_id: row.task_id ?? undefined,
       delegation_contract_id: row.delegation_contract_id,
     }));
   }

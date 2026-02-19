@@ -15,9 +15,11 @@ import { FrameworkConfigSchema, DEFAULT_CONFIG, type FrameworkConfig } from './s
 /**
  * Check if running in browser environment
  */
-const isBrowser = typeof globalThis !== 'undefined' &&
-  typeof (globalThis as any).window !== 'undefined' &&
-  typeof (globalThis as any).window.document !== 'undefined';
+const isBrowser = (() => {
+  if (typeof globalThis === 'undefined') return false;
+  const g = globalThis as typeof globalThis & { window?: { document?: unknown } };
+  return g.window !== undefined && g.window.document !== undefined;
+})();
 
 /**
  * Configuration file names to search for (in priority order)
