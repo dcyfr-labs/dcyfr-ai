@@ -681,62 +681,52 @@ export class DelegationContractManager extends EventEmitter {
     metadata?: Record<string, any>;
     tlp_classification?: string;
   }): { threat_type: string; severity: 'warning' | 'critical'; description: string; action: 'block' | 'notify' } | null {
-    const scopes = new Set<string>();
-    const actions = new Set<string>();
-
-    if (input.permission_token) {
-      for (const scope of input.permission_token.scopes || []) scopes.add(String(scope).toLowerCase());
-      for (const action of input.permission_token.actions || []) actions.add(String(action).toLowerCase());
-    }
-
-    for (const token of input.permission_tokens || []) {
-      for (const scope of token?.scopes || []) scopes.add(String(scope).toLowerCase());
-      for (const action of token?.actions || []) actions.add(String(action).toLowerCase());
-    }
-
+    const { scopes, actions } = this.collectScopesAndActions(input);
     const joined = `${Array.from(scopes).join(' ')} ${Array.from(actions).join(' ')}`;
     const hasCriticalPermission = /(root|admin|execute|delete|modify_system|system_admin|root_access|execute_arbitrary)/i.test(joined);
     if (hasCriticalPermission) {
-      return {
-        threat_type: 'permission_escalation',
-        severity: 'critical',
-        description: 'Detected high-risk permission scopes or actions.',
-        action: 'block',
-      };
+      return { threat_type: 'permission_escalation', severity: 'critical', description: 'Detected high-risk permission scopes or actions.', action: 'block' };
     }
 
     const depth = Number(input.metadata?.delegation_depth ?? 0);
     if (Number.isFinite(depth) && depth >= 6) {
-      return {
-        threat_type: 'permission_escalation',
-        severity: 'critical',
-        description: 'Delegation chain depth exceeds safe limits.',
-        action: 'block',
-      };
+      return { threat_type: 'permission_escalation', severity: 'critical', description: 'Delegation chain depth exceeds safe limits.', action: 'block' };
     }
 
-    const memory = Number(input.resource_requirements?.memory_mb ?? 0);
-    const cpu = Number(input.resource_requirements?.cpu_cores ?? 0);
-    const disk = Number(input.resource_requirements?.disk_space_mb ?? 0);
-    if ((Number.isFinite(memory) && memory > 8192) || (Number.isFinite(cpu) && cpu > 8) || (Number.isFinite(disk) && disk > 512000)) {
-      return {
-        threat_type: 'abuse_pattern',
-        severity: 'critical',
-        description: 'Resource requirements indicate possible abuse or exhaustion attempt.',
-        action: 'block',
-      };
+    if (this.isExcessiveResourceRequirement(input.resource_requirements)) {
+      return { threat_type: 'abuse_pattern', severity: 'critical', description: 'Resource requirements indicate possible abuse or exhaustion attempt.', action: 'block' };
     }
 
     if (input.tlp_classification === 'TLP:RED' && hasCriticalPermission) {
-      return {
-        threat_type: 'permission_escalation',
-        severity: 'critical',
-        description: 'High-sensitivity contract with excessive permissions.',
-        action: 'block',
-      };
+      return { threat_type: 'permission_escalation', severity: 'critical', description: 'High-sensitivity contract with excessive permissions.', action: 'block' };
     }
 
     return null;
+  }
+
+  /** @private Collect all scopes and actions from permission tokens */
+  private collectScopesAndActions(input: { permission_token?: any; permission_tokens?: any[] }): { scopes: Set<string>; actions: Set<string> } {
+    const scopes = new Set<string>();
+    const actions = new Set<string>();
+    if (input.permission_token) {
+      for (const scope of input.permission_token.scopes || []) scopes.add(String(scope).toLowerCase());
+      for (const action of input.permission_token.actions || []) actions.add(String(action).toLowerCase());
+    }
+    for (const token of input.permission_tokens || []) {
+      for (const scope of token?.scopes || []) scopes.add(String(scope).toLowerCase());
+      for (const action of token?.actions || []) actions.add(String(action).toLowerCase());
+    }
+    return { scopes, actions };
+  }
+
+  /** @private Check if resource requirements exceed safe thresholds */
+  private isExcessiveResourceRequirement(requirements: any): boolean {
+    const memory = Number(requirements?.memory_mb ?? 0);
+    const cpu = Number(requirements?.cpu_cores ?? 0);
+    const disk = Number(requirements?.disk_space_mb ?? 0);
+    return (Number.isFinite(memory) && memory > 8192)
+      || (Number.isFinite(cpu) && cpu > 8)
+      || (Number.isFinite(disk) && disk > 512000);
   }
 
   /**

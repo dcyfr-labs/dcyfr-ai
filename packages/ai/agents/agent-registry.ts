@@ -149,20 +149,8 @@ export class AgentRegistry {
       // Load from package or file path
       try {
         if (source.startsWith('@') || source.startsWith('.')) {
-          // Try to import as a module that exports agents
           const module = await import(source);
-          const agents = module.default || module.agents || module;
-
-          if (Array.isArray(agents)) {
-            await loader.loadAgents(agents, tier);
-          } else if (typeof agents === 'object') {
-            // Object with agent exports
-            for (const [, agent] of Object.entries(agents)) {
-              if (this.isAgent(agent)) {
-                await loader.loadAgent(agent as Agent, tier);
-              }
-            }
-          }
+          await this.loadAgentsFromModule(module.default || module.agents || module, tier, loader);
         } else {
           // Discover agents in path
           await loader.discoverAgents();
@@ -176,6 +164,19 @@ export class AgentRegistry {
     }
 
     tierSource.loaded = true;
+  }
+
+  /** @private Load agents from an imported module value (array or object export) */
+  private async loadAgentsFromModule(agents: unknown, tier: AgentTier, loader: AgentLoader): Promise<void> {
+    if (Array.isArray(agents)) {
+      await loader.loadAgents(agents, tier);
+    } else if (typeof agents === 'object' && agents !== null) {
+      for (const [, agent] of Object.entries(agents)) {
+        if (this.isAgent(agent)) {
+          await loader.loadAgent(agent as Agent, tier);
+        }
+      }
+    }
   }
 
   /**

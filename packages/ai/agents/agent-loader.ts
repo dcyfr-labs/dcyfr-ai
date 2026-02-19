@@ -94,24 +94,7 @@ export class AgentLoader {
 
       if (typeof agentSource === 'string') {
         source = agentSource;
-
-        // Check if it's a module path (starts with @ or no slashes at start)
-        if (agentSource.startsWith('@') || !agentSource.startsWith('/')) {
-          // Dynamic import from node_modules or relative path
-          const module = await import(agentSource);
-          agent = module.default || module;
-        } else {
-          // File path - try to load as JSON or TypeScript/JavaScript
-          if (agentSource.endsWith('.json')) {
-            const module = await import(agentSource, { with: { type: 'json' } });
-            agent = this.parseAgentFromJson(module.default);
-          } else if (agentSource.endsWith('.md')) {
-            agent = await this.parseAgentFromMarkdown(agentSource);
-          } else {
-            const module = await import(agentSource);
-            agent = module.default || module;
-          }
-        }
+        agent = await this.resolveAgentFromSource(agentSource);
       } else {
         agent = agentSource;
         source = 'runtime';
@@ -120,24 +103,8 @@ export class AgentLoader {
       // Validate manifest
       this.validateManifest(agent.manifest);
 
-      // Check for duplicates
-      if (this.agents.has(agent.manifest.name)) {
-        const existing = this.agents.get(agent.manifest.name)!;
-        // Allow override if new tier has higher priority
-        const tierPriority: Record<AgentTier, number> = {
-          project: 0,
-          private: 1,
-          public: 2,
-        };
-        if (tierPriority[tier] >= tierPriority[existing.tier]) {
-          throw new AgentValidationError(
-            `Agent '${agent.manifest.name}' is already loaded from tier '${existing.tier}'`,
-            agent.manifest.name
-          );
-        }
-        // Override with higher priority tier
-        await this.unloadAgent(agent.manifest.name);
-      }
+      // Check for duplicates and handle override logic
+      await this.handleAgentDuplicate(agent, tier);
 
       // Call onLoad hook if present
       if (agent.onLoad) {
@@ -180,6 +147,40 @@ export class AgentLoader {
       // Return a dummy LoadedAgent for non-throw modes
       throw error;
     }
+  }
+
+  /** @private Resolve an Agent from a string path or module specifier */
+  private async resolveAgentFromSource(agentSource: string): Promise<Agent> {
+    // Module path (starts with @ or no slashes at start)
+    if (agentSource.startsWith('@') || !agentSource.startsWith('/')) {
+      const module = await import(agentSource);
+      return module.default || module;
+    }
+    // File path: JSON, Markdown, or JS/TS module
+    if (agentSource.endsWith('.json')) {
+      const module = await import(agentSource, { with: { type: 'json' } });
+      return this.parseAgentFromJson(module.default);
+    }
+    if (agentSource.endsWith('.md')) {
+      return this.parseAgentFromMarkdown(agentSource);
+    }
+    const module = await import(agentSource);
+    return module.default || module;
+  }
+
+  /** @private Handle duplicate agent detection and tier-based override logic */
+  private async handleAgentDuplicate(agent: Agent, tier: AgentTier): Promise<void> {
+    if (!this.agents.has(agent.manifest.name)) return;
+    const existing = this.agents.get(agent.manifest.name)!;
+    const tierPriority: Record<AgentTier, number> = { project: 0, private: 1, public: 2 };
+    if (tierPriority[tier] >= tierPriority[existing.tier]) {
+      throw new AgentValidationError(
+        `Agent '${agent.manifest.name}' is already loaded from tier '${existing.tier}'`,
+        agent.manifest.name
+      );
+    }
+    // Override with higher priority tier
+    await this.unloadAgent(agent.manifest.name);
   }
 
   /**

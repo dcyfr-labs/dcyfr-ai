@@ -299,109 +299,135 @@ export class AgentRuntime {
       // Execute with timeout
       const result = await this.executeWithTimeout(state, context, startTime);
 
-      // Persist insights to memory
-      if (this.config.memoryEnabled && result.success) {
-        try {
-          await this.persistInsights(context, state, result);
-        } catch (error) {
-          console.warn('[AgentRuntime] Failed to persist insights:', error);
-          memoryWriteFailed = true;
-        }
-      }
-
-      // Debug log working memory state
-      if (this.config.debugWorkingMemory && state.workingMemory.size > 0) {
-        const memorySnapshot: Record<string, unknown> = {};
-        state.workingMemory.forEach((value, key) => {
-          memorySnapshot[key] = value;
-        });
-        console.log('[WorkingMemory] Final state:', JSON.stringify(memorySnapshot, null, 2));
-      }
-
-      // Clear working memory unless persistence is enabled
-      if (!this.config.persistWorkingMemory) {
-        if (this.config.debugWorkingMemory) {
-          console.log('[WorkingMemory] Clearing ephemeral state');
-        }
-        state.workingMemory.clear();
-      }
-
-      // End telemetry session
-      if (sessionManager) {
-        await sessionManager.end(result.success ? 'success' : 'failed');
-      }
-
-      // Emit finish event
-      this.emitEvent({
-        type: 'finish',
-        success: result.success,
-        iterations: state.iteration,
-        output: result.output,
-        duration: Date.now() - startTime,
-        error: result.error,
-      });
-
-      const finalResult = {
-        ...result,
-        sessionId,
-        memoryWriteFailed: memoryWriteFailed || undefined,
-      };
-
-      // Run after-execution hooks
-      const finalHookContext: HookContext = {
-        agentName: this.agentName,
-        task: context.task,
-        userId: context.userId,
-        sessionId: context.sessionId,
-        timestamp: Date.now(),
-      };
-      await this.runAfterExecuteHooks(finalHookContext, finalResult);
-
-      return finalResult;
+      return await this.handleSuccessfulExecution(
+        state, result, sessionManager, sessionId, context, startTime, memoryWriteFailed
+      );
     } catch (error) {
-      // Re-throw hook errors to propagate them properly
-      if (error && typeof error === 'object' && (error as any).isHookError) {
-        throw error;
-      }
-
-      const executionTime = Date.now() - startTime;
-      const errorMessage = error instanceof Error ? error.message : String(error);
-
-      // End telemetry session on error
-      if (sessionManager) {
-        await sessionManager.end('failed');
-      }
-
-      // Emit error event
-      this.emitEvent({
-        type: 'error',
-        error: error instanceof Error ? error : new Error(errorMessage),
-        context: 'execution',
-        timestamp: Date.now(),
-      });
-
-      const result: AgentExecutionResult = {
-        success: false,
-        error: errorMessage,
-        outcome: 'error',
-        executionTime,
-        cost: 0,
-        iterations: 0,
-        sessionId,
-      };
-
-      // Run after-execution hooks even on error
-      const errorHookContext: HookContext = {
-        agentName: this.agentName,
-        task: context.task,
-        userId: context.userId,
-        sessionId: context.sessionId,
-        timestamp: Date.now(),
-      };
-      await this.runAfterExecuteHooks(errorHookContext, result);
-
-      return result;
+      return await this.handleFailedExecution(error, sessionManager, sessionId, context, startTime);
     }
+  }
+
+  /** @private Success path of execute() — persist memory, emit events, run after-hooks */
+  private async handleSuccessfulExecution(
+    state: RuntimeState,
+    result: Omit<AgentExecutionResult, 'sessionId'>,
+    sessionManager: TelemetrySessionManager | undefined,
+    sessionId: string | undefined,
+    context: TaskContext,
+    startTime: number,
+    memoryWriteFailed: boolean
+  ): Promise<AgentExecutionResult> {
+    // Persist insights to memory
+    if (this.config.memoryEnabled && result.success) {
+      try {
+        await this.persistInsights(context, state, result);
+      } catch (error) {
+        console.warn('[AgentRuntime] Failed to persist insights:', error);
+        memoryWriteFailed = true;
+      }
+    }
+
+    // Debug log working memory state
+    if (this.config.debugWorkingMemory && state.workingMemory.size > 0) {
+      const memorySnapshot: Record<string, unknown> = {};
+      state.workingMemory.forEach((value, key) => {
+        memorySnapshot[key] = value;
+      });
+      console.log('[WorkingMemory] Final state:', JSON.stringify(memorySnapshot, null, 2));
+    }
+
+    // Clear working memory unless persistence is enabled
+    if (!this.config.persistWorkingMemory) {
+      if (this.config.debugWorkingMemory) {
+        console.log('[WorkingMemory] Clearing ephemeral state');
+      }
+      state.workingMemory.clear();
+    }
+
+    // End telemetry session
+    if (sessionManager) {
+      await sessionManager.end(result.success ? 'success' : 'failed');
+    }
+
+    // Emit finish event
+    this.emitEvent({
+      type: 'finish',
+      success: result.success,
+      iterations: state.iteration,
+      output: result.output,
+      duration: Date.now() - startTime,
+      error: result.error,
+    });
+
+    const finalResult = {
+      ...result,
+      sessionId,
+      memoryWriteFailed: memoryWriteFailed || undefined,
+    };
+
+    // Run after-execution hooks
+    const finalHookContext: HookContext = {
+      agentName: this.agentName,
+      task: context.task,
+      userId: context.userId,
+      sessionId: context.sessionId,
+      timestamp: Date.now(),
+    };
+    await this.runAfterExecuteHooks(finalHookContext, finalResult);
+
+    return finalResult;
+  }
+
+  /** @private Error path of execute() — end session, emit error event, run after-hooks */
+  private async handleFailedExecution(
+    error: unknown,
+    sessionManager: TelemetrySessionManager | undefined,
+    sessionId: string | undefined,
+    context: TaskContext,
+    startTime: number
+  ): Promise<AgentExecutionResult> {
+    // Re-throw hook errors to propagate them properly
+    if (error && typeof error === 'object' && (error as any).isHookError) {
+      throw error;
+    }
+
+    const executionTime = Date.now() - startTime;
+    const errorMessage = error instanceof Error ? error.message : String(error);
+
+    // End telemetry session on error
+    if (sessionManager) {
+      await sessionManager.end('failed');
+    }
+
+    // Emit error event
+    this.emitEvent({
+      type: 'error',
+      error: error instanceof Error ? error : new Error(errorMessage),
+      context: 'execution',
+      timestamp: Date.now(),
+    });
+
+    const result: AgentExecutionResult = {
+      success: false,
+      error: errorMessage,
+      outcome: 'error',
+      executionTime,
+      cost: 0,
+      iterations: 0,
+      sessionId,
+    };
+
+    // Run after-execution hooks even on error
+    const errorHookContext: HookContext = {
+      agentName: this.agentName,
+      task: context.task,
+      userId: context.userId,
+      sessionId: context.sessionId,
+      timestamp: Date.now(),
+    };
+    await this.runAfterExecuteHooks(errorHookContext, result);
+
+    return result;
   }
 
   /**
@@ -843,36 +869,9 @@ export class AgentRuntime {
 
     try {
       // Validate input against Zod schema if available
-      if (tool.schema && typeof (tool.schema as any).safeParse === 'function') {
-        const schema = tool.schema as ZodSchema;
-        const validationResult = schema.safeParse(action.input);
-        
-        if (!validationResult.success) {
-          const validationError = new Error(
-            `Tool input validation failed for ${action.tool}: ${validationResult.error.message}`
-          );
-          
-          this.emitEvent({
-            type: 'error',
-            error: validationError,
-            context: 'tool_validation',
-            timestamp: Date.now(),
-          });
-          
-          return {
-            tool: action.tool,
-            input: action.input,
-            duration: Date.now() - startTime,
-            success: false,
-            error: validationError,
-            timestamp: Date.now(),
-          };
-        }
-        
-        // Use validated input
-        action.input = validationResult.data as Record<string, unknown>;
-      }
-      
+      const schemaError = this.validateZodToolInput(tool, action, startTime);
+      if (schemaError !== null) return schemaError;
+
       // Build tool execution context
       const toolContext: ToolExecutionContext = {
         workingMemory: state.workingMemory,
@@ -882,28 +881,8 @@ export class AgentRuntime {
       };
 
       // Check working memory cache if enabled
-      if (this.config.workingMemoryEnabled) {
-        const cacheKey = `tool:${action.tool}:${this.hashInput(action.input)}`;
-        const cachedResult = state.workingMemory.get(cacheKey);
-        
-        if (cachedResult !== undefined) {
-          this.emitEvent({
-            type: 'working_memory_hit',
-            tool: action.tool,
-            cacheKey,
-            timestamp: Date.now(),
-          });
-          
-          return {
-            tool: action.tool,
-            input: action.input,
-            output: cachedResult,
-            duration: Date.now() - startTime,
-            success: true,
-            timestamp: Date.now(),
-          };
-        }
-      }
+      const cachedObservation = this.checkWorkingMemoryCache(action, state, startTime);
+      if (cachedObservation !== null) return cachedObservation;
 
       // Execute tool
       const output = await tool.execute(action.input, toolContext);
@@ -952,6 +931,42 @@ export class AgentRuntime {
         timestamp: Date.now(),
       };
     }
+  }
+
+  /** @private Validate tool input against Zod schema; mutates action.input on success. Returns error Observation or null. */
+  private validateZodToolInput(
+    tool: NonNullable<TaskContext['tools']>[number],
+    action: { tool: string; input: Record<string, unknown> },
+    startTime: number
+  ): Observation | null {
+    if (!tool.schema || typeof (tool.schema as any).safeParse !== 'function') {
+      return null;
+    }
+    const schema = tool.schema as ZodSchema;
+    const validationResult = schema.safeParse(action.input);
+    if (validationResult.success) {
+      action.input = validationResult.data as Record<string, unknown>;
+      return null;
+    }
+    const validationError = new Error(
+      `Tool input validation failed for ${tool.name}: ${validationResult.error.message}`
+    );
+    this.emitEvent({ type: 'error', error: validationError, context: 'tool_validation', timestamp: Date.now() });
+    return { tool: action.tool, input: action.input, duration: Date.now() - startTime, success: false, error: validationError, timestamp: Date.now() };
+  }
+
+  /** @private Check working memory cache for a prior tool result. Returns cached Observation or null. */
+  private checkWorkingMemoryCache(
+    action: { tool: string; input: Record<string, unknown> },
+    state: RuntimeState,
+    startTime: number
+  ): Observation | null {
+    if (!this.config.workingMemoryEnabled) return null;
+    const cacheKey = `tool:${action.tool}:${this.hashInput(action.input)}`;
+    const cachedResult = state.workingMemory.get(cacheKey);
+    if (cachedResult === undefined) return null;
+    this.emitEvent({ type: 'working_memory_hit', tool: action.tool, cacheKey, timestamp: Date.now() });
+    return { tool: action.tool, input: action.input, output: cachedResult, duration: Date.now() - startTime, success: true, timestamp: Date.now() };
   }
 
   /**
