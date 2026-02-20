@@ -102,6 +102,79 @@ function capitalize(s: string): string {
 }
 
 /**
+ * Generate identity section from persona
+ */
+function generateIdentitySection(persona: ResolvedPersona): string | undefined {
+  if (!persona.displayName && !persona.identity) return undefined;
+  
+  const lines: string[] = ['## Agent Identity', ''];
+  if (persona.displayName) {
+    lines.push(`**Name:** ${persona.displayName}`);
+  }
+  if (persona.identity) {
+    lines.push('');
+    lines.push(persona.identity);
+  }
+  return lines.join('\n');
+}
+
+/**
+ * Generate communication style section from persona
+ */
+function generateCommunicationSection(persona: ResolvedPersona): string | undefined {
+  const hasAttributes = persona.voiceAttributes.length > 0;
+  const hasTraits = Object.keys(persona.personalityTraits).length > 0;
+  if (!hasAttributes && !hasTraits) return undefined;
+  
+  const lines: string[] = ['## How You Communicate', ''];
+  if (hasAttributes) {
+    lines.push('Your voice is:');
+    for (const attr of persona.voiceAttributes) {
+      lines.push(`- ${attr}`);
+    }
+  }
+  if (hasTraits) {
+    if (hasAttributes) lines.push('');
+    lines.push('Your personality calibration:');
+    lines.push(describeTraits(persona.personalityTraits));
+  }
+  if (persona.perspective) {
+    lines.push('');
+    lines.push(`**Perspective:** ${perspectiveLabel(persona.perspective)}`);
+  }
+  return lines.join('\n');
+}
+
+/**
+ * Generate situational adaptation section from persona
+ */
+function generateSituationalSection(persona: ResolvedPersona): string | undefined {
+  if (persona.situationalTones.length === 0) return undefined;
+  
+  const lines: string[] = ['## Situational Adaptation', ''];
+  lines.push('Adjust your approach based on context:');
+  lines.push('');
+  for (const tone of persona.situationalTones) {
+    const label = tone.situation.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    lines.push(`**${label}:** ${tone.guidance}`);
+  }
+  return lines.join('\n');
+}
+
+/**
+ * Generate anti-patterns section from persona
+ */
+function generateAntiPatternsSection(persona: ResolvedPersona): string | undefined {
+  if (persona.antiPatterns.length === 0) return undefined;
+  
+  const lines: string[] = ['## You Never', ''];
+  for (const pattern of persona.antiPatterns) {
+    lines.push(`- ${pattern}`);
+  }
+  return lines.join('\n');
+}
+
+/**
  * Generate persona instruction segments from a resolved persona.
  *
  * All sections are optional — if the resolved persona lacks data for a section
@@ -116,78 +189,17 @@ export function generatePersonaInstructions(
 ): PersonaInstructionSegments {
   const sections: string[] = [];
 
-  // -------------------------------------------------------------------------
-  // Agent Identity
-  // -------------------------------------------------------------------------
-  let identitySection: string | undefined;
-  if (persona.displayName || persona.identity) {
-    const lines: string[] = ['## Agent Identity', ''];
-    if (persona.displayName) {
-      lines.push(`**Name:** ${persona.displayName}`);
-    }
-    if (persona.identity) {
-      lines.push('');
-      lines.push(persona.identity);
-    }
-    identitySection = lines.join('\n');
-    sections.push(identitySection);
-  }
+  const identitySection = generateIdentitySection(persona);
+  if (identitySection) sections.push(identitySection);
 
-  // -------------------------------------------------------------------------
-  // How You Communicate
-  // -------------------------------------------------------------------------
-  let communicationSection: string | undefined;
-  const hasAttributes = persona.voiceAttributes.length > 0;
-  const hasTraits = Object.keys(persona.personalityTraits).length > 0;
-  if (hasAttributes || hasTraits) {
-    const lines: string[] = ['## How You Communicate', ''];
-    if (hasAttributes) {
-      lines.push('Your voice is:');
-      for (const attr of persona.voiceAttributes) {
-        lines.push(`- ${attr}`);
-      }
-    }
-    if (hasTraits) {
-      if (hasAttributes) lines.push('');
-      lines.push('Your personality calibration:');
-      lines.push(describeTraits(persona.personalityTraits));
-    }
-    if (persona.perspective) {
-      lines.push('');
-      lines.push(`**Perspective:** ${perspectiveLabel(persona.perspective)}`);
-    }
-    communicationSection = lines.join('\n');
-    sections.push(communicationSection);
-  }
+  const communicationSection = generateCommunicationSection(persona);
+  if (communicationSection) sections.push(communicationSection);
 
-  // -------------------------------------------------------------------------
-  // Situational Adaptation
-  // -------------------------------------------------------------------------
-  let situationalSection: string | undefined;
-  if (persona.situationalTones.length > 0) {
-    const lines: string[] = ['## Situational Adaptation', ''];
-    lines.push('Adjust your approach based on context:');
-    lines.push('');
-    for (const tone of persona.situationalTones) {
-      const label = tone.situation.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-      lines.push(`**${label}:** ${tone.guidance}`);
-    }
-    situationalSection = lines.join('\n');
-    sections.push(situationalSection);
-  }
+  const situationalSection = generateSituationalSection(persona);
+  if (situationalSection) sections.push(situationalSection);
 
-  // -------------------------------------------------------------------------
-  // Anti-patterns
-  // -------------------------------------------------------------------------
-  let antiPatternsSection: string | undefined;
-  if (persona.antiPatterns.length > 0) {
-    const lines: string[] = ['## You Never', ''];
-    for (const pattern of persona.antiPatterns) {
-      lines.push(`- ${pattern}`);
-    }
-    antiPatternsSection = lines.join('\n');
-    sections.push(antiPatternsSection);
-  }
+  const antiPatternsSection = generateAntiPatternsSection(persona);
+  if (antiPatternsSection) sections.push(antiPatternsSection);
 
   return {
     identity: identitySection,

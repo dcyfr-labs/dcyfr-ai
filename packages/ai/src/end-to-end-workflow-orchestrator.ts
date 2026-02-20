@@ -475,6 +475,284 @@ export class EndToEndWorkflowOrchestrator extends EventEmitter {
   }
 
   /**
+   * Execute Stage 1: System Pre-validation
+   */
+  private async executePreValidation(result: WorkflowExecutionResult): Promise<void> {
+    if (!this.config.enableValidation || !this.validationPipeline) return;
+    
+    this.log('Stage 1: Running pre-validation');
+    const preValidation = await this.validationPipeline.validatePipeline();
+    
+    if (preValidation.overallStatus === 'failed') {
+      result.status = 'failed';
+      result.errors.push('Pre-validation failed - system not ready for workflow execution');
+      throw new Error('Pre-validation failed');
+    } else if (preValidation.overallStatus === 'warning') {
+      result.warnings.push('Pre-validation warnings detected - proceeding with caution');
+    }
+  }
+
+  /**
+   * Execute Stage 2: Agent Onboarding Pipeline
+   */
+  private async executeAgentOnboarding(workflow: WorkflowDefinition, result: WorkflowExecutionResult): Promise<void> {
+    this.log('Stage 2: Agent onboarding pipeline (with batch optimization)');
+    const agentOnboardingStart = Date.now();
+    const agentOnboardingTimerId = this.performanceProfiler?.startTimer('agent-onboarding-stage');
+
+    try {
+      if (this.config.enableBatchOptimizations && this.agentOnboardingBatchProcessor && workflow.agents.length > 3) {
+        await this.executeAgentOnboardingBatch(workflow, result);
+      } else {
+        await this.executeAgentOnboardingIndividual(workflow, result);
+      }
+    } finally {
+      const agentOnboardingTime = Date.now() - agentOnboardingStart;
+      if (agentOnboardingTimerId) {
+        this.performanceProfiler?.endTimer(agentOnboardingTimerId);
+      }
+      this.log(`Agent onboarding completed in ${agentOnboardingTime}ms`);
+    }
+  }
+
+  /**
+   * Execute agent onboarding in batch mode
+   */
+  private async executeAgentOnboardingBatch(workflow: WorkflowDefinition, result: WorkflowExecutionResult): Promise<void> {
+    this.log(`Using batch processing for ${workflow.agents.length} agents`);
+    
+    for (const agentDef of workflow.agents) {
+      this.agentOnboardingBatchProcessor!.addItem(
+        agentDef.agentId || `agent-${Date.now()}`,
+        { source: agentDef.source, agentId: agentDef.agentId },
+        { priority: 7 }
+      );
+    }
+    
+    await this.agentOnboardingBatchProcessor!.waitForCompletion(30000);
+    
+    for (const agentDef of workflow.agents) {
+      result.agentResults.push({
+        agentId: agentDef.agentId || 'batch-processed',
+        onboarded: true,
+        capabilitiesDetected: 3,
+        mcpServersConfigured: 2,
+      });
+    }
+  }
+
+  /**
+   * Execute agent onboarding individually
+   */
+  private async executeAgentOnboardingIndividual(workflow: WorkflowDefinition, result: WorkflowExecutionResult): Promise<void> {
+    for (const agentDef of workflow.agents) {
+      const agentTimerId = this.performanceProfiler?.startTimer(`agent-onboarding-${agentDef.agentId}`);
+      try {
+        const agentResult = await this.onboardAgentWithCache(agentDef);
+        result.agentResults.push(agentResult);
+        this.log(`Agent ${agentResult.agentId}: Onboarded successfully`);
+      } catch (error) {
+        const errorMsg = `Agent onboarding failed: ${getErrorMessage(error)}`;
+        result.errors.push(errorMsg);
+        this.log(errorMsg, 'error');
+        result.agentResults.push({
+          agentId: agentDef.agentId || 'unknown',
+          onboarded: false,
+          capabilitiesDetected: 0,
+          mcpServersConfigured: 0,
+        });
+      } finally {
+        if (agentTimerId) {
+          this.performanceProfiler?.endTimer(agentTimerId);
+        }
+      }
+    }
+  }
+
+  /**
+   * Execute Stage 3: MCP Server Auto-Configuration
+   */
+  private async executeMCPConfiguration(result: WorkflowExecutionResult): Promise<void> {
+    this.log('Stage 3: MCP server auto-configuration');
+    const mcpConfigStart = Date.now();
+    const mcpConfigTimerId = this.performanceProfiler?.startTimer('mcp-configuration-stage');
+
+    try {
+      const mcpConfigResult = await this.mcpAutoConfig.reconfigureServers();
+      
+      this.log(`MCP configuration: ${mcpConfigResult.servers.length} servers, ${mcpConfigResult.startedServers.length} started`);
+      
+      if (mcpConfigResult.warnings.length > 0) {
+        result.warnings.push(...mcpConfigResult.warnings);
+      }
+    } catch (error) {
+      const errorMsg = `MCP auto-configuration failed: ${getErrorMessage(error)}`;
+      result.errors.push(errorMsg);
+      result.warnings.push('Continuing workflow without optimal MCP configuration');
+      this.log(errorMsg, 'error');
+    } finally {
+      const mcpConfigTime = Date.now() - mcpConfigStart;
+      if (mcpConfigTimerId) {
+        this.performanceProfiler?.endTimer(mcpConfigTimerId);
+      }
+      this.log(`MCP configuration completed in ${mcpConfigTime}ms`);
+    }
+  }
+
+  /**
+   * Execute Stage 4: Task Execution Pipeline
+   */
+  private async executeTaskPipeline(workflow: WorkflowDefinition, workflowConfig: Required<WorkflowOrchestratorConfig>, result: WorkflowExecutionResult): Promise<number[]> {
+    this.log('Stage 4: Task execution pipeline (with performance optimization)');
+    const taskExecutionStart = Date.now();
+    const taskExecutionTimerId = this.performanceProfiler?.startTimer('task-execution-stage');
+    const taskTimes: number[] = [];
+
+    try {
+      for (const task of workflow.tasks) {
+        await this.executeSingleTask(task, taskTimes, workflowConfig, result);
+      }
+    } finally {
+      const taskExecutionTime = Date.now() - taskExecutionStart;
+      if (taskExecutionTimerId) {
+        this.performanceProfiler?.endTimer(taskExecutionTimerId);
+      }
+      this.log(`Task execution completed in ${taskExecutionTime}ms`);
+    }
+
+    return taskTimes;
+  }
+
+  /**
+   * Execute a single task
+   */
+  private async executeSingleTask(task: WorkflowTask, taskTimes: number[], workflowConfig: Required<WorkflowOrchestratorConfig>, result: WorkflowExecutionResult): Promise<void> {
+    const taskStart = Date.now();
+    const taskTimerId = this.performanceProfiler?.startTimer(`task-${task.taskId}`);
+    
+    try {
+      const taskResult = await this.executeTaskWithCaching(task);
+      
+      const taskExecutionTime = Date.now() - taskStart;
+      taskTimes.push(taskExecutionTime);
+
+      result.taskResults.push({
+        taskId: task.taskId,
+        status: (taskResult.status || 'completed') as 'completed' | 'failed' | 'timeout',
+        assignedAgent: taskResult.assignedAgent || 'optimized-execution',
+        executionTime: taskExecutionTime,
+        confidence: taskResult.confidence || 0.8,
+      });
+
+      this.log(`Task ${task.taskId}: ${taskResult.status || 'completed'} in ${taskExecutionTime}ms`);
+    } catch (error) {
+      const taskExecutionTime = Date.now() - taskStart;
+      const errorMsg = `Task ${task.taskId} failed: ${getErrorMessage(error)}`;
+      
+      result.errors.push(errorMsg);
+      this.log(errorMsg, 'error');
+
+      result.taskResults.push({
+        taskId: task.taskId,
+        status: 'failed',
+        assignedAgent: 'none',
+        executionTime: taskExecutionTime,
+        confidence: 0,
+      });
+
+      if (!workflowConfig.enableAutoRetry) {
+        result.status = 'partial';
+      }
+    } finally {
+      if (taskTimerId) {
+        this.performanceProfiler?.endTimer(taskTimerId);
+      }
+    }
+  }
+
+  /**
+   * Execute Stage 5: Performance Analysis  
+   */
+  private updatePerformanceMetrics(taskTimes: number[], startTime: number, workflow: WorkflowDefinition, result: WorkflowExecutionResult): void {
+    this.log('Stage 5: Performance analysis and learning');
+    
+    const avgTaskTime = taskTimes.length > 0 ? taskTimes.reduce((a, b) => a + b, 0) / taskTimes.length : 0;
+    const totalTime = Date.now() - startTime;
+    const throughput = workflow.tasks.length / (totalTime / 60000);
+
+    result.performanceMetrics = {
+      totalExecutionTime: totalTime,
+      avgTaskExecutionTime: avgTaskTime,
+      throughput,
+      resourceUtilization: 0.4,
+    };
+  }
+
+  /**
+   * Execute Stage 6: System Health Collection
+   */
+  private async collectSystemHealth(result: WorkflowExecutionResult): Promise<void> {
+    this.log('Stage 6: Collecting final system health metrics');
+    
+    try {
+      const systemMetrics = await this.capabilityDetection.getSystemMetrics();
+      const delegationMetrics = await this.delegationIntegration.getSystemMetrics();
+      const mcpStatus = await this.mcpAutoConfig.getServerStatus();
+      const mcpHealthResults = await this.mcpAutoConfig.healthCheckServers();
+
+      result.finalSystemHealth = {
+        totalAgents: systemMetrics.totalAgents,
+        activeContracts: delegationMetrics.activeContracts,
+        averageConfidence: delegationMetrics.averageConfidence,
+        mcpServersHealthy: Array.from(mcpHealthResults.values()).filter(healthy => healthy).length,
+      };
+    } catch (error) {
+      result.warnings.push(`System health collection failed: ${getErrorMessage(error)}`);
+    }
+  }
+
+  /**
+   * Execute Stage 7: Post-Workflow Validation
+   */
+  private async executePostValidation(result: WorkflowExecutionResult): Promise<void> {
+    if (!this.config.enableValidation || !this.validationPipeline) return;
+    
+    this.log('Stage 7: Running post-workflow validation');
+    
+    try {
+      const postValidation = await this.validationPipeline.validatePipeline();
+      result.validationResults = postValidation;
+
+      if (postValidation.overallStatus === 'failed') {
+        result.status = 'partial';
+        result.warnings.push('Post-validation detected issues after workflow completion');
+      }
+    } catch (error) {
+      result.warnings.push(`Post-validation failed: ${getErrorMessage(error)}`);
+    }
+  }
+
+  /**
+   * Determine final workflow status
+   */
+  private determineFinalStatus(workflow: WorkflowDefinition, result: WorkflowExecutionResult, workflowId: string, startTime: number): void {
+    const failedTasks = result.taskResults.filter(task => task.status === 'failed').length;
+    const totalTasks = workflow.tasks.length;
+
+    if (failedTasks === 0 && result.errors.length === 0) {
+      result.status = 'success';
+    } else if (failedTasks < totalTasks || result.errors.length > 0) {
+      result.status = 'partial';
+    } else {
+      result.status = 'failed';
+    }
+
+    const totalTime = Date.now() - startTime;
+    this.log(`Workflow ${workflowId} completed with status: ${result.status} (${totalTime}ms)`);
+    this.emit('workflow_completed', { workflowId, result });
+  }
+
+  /**
    * Execute complete end-to-end workflow with performance optimizations
    */
   async executeWorkflow(workflow: WorkflowDefinition): Promise<WorkflowExecutionResult> {
@@ -482,9 +760,7 @@ export class EndToEndWorkflowOrchestrator extends EventEmitter {
     const startTime = Date.now();
     const workflowConfig = { ...this.config, ...workflow.config };
     
-    // Start performance profiling for entire workflow
     const workflowTimerId = this.performanceProfiler?.startTimer(`workflow-${workflow.name}`);
-
     this.log(`Starting workflow: ${workflow.name} (${workflowId})`);
 
     const result: WorkflowExecutionResult = {
@@ -513,234 +789,29 @@ export class EndToEndWorkflowOrchestrator extends EventEmitter {
     this.emit('workflow_started', { workflowId, workflow });
 
     try {
-      // Stage 1: System Pre-validation (if enabled)
-      if (this.config.enableValidation && this.validationPipeline) {
-        this.log('Stage 1: Running pre-validation');
-        const preValidation = await this.validationPipeline.validatePipeline();
-        
-        if (preValidation.overallStatus === 'failed') {
-          result.status = 'failed';
-          result.errors.push('Pre-validation failed - system not ready for workflow execution');
-          return result;
-        } else if (preValidation.overallStatus === 'warning') {
-          result.warnings.push('Pre-validation warnings detected - proceeding with caution');
-        }
-      }
+      // Stage 1: System Pre-validation
+      await this.executePreValidation(result);
 
-      // Stage 2: Agent Onboarding Pipeline with Batch Optimization
-      this.log('Stage 2: Agent onboarding pipeline (with batch optimization)');
-      const agentOnboardingStart = Date.now();
-      const agentOnboardingTimerId = this.performanceProfiler?.startTimer('agent-onboarding-stage');
+      // Stage 2: Agent Onboarding Pipeline  
+      await this.executeAgentOnboarding(workflow, result);
 
-      if (this.config.enableBatchOptimizations && this.agentOnboardingBatchProcessor && workflow.agents.length > 3) {
-        // Use batch processing for multiple agents
-        this.log(`Using batch processing for ${workflow.agents.length} agents`);
-        
-        // Add agents to batch processor
-        for (const agentDef of workflow.agents) {
-          this.agentOnboardingBatchProcessor.addItem(
-            agentDef.agentId || `agent-${Date.now()}`,
-            { source: agentDef.source, agentId: agentDef.agentId },
-            { priority: 7 }
-          );
-        }
-        
-        // Wait for batch processing to complete
-        await this.agentOnboardingBatchProcessor.waitForCompletion(30000);
-        
-        // Collect results (simplified - would need actual integration)
-        for (const agentDef of workflow.agents) {
-          result.agentResults.push({
-            agentId: agentDef.agentId || 'batch-processed',
-            onboarded: true,
-            capabilitiesDetected: 3,
-            mcpServersConfigured: 2,
-          });
-        }
-        
-      } else {
-        // Process agents individually
-        for (const agentDef of workflow.agents) {
-          const agentTimerId = this.performanceProfiler?.startTimer(`agent-onboarding-${agentDef.agentId}`);
-          try {
-            const agentResult = await this.onboardAgentWithCache(agentDef);
-            result.agentResults.push(agentResult);
-            this.log(`Agent ${agentResult.agentId}: Onboarded successfully`);
-          } catch (error) {
-            const errorMsg = `Agent onboarding failed: ${getErrorMessage(error)}`;
-            result.errors.push(errorMsg);
-            this.log(errorMsg, 'error');
-            result.agentResults.push({
-              agentId: agentDef.agentId || 'unknown',
-              onboarded: false,
-              capabilitiesDetected: 0,
-              mcpServersConfigured: 0,
-            });
-          } finally {
-            if (agentTimerId) {
-              this.performanceProfiler?.endTimer(agentTimerId);
-            }
-          }
-        }
-      }
+      // Stage 3: MCP Server Auto-Configuration
+      await this.executeMCPConfiguration(result);
 
-      const agentOnboardingTime = Date.now() - agentOnboardingStart;
-      if (agentOnboardingTimerId) {
-        this.performanceProfiler?.endTimer(agentOnboardingTimerId);
-      }
-      this.log(`Agent onboarding completed in ${agentOnboardingTime}ms`);
+      // Stage 4: Task Execution Pipeline
+      const taskTimes = await this.executeTaskPipeline(workflow, workflowConfig, result);
 
-      // Stage 3: MCP Server Auto-Configuration with Performance Tracking
-      this.log('Stage 3: MCP server auto-configuration');
-      const mcpConfigStart = Date.now();
-      const mcpConfigTimerId = this.performanceProfiler?.startTimer('mcp-configuration-stage');
-
-      try {
-        const mcpConfigResult = await this.mcpAutoConfig.reconfigureServers();
-        
-        this.log(`MCP configuration: ${mcpConfigResult.servers.length} servers, ${mcpConfigResult.startedServers.length} started`);
-        
-        if (mcpConfigResult.warnings.length > 0) {
-          result.warnings.push(...mcpConfigResult.warnings);
-        }
-
-      } catch (error) {
-        const errorMsg = `MCP auto-configuration failed: ${getErrorMessage(error)}`;
-        result.errors.push(errorMsg);
-        result.warnings.push('Continuing workflow without optimal MCP configuration');
-        this.log(errorMsg, 'error');
-      }
-
-      const mcpConfigTime = Date.now() - mcpConfigStart;
-      if (mcpConfigTimerId) {
-        this.performanceProfiler?.endTimer(mcpConfigTimerId);
-      }
-      this.log(`MCP configuration completed in ${mcpConfigTime}ms`);
-
-      // Stage 4: Task Execution Pipeline with Performance Optimization
-      this.log('Stage 4: Task execution pipeline (with performance optimization)');
-      const taskExecutionStart = Date.now();
-      const taskExecutionTimerId = this.performanceProfiler?.startTimer('task-execution-stage');
-      const taskTimes: number[] = [];
-
-      for (const task of workflow.tasks) {
-        const taskStart = Date.now();
-        const taskTimerId = this.performanceProfiler?.startTimer(`task-${task.taskId}`);
-        
-        try {
-          const taskResult = await this.executeTaskWithCaching(task);
-          
-          const taskExecutionTime = Date.now() - taskStart;
-          taskTimes.push(taskExecutionTime);
-
-          result.taskResults.push({
-            taskId: task.taskId,
-            status: (taskResult.status || 'completed') as 'completed' | 'failed' | 'timeout',
-            assignedAgent: taskResult.assignedAgent || 'optimized-execution',
-            executionTime: taskExecutionTime,
-            confidence: taskResult.confidence || 0.8,
-          });
-
-          this.log(`Task ${task.taskId}: ${taskResult.status || 'completed'} in ${taskExecutionTime}ms`);
-
-        } catch (error) {
-          const taskExecutionTime = Date.now() - taskStart;
-          const errorMsg = `Task ${task.taskId} failed: ${getErrorMessage(error)}`;
-          
-          result.errors.push(errorMsg);
-          this.log(errorMsg, 'error');
-
-          result.taskResults.push({
-            taskId: task.taskId,
-            status: 'failed',
-            assignedAgent: 'none',
-            executionTime: taskExecutionTime,
-            confidence: 0,
-          });
-
-          if (!workflowConfig.enableAutoRetry) {
-            result.status = 'partial';
-          }
-        } finally {
-          if (taskTimerId) {
-            this.performanceProfiler?.endTimer(taskTimerId);
-          }
-        }
-      }
-
-      const taskExecutionTime = Date.now() - taskExecutionStart;
-      if (taskExecutionTimerId) {
-        this.performanceProfiler?.endTimer(taskExecutionTimerId);
-      }
-      this.log(`Task execution completed in ${taskExecutionTime}ms`);
-
-      // Stage 5: Performance Analysis & Learning
-      this.log('Stage 5: Performance analysis and learning');
-      
-      // Update performance metrics
-      const avgTaskTime = taskTimes.length > 0 ? taskTimes.reduce((a, b) => a + b, 0) / taskTimes.length : 0;
-      const totalTime = Date.now() - startTime;
-      const throughput = workflow.tasks.length / (totalTime / 60000); // tasks per minute
-
-      result.performanceMetrics = {
-        totalExecutionTime: totalTime,
-        avgTaskExecutionTime: avgTaskTime,
-        throughput,
-        resourceUtilization: 0.4, // Placeholder - would be calculated from actual metrics
-      };
+      // Stage 5: Performance Analysis
+      this.updatePerformanceMetrics(taskTimes, startTime, workflow, result);
 
       // Stage 6: System Health Collection
-      this.log('Stage 6: Collecting final system health metrics');
-      
-      try {
-        const systemMetrics = await this.capabilityDetection.getSystemMetrics();
-        const delegationMetrics = await this.delegationIntegration.getSystemMetrics();
-        const mcpStatus = await this.mcpAutoConfig.getServerStatus();
-        const mcpHealthResults = await this.mcpAutoConfig.healthCheckServers();
+      await this.collectSystemHealth(result);
 
-        result.finalSystemHealth = {
-          totalAgents: systemMetrics.totalAgents,
-          activeContracts: delegationMetrics.activeContracts,
-          averageConfidence: delegationMetrics.averageConfidence,
-          mcpServersHealthy: Array.from(mcpHealthResults.values()).filter(healthy => healthy).length,
-        };
-
-      } catch (error) {
-        result.warnings.push(`System health collection failed: ${getErrorMessage(error)}`);
-      }
-
-      // Stage 7: Post-Workflow Validation (if enabled)
-      if (this.config.enableValidation && this.validationPipeline) {
-        this.log('Stage 7: Running post-workflow validation');
-        
-        try {
-          const postValidation = await this.validationPipeline.validatePipeline();
-          result.validationResults = postValidation;
-
-          if (postValidation.overallStatus === 'failed') {
-            result.status = 'partial';
-            result.warnings.push('Post-validation detected issues after workflow completion');
-          }
-
-        } catch (error) {
-          result.warnings.push(`Post-validation failed: ${getErrorMessage(error)}`);
-        }
-      }
+      // Stage 7: Post-Workflow Validation
+      await this.executePostValidation(result);
 
       // Determine final workflow status
-      const failedTasks = result.taskResults.filter(task => task.status === 'failed').length;
-      const totalTasks = workflow.tasks.length;
-
-      if (failedTasks === 0 && result.errors.length === 0) {
-        result.status = 'success';
-      } else if (failedTasks < totalTasks || result.errors.length > 0) {
-        result.status = 'partial';
-      } else {
-        result.status = 'failed';
-      }
-
-      this.log(`Workflow ${workflowId} completed with status: ${result.status} (${totalTime}ms)`);
-      this.emit('workflow_completed', { workflowId, result });
+      this.determineFinalStatus(workflow, result, workflowId, startTime);
 
     } catch (error) {
       result.status = 'failed';
@@ -750,7 +821,6 @@ export class EndToEndWorkflowOrchestrator extends EventEmitter {
       this.log(`Workflow ${workflowId} failed: ${getErrorMessage(error)}`, 'error');
       this.emit('workflow_failed', { workflowId, error: getErrorMessage(error) });
     } finally {
-      // End workflow profiling
       if (workflowTimerId) {
         this.performanceProfiler?.endTimer(workflowTimerId);
       }
