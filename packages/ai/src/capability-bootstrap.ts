@@ -332,6 +332,43 @@ export class CapabilityDetector {
   }
   
   /**
+   * Check if capability should be added based on name matching
+   */
+  private checkNameBasedDetection(
+    capabilityId: string,
+    matchedKeywords: string[],
+    nameLower: string,
+    agentName: string
+  ): { capabilityId: string; detectionConfidence: number; matchedKeywords: string[] } | null {
+    const idVariants = [capabilityId.replace(/_/g, '-'), capabilityId.replace(/_/g, ' ')];
+    if (idVariants.some(v => nameLower.includes(v))) {
+      return {
+        capabilityId,
+        detectionConfidence: 0.75,
+        matchedKeywords: [...matchedKeywords, `name:${agentName}`]
+      };
+    }
+    return null;
+  }
+
+  /**
+   * Add mandatory capabilities that weren't detected
+   */
+  private addMandatoryCapabilities(
+    capabilities: Array<{ capabilityId: string; detectionConfidence: number; matchedKeywords: string[] }>
+  ): void {
+    for (const mandatoryCapability of this.config.mandatoryCapabilities) {
+      if (!capabilities.some(c => c.capabilityId === mandatoryCapability)) {
+        capabilities.push({
+          capabilityId: mandatoryCapability,
+          detectionConfidence: 1.0,
+          matchedKeywords: ['mandatory'],
+        });
+      }
+    }
+  }
+
+  /**
    * Detect capabilities from analyzed agent content
    */
   detect(
@@ -348,7 +385,7 @@ export class CapabilityDetector {
       ...this.config.customKeywordMappings,
     };
     
-    for (const [capabilityId, keywords] of Object.entries(allKeywordMappings)) {
+   for (const [capabilityId, keywords] of Object.entries(allKeywordMappings)) {
       const matchedKeywords = this.matchKeywords(keywords, contentLower);
       const matchCount = matchedKeywords.length;
       const detectionConfidence = Math.min(matchCount / keywords.length, 1.0);
@@ -356,23 +393,13 @@ export class CapabilityDetector {
       if (matchCount >= this.config.minimumKeywordMatches) {
         capabilities.push({ capabilityId, detectionConfidence, matchedKeywords });
       } else if (matchCount >= 1) {
-        const idVariants = [capabilityId.replace(/_/g, '-'), capabilityId.replace(/_/g, ' ')];
-        if (idVariants.some(v => nameLower.includes(v))) {
-          capabilities.push({ capabilityId, detectionConfidence: 0.75, matchedKeywords: [...matchedKeywords, `name:${agentName}`] });
-        }
+        const nameMatch = this.checkNameBasedDetection(capabilityId, matchedKeywords, nameLower, agentName);
+        if (nameMatch) capabilities.push(nameMatch);
       }
     }
     
     // Add mandatory capabilities if not already detected
-    for (const mandatoryCapability of this.config.mandatoryCapabilities) {
-      if (!capabilities.some(c => c.capabilityId === mandatoryCapability)) {
-        capabilities.push({
-          capabilityId: mandatoryCapability,
-          detectionConfidence: 1.0,
-          matchedKeywords: ['mandatory'],
-        });
-      }
-    }
+    this.addMandatoryCapabilities(capabilities);
     
     return capabilities;
   }
