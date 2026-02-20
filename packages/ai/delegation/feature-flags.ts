@@ -172,6 +172,78 @@ export class FeatureFlagManager {
   }
 
   /**
+   * Check if feature has expired
+   */
+  private checkExpiration(flag: DelegationFeatureFlag, config: FeatureFlagConfig): FeatureEvaluation | null {
+    if (config.expiresAt && new Date() > config.expiresAt) {
+      return { flag, enabled: false, reason: 'Feature flag has expired' };
+    }
+    return null;
+  }
+
+  /**
+   * Check master delegation switch
+   */
+  private checkMasterSwitch(flag: DelegationFeatureFlag, context: FeatureFlagContext): FeatureEvaluation | null {
+    if (flag !== 'delegation_enabled') {
+      const masterSwitch = this.isEnabled('delegation_enabled', context);
+      if (!masterSwitch.enabled) {
+        return { flag, enabled: false, reason: 'Master delegation switch is disabled' };
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Check environment compatibility
+   */
+  private checkEnvironment(flag: DelegationFeatureFlag, config: FeatureFlagConfig, context: FeatureFlagContext): FeatureEvaluation | null {
+    if (config.environment && context.environment) {
+      const envEnabled = config.environment.includes(context.environment);
+      if (!envEnabled) {
+        return { flag, enabled: false, reason: `Not enabled for environment: ${context.environment}` };
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Check rollout percentage
+   */
+  private checkRollout(flag: DelegationFeatureFlag, config: FeatureFlagConfig, context: FeatureFlagContext): FeatureEvaluation | null {
+    if (config.rolloutPercentage !== undefined && config.rolloutPercentage < 100) {
+      const hashKey = context.requestId || context.userId || context.tenantId || 'default';
+      const hash = this.hashString(hashKey);
+      const bucket = hash % 100;
+      
+      if (bucket >= config.rolloutPercentage) {
+        return {
+          flag,
+          enabled: false,
+          reason: `Outside rollout percentage (${config.rolloutPercentage}%)`,
+          overrideSource: 'percentage'
+        };
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Check dependencies
+   */
+  private checkDependencies(flag: DelegationFeatureFlag, config: FeatureFlagConfig, context: FeatureFlagContext): FeatureEvaluation | null {
+    if (config.dependencies) {
+      for (const dep of config.dependencies) {
+        const depEval = this.isEnabled(dep, context);
+        if (!depEval.enabled) {
+          return { flag, enabled: false, reason: `Dependency '${dep}' is not enabled: ${depEval.reason}` };
+        }
+      }
+    }
+    return null;
+  }
+
+  /**
    * Evaluate whether a feature is enabled for given context
    */
   isEnabled(
@@ -188,75 +260,20 @@ export class FeatureFlagManager {
       };
     }
     
-    // Check expiration
-    if (config.expiresAt && new Date() > config.expiresAt) {
-      return {
-        flag,
-        enabled: false,
-        reason: 'Feature flag has expired'
-      };
-    }
-    
-    // Check master delegation switch
-    if (flag !== 'delegation_enabled') {
-      const masterSwitch = this.isEnabled('delegation_enabled', context);
-      if (!masterSwitch.enabled) {
-        return {
-          flag,
-          enabled: false,
-          reason: 'Master delegation switch is disabled'
-        };
-      }
-    }
-    
-    // Check user-specific override
-    const userOverride = this.checkUserOverride(flag, config, context);
-    if (userOverride !== null) return userOverride;
-    
-    // Check tenant-specific override
-    const tenantOverride = this.checkTenantOverride(flag, config, context);
-    if (tenantOverride !== null) return tenantOverride;
-    
-    // Check environment
-    if (config.environment && context.environment) {
-      const envEnabled = config.environment.includes(context.environment);
-      if (!envEnabled) {
-        return {
-          flag,
-          enabled: false,
-          reason: `Not enabled for environment: ${context.environment}`
-        };
-      }
-    }
-    
-    // Check rollout percentage
-    if (config.rolloutPercentage !== undefined && config.rolloutPercentage < 100) {
-      const hashKey = context.requestId || context.userId || context.tenantId || 'default';
-      const hash = this.hashString(hashKey);
-      const bucket = hash % 100;
-      
-      if (bucket >= config.rolloutPercentage) {
-        return {
-          flag,
-          enabled: false,
-          reason: `Outside rollout percentage (${config.rolloutPercentage}%)`,
-          overrideSource: 'percentage'
-        };
-      }
-    }
-    
-    // Check dependencies
-    if (config.dependencies) {
-      for (const dep of config.dependencies) {
-        const depEval = this.isEnabled(dep, context);
-        if (!depEval.enabled) {
-          return {
-            flag,
-            enabled: false,
-            reason: `Dependency '${dep}' is not enabled: ${depEval.reason}`
-          };
-        }
-      }
+    // Run all checks in sequence
+    const checks = [
+      () => this.checkExpiration(flag, config),
+      () => this.checkMasterSwitch(flag, context),
+      () => this.checkUserOverride(flag, config, context),
+      () => this.checkTenantOverride(flag, config, context),
+      () => this.checkEnvironment(flag, config, context),
+      () => this.checkRollout(flag, config, context),
+      () => this.checkDependencies(flag, config, context),
+    ];
+
+    for (const check of checks) {
+      const result = check();
+      if (result !== null) return result;
     }
     
     return {

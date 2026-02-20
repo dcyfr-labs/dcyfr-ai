@@ -205,45 +205,57 @@ export class AgentLoader {
   }
 
   /**
+   * Discover agents from a single pattern
+   */
+  private async discoverFromPattern(pattern: string, discovered: AgentManifest[]): Promise<void> {
+    const { glob: globCallback } = await import('glob');
+    const { promisify } = await import('util');
+    const glob = promisify(globCallback) as (pattern: string, options?: any) => Promise<string[]>;
+
+    const files = await glob(pattern, { absolute: true });
+
+    for (const file of files) {
+      try {
+        const loaded = await this.loadAgent(file);
+        discovered.push(loaded.manifest);
+      } catch (error) {
+        if (this.config.failureMode === 'warn') {
+          console.warn(`⚠️  Failed to discover agent at ${file}:`, error);
+        }
+      }
+    }
+  }
+
+  /**
+   * Discover agents from a single search path
+   */
+  private async discoverFromSearchPath(searchPath: string, discovered: AgentManifest[]): Promise<void> {
+    try {
+      const patterns = [
+        `${searchPath}/**/*.agent.ts`,
+        `${searchPath}/**/*.agent.js`,
+        `${searchPath}/**/*.agent.json`,
+        `${searchPath}/**/*.md`,
+      ];
+
+      for (const pattern of patterns) {
+        await this.discoverFromPattern(pattern, discovered);
+      }
+    } catch (error) {
+      if (this.config.failureMode === 'warn') {
+        console.warn(`⚠️  Failed to search path ${searchPath}:`, error);
+      }
+    }
+  }
+
+  /**
    * Discover agents in search paths
    */
   async discoverAgents(): Promise<AgentManifest[]> {
     const discovered: AgentManifest[] = [];
 
     for (const searchPath of this.config.searchPaths) {
-      try {
-        // Use dynamic import and promisify glob
-        const { glob: globCallback } = await import('glob');
-        const { promisify } = await import('util');
-        const glob = promisify(globCallback) as (pattern: string, options?: any) => Promise<string[]>;
-
-        // Search for agent files
-        const patterns = [
-          `${searchPath}/**/*.agent.ts`,
-          `${searchPath}/**/*.agent.js`,
-          `${searchPath}/**/*.agent.json`,
-          `${searchPath}/**/*.md`,
-        ];
-
-        for (const pattern of patterns) {
-          const files = await glob(pattern, { absolute: true });
-
-          for (const file of files) {
-            try {
-              const loaded = await this.loadAgent(file);
-              discovered.push(loaded.manifest);
-            } catch (error) {
-              if (this.config.failureMode === 'warn') {
-                console.warn(`⚠️  Failed to discover agent at ${file}:`, error);
-              }
-            }
-          }
-        }
-      } catch (error) {
-        if (this.config.failureMode === 'warn') {
-          console.warn(`⚠️  Failed to search path ${searchPath}:`, error);
-        }
-      }
+      await this.discoverFromSearchPath(searchPath, discovered);
     }
 
     return discovered;

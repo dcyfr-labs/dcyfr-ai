@@ -402,8 +402,48 @@ export abstract class BaseVerificationFormatter {
     return { valid: true };
   }
 
+  /**
+   * Validate JSON Schema format
+   */
+  private validateJSONSchemaFormat(outputObj: Record<string, unknown>, schema: Record<string, unknown>): { valid: boolean; details?: string } {
+    const required = schema.required as string[];
+    const missing = required.filter(key => !(key in outputObj));
+    
+    if (missing.length > 0) {
+      return { valid: false, details: `Missing required properties: ${missing.join(', ')}` };
+    }
+    
+    // Check property types if properties are defined
+    if (schema.properties) {
+      const properties = schema.properties as Record<string, { type?: string; minimum?: number; maximum?: number }>;
+      for (const [key, propSchema] of Object.entries(properties)) {
+        if (key in outputObj) {
+          const propResult = this.validatePropertySchema(key, outputObj[key], propSchema);
+          if (!propResult.valid) return propResult;
+        }
+      }
+    }
+    
+    return { valid: true, details: 'Output schema validation passed' };
+  }
+
+  /**
+   * Validate simple object schema format
+   */
+  private validateSimpleSchemaFormat(outputObj: Record<string, unknown>, schema: Record<string, unknown>): { valid: boolean; details?: string } {
+    const schemaKeys = Object.keys(schema);
+    const outputKeys = Object.keys(outputObj);
+    
+    const missingKeys = schemaKeys.filter(key => !outputKeys.includes(key));
+    
+    if (missingKeys.length > 0) {
+      return { valid: false, details: `Missing required keys: ${missingKeys.join(', ')}` };
+    }
+    
+    return { valid: true, details: 'Output schema validation passed' };
+  }
+
   protected validateOutputSchema(output: unknown, schema: Record<string, unknown>): { valid: boolean; details?: string } {
-    // Basic schema validation (would use proper JSON schema validator in production)
     try {
       if (typeof output !== 'object' || output === null) {
         return { valid: false, details: 'Output must be an object' };
@@ -413,38 +453,11 @@ export abstract class BaseVerificationFormatter {
       
       // Handle JSON Schema format
       if (schema.type === 'object' && schema.required) {
-        const required = schema.required as string[];
-        const missing = required.filter(key => !(key in outputObj));
-        
-        if (missing.length > 0) {
-          return { valid: false, details: `Missing required properties: ${missing.join(', ')}` };
-        }
-        
-        // Check property types if properties are defined
-        if (schema.properties) {
-          const properties = schema.properties as Record<string, { type?: string; minimum?: number; maximum?: number }>;
-          for (const [key, propSchema] of Object.entries(properties)) {
-            if (key in outputObj) {
-              const propResult = this.validatePropertySchema(key, outputObj[key], propSchema);
-              if (!propResult.valid) return propResult;
-            }
-          }
-        }
-        
-        return { valid: true, details: 'Output schema validation passed' };
+        return this.validateJSONSchemaFormat(outputObj, schema);
       }
       
-      // Fallback for simple object schema (direct key validation)
-      const schemaKeys = Object.keys(schema);
-      const outputKeys = Object.keys(outputObj);
-      
-      const missingKeys = schemaKeys.filter(key => !outputKeys.includes(key));
-      
-      if (missingKeys.length > 0) {
-        return { valid: false, details: `Missing required keys: ${missingKeys.join(', ')}` };
-      }
-      
-      return { valid: true, details: 'Output schema validation passed' };
+      // Fallback for simple object schema
+      return this.validateSimpleSchemaFormat(outputObj, schema);
     } catch (error) {
       return { valid: false, details: `Schema validation error: ${error}` };
     }
