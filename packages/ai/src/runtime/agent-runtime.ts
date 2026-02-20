@@ -619,104 +619,81 @@ export class AgentRuntime extends EventEmitter {
     return { can_accept: true, updated_assessment: updatedAssessment };
   }
 
+  /** Check reputation/permission requirements; mutates assessment.reputation_compliance and returns rejection or null */
+  private checkReputationAndPermission(
+    contract: DelegationContract,
+    assessment: NonNullable<ContractAcceptanceDecision['assessment']>
+  ): ContractAcceptanceDecision | null {
+    if (contract.reputation_requirements) {
+      const check = this.checkReputationRequirements(contract.reputation_requirements);
+      if (!check.meets_requirements) {
+        return { can_accept: false, reason: `Reputation requirements not met: ${check.reason}`, confidence: 0, assessment: { ...assessment, reputation_compliance: false } };
+      }
+    }
+    assessment.reputation_compliance = true;
+    if (contract.permission_token) {
+      const check = this.validatePermissionToken(contract.permission_token);
+      if (!check.valid) {
+        return { can_accept: false, reason: `Permission validation failed: ${check.reason}`, confidence: 0, assessment };
+      }
+    }
+    return null;
+  }
+
+  /** Check firebreak constraints; mutates assessment.firebreak_compliance and returns rejection or null */
+  private checkFirebreakConstraints(
+    contract: DelegationContract,
+    assessment: NonNullable<ContractAcceptanceDecision['assessment']>
+  ): ContractAcceptanceDecision | null {
+    if (!contract.firebreaks?.length) {
+      assessment.firebreak_compliance = true;
+      return null;
+    }
+    const check = this.validateFirebreaks(contract.firebreaks, contract);
+    if (!check.compliant) {
+      return { can_accept: false, reason: `Firebreak violation: ${check.reason}`, confidence: 0, assessment: { ...assessment, firebreak_compliance: false } };
+    }
+    assessment.firebreak_compliance = true;
+    return null;
+  }
+
   /**
    * Check if agent can accept delegation contract with comprehensive validation
    */
   async canAcceptDelegationContract(contract: DelegationContract): Promise<ContractAcceptanceDecision> {
-    let assessment = {
-      capability_match: 0,
-      resource_availability: 0,
-      workload_capacity: 0,
-      reputation_compliance: false,
-      firebreak_compliance: false,
+    let assessment: NonNullable<ContractAcceptanceDecision['assessment']> = {
+      capability_match: 0, resource_availability: 0, workload_capacity: 0,
+      reputation_compliance: false, firebreak_compliance: false,
     };
-    
-    // Check concurrent task limit
+
     if (this.currentTasks.size >= (this.config.max_concurrent_tasks || 5)) {
-      return { 
-        can_accept: false, 
-        reason: 'Maximum concurrent tasks reached',
-        confidence: 0,
-        assessment 
-      };
+      return { can_accept: false, reason: 'Maximum concurrent tasks reached', confidence: 0, assessment };
     }
-    
     assessment.workload_capacity = 1 - (this.currentTasks.size / (this.config.max_concurrent_tasks || 5));
-    
-    // Check reputation requirements
-    if (contract.reputation_requirements) {
-      const reputationCheck = this.checkReputationRequirements(contract.reputation_requirements);
-      if (!reputationCheck.meets_requirements) {
-        return { 
-          can_accept: false, 
-          reason: `Reputation requirements not met: ${reputationCheck.reason}`,
-          confidence: 0,
-          assessment: { ...assessment, reputation_compliance: false }
-        };
-      }
-    }
-    assessment.reputation_compliance = true;
-    
-    // Check permission tokens (if required)
-    if (contract.permission_token) {
-      const permissionCheck = this.validatePermissionToken(contract.permission_token);
-      if (!permissionCheck.valid) {
-        return { 
-          can_accept: false, 
-          reason: `Permission validation failed: ${permissionCheck.reason}`,
-          confidence: 0,
-          assessment 
-        };
-      }
-    }
-    
-    // Check firebreak constraints
-    if (contract.firebreaks && contract.firebreaks.length > 0) {
-      const firebreakCheck = this.validateFirebreaks(contract.firebreaks, contract);
-      if (!firebreakCheck.compliant) {
-        return { 
-          can_accept: false, 
-          reason: `Firebreak violation: ${firebreakCheck.reason}`,
-          confidence: 0,
-          assessment: { ...assessment, firebreak_compliance: false }
-        };
-      }
-    }
-    assessment.firebreak_compliance = true;
-    
-    // Check resource requirements
+
+    const reputationRejection = this.checkReputationAndPermission(contract, assessment);
+    if (reputationRejection) return reputationRejection;
+
+    const firebreakRejection = this.checkFirebreakConstraints(contract, assessment);
+    if (firebreakRejection) return firebreakRejection;
+
     if (contract.resource_requirements) {
       const resourceCheck = this.checkResourceRequirements(contract.resource_requirements);
       if (!resourceCheck.canMeet) {
-        return { 
-          can_accept: false, 
-          reason: `Insufficient resources: ${resourceCheck.reason}`,
-          confidence: 0,
-          assessment 
-        };
+        return { can_accept: false, reason: `Insufficient resources: ${resourceCheck.reason}`, confidence: 0, assessment };
       }
       assessment.resource_availability = resourceCheck.availability_score || 1;
     } else {
       assessment.resource_availability = 1;
     }
 
-    // Check capability requirements and timeout feasibility
     const { can_accept, reason, updated_assessment } = this.checkCapabilityAndTimeout(contract, assessment);
     assessment = updated_assessment;
-    if (!can_accept) {
-      return { can_accept: false, reason, confidence: 0, assessment };
-    }
-    
-    // Calculate overall confidence
+    if (!can_accept) { return { can_accept: false, reason, confidence: 0, assessment }; }
+
     const estimatedTime = this.estimateTaskTime(contract.task_description || contract.metadata?.task_categories?.join(' ') || '');
     const confidence = this.calculateAcceptanceConfidence(assessment, contract);
-    
-    return { 
-      can_accept: true, 
-      confidence,
-      estimated_completion_ms: estimatedTime,
-      assessment
-    };
+    return { can_accept: true, confidence, estimated_completion_ms: estimatedTime, assessment };
   }
   
   // Private methods
@@ -823,43 +800,43 @@ export class AgentRuntime extends EventEmitter {
     }
   }
 
+  /** Handle retry catch: emits events, returns true if loop should continue, false if error should be thrown */
+  private handleRetryAttemptError(
+    error: Error,
+    context: TaskExecutionContext,
+    attempt: number,
+    maxRetries: number,
+    retryPolicy?: RetryPolicy
+  ): boolean {
+    if (attempt < maxRetries && this.shouldRetryError(error, retryPolicy)) {
+      this.emit('task:retry:error', context, attempt, error);
+      return true;
+    }
+    if (attempt > 0) this.emit('task:retry:exhausted', context, attempt);
+    return false;
+  }
+
   private async performTaskExecutionWithRetry(
-    context: TaskExecutionContext, 
-    timeout: number, 
+    context: TaskExecutionContext,
+    timeout: number,
     retryPolicy?: RetryPolicy
   ): Promise<TaskExecutionResult> {
     const maxRetries = retryPolicy?.max_retries || 0;
     let lastError: Error | null = null;
-    
+
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
-        if (attempt > 0) {
-          await this.applyRetryDelay(context, attempt, retryPolicy);
-        }
-        
+        if (attempt > 0) await this.applyRetryDelay(context, attempt, retryPolicy);
         const result = await this.performTaskExecution(context, timeout);
-        
-        if (attempt > 0) {
-          this.emit('task:retry:success', context, attempt);
-        }
-        
+        if (attempt > 0) this.emit('task:retry:success', context, attempt);
         return result;
-        
       } catch (error) {
         lastError = error as Error;
-        
-        if (attempt < maxRetries && this.shouldRetryError(error as Error, retryPolicy)) {
-          this.emit('task:retry:error', context, attempt, error);
-          continue;
-        } else {
-          if (attempt > 0) {
-            this.emit('task:retry:exhausted', context, attempt);
-          }
-          throw error;
-        }
+        if (this.handleRetryAttemptError(error as Error, context, attempt, maxRetries, retryPolicy)) continue;
+        throw error;
       }
     }
-    
+
     throw lastError || new Error('Unknown retry error');
   }
   

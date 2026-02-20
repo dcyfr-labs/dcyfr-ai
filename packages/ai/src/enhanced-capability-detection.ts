@@ -440,6 +440,26 @@ export class EnhancedCapabilityDetection extends EventEmitter {
     return metrics;
   }
 
+  /** Update a single capability metric from a completed/failed contract */
+  private updateSingleCapabilityMetric(metric: CapabilityPerformanceMetrics, contract: DelegationContract): void {
+    metric.totalExecutions += 1;
+    if (contract.status === 'completed' && contract.verification_result?.verified) {
+      metric.successfulExecutions += 1;
+    }
+    metric.successRate = metric.totalExecutions > 0
+      ? metric.successfulExecutions / metric.totalExecutions
+      : 0;
+    if (contract.completed_at && contract.activated_at) {
+      const executionTime = new Date(contract.completed_at).getTime() -
+                            new Date(contract.activated_at).getTime();
+      metric.averageExecutionTime = (metric.averageExecutionTime + executionTime) / 2;
+    }
+    metric.lastExecutionAt = new Date();
+    if (metric.totalExecutions >= this.config.minExecutionsForTrend) {
+      metric.trend = this.calculateTrend(metric);
+    }
+  }
+
   /**
    * Update performance metrics based on delegation outcome
    */
@@ -448,31 +468,8 @@ export class EnhancedCapabilityDetection extends EventEmitter {
       const capId = typeof requiredCapability === 'string' ? requiredCapability : requiredCapability.capability_id;
       const metricKey = `${contract.delegatee_agent_id}:${capId}`;
       const metric = this.performanceMetrics.get(metricKey);
-
       if (metric) {
-        metric.totalExecutions += 1;
-        if (contract.status === 'completed' && contract.verification_result?.verified) {
-          metric.successfulExecutions += 1;
-        }
-
-        metric.successRate = metric.totalExecutions > 0 
-          ? metric.successfulExecutions / metric.totalExecutions 
-          : 0;
-
-        // Update execution time if available
-        if (contract.completed_at && contract.activated_at) {
-          const executionTime = new Date(contract.completed_at).getTime() - 
-                               new Date(contract.activated_at).getTime();
-          metric.averageExecutionTime = (metric.averageExecutionTime + executionTime) / 2;
-        }
-
-        metric.lastExecutionAt = new Date();
-
-        // Update trend analysis
-        if (metric.totalExecutions >= this.config.minExecutionsForTrend) {
-          metric.trend = this.calculateTrend(metric);
-        }
-
+        this.updateSingleCapabilityMetric(metric, contract);
         this.performanceMetrics.set(metricKey, metric);
       }
     }

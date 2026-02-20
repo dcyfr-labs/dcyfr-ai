@@ -171,62 +171,70 @@ export class StandardVerificationFormatter extends BaseVerificationFormatter imp
     return section;
   }
 
+  private formatMarkdownMetrics(result: TaskExecutionResult): string {
+    let section = '';
+    if (result.metrics.peak_memory_mb) {
+      section += `- **Peak Memory:** ${result.metrics.peak_memory_mb}MB\n`;
+    }
+    if (result.metrics.cpu_time_ms) {
+      section += `- **CPU Time:** ${result.metrics.cpu_time_ms}ms\n`;
+    }
+    return section;
+  }
+
+  private formatMarkdownOutput(result: TaskExecutionResult): string {
+    if (!result.success || !result.output) return '';
+    return `## Task Output\n\n\`\`\`json\n${JSON.stringify(result.output, null, 2)}\n\`\`\`\n\n`;
+  }
+
+  private formatMarkdownError(result: TaskExecutionResult): string {
+    if (result.success || !result.error) return '';
+    let section = `## Error Details\n\n`;
+    section += `- **Type:** ${result.error.type}\n`;
+    section += `- **Message:** ${result.error.message}\n`;
+    if (result.error.details) {
+      section += `- **Details:** \`${JSON.stringify(result.error.details)}\`\n`;
+    }
+    return section + '\n';
+  }
+
+  private formatMarkdownVerification(result: TaskExecutionResult): string {
+    if (!result.verification) return '';
+    const v = result.verification;
+    let section = `## Verification Results\n\n`;
+    section += `- **Verified:** ${v.verified ? '✅ Yes' : '❌ No'}\n`;
+    section += `- **Method:** ${v.verification_method}\n`;
+    section += `- **Verified By:** ${v.verified_by}\n`;
+    if (v.quality_score !== undefined) {
+      section += `- **Quality Score:** ${(v.quality_score * 100).toFixed(1)}%\n`;
+    }
+    if (v.verification_details) {
+      section += `- **Details:** ${v.verification_details}\n`;
+    }
+    return section + '\n';
+  }
+
   private async formatAsMarkdown(result: TaskExecutionResult, contract: DelegationContract): Promise<string> {
     const status = result.success ? '✅ SUCCESS' : '❌ FAILED';
     const complianceScore = this.calculateComplianceScore(result, contract);
     const complianceStatus = complianceScore >= 0.8 ? '✅ COMPLIANT' : '⚠️ NON-COMPLIANT';
-    
+
     let markdown = `# Verification Report\n\n`;
     markdown += `**Contract ID:** \`${contract.contract_id}\`  \n`;
     markdown += `**Status:** ${status}  \n`;
     markdown += `**Compliance:** ${complianceStatus} (${(complianceScore * 100).toFixed(1)}%)  \n`;
     markdown += `**Generated:** ${new Date().toISOString()}  \n\n`;
-    
-    // Execution Summary
+
     markdown += `## Execution Summary\n\n`;
     markdown += `- **Execution Time:** ${result.metrics.execution_time_ms}ms\n`;
-    if (result.metrics.peak_memory_mb) {
-      markdown += `- **Peak Memory:** ${result.metrics.peak_memory_mb}MB\n`;
-    }
-    if (result.metrics.cpu_time_ms) {
-      markdown += `- **CPU Time:** ${result.metrics.cpu_time_ms}ms\n`;
-    }
+    markdown += this.formatMarkdownMetrics(result);
     markdown += `- **Completed At:** ${result.completed_at}\n\n`;
-    
-    // Task Output
-    if (result.success && result.output) {
-      markdown += `## Task Output\n\n`;
-      markdown += `\`\`\`json\n${JSON.stringify(result.output, null, 2)}\n\`\`\`\n\n`;
-    }
-    
-    // Error Details
-    if (!result.success && result.error) {
-      markdown += `## Error Details\n\n`;
-      markdown += `- **Type:** ${result.error.type}\n`;
-      markdown += `- **Message:** ${result.error.message}\n`;
-      if (result.error.details) {
-        markdown += `- **Details:** \`${JSON.stringify(result.error.details)}\`\n`;
-      }
-      markdown += `\n`;
-    }
-    
-    // Verification Results
-    if (result.verification) {
-      markdown += `## Verification Results\n\n`;
-      markdown += `- **Verified:** ${result.verification.verified ? '✅ Yes' : '❌ No'}\n`;
-      markdown += `- **Method:** ${result.verification.verification_method}\n`;
-      markdown += `- **Verified By:** ${result.verification.verified_by}\n`;
-      if (result.verification.quality_score !== undefined) {
-        markdown += `- **Quality Score:** ${(result.verification.quality_score * 100).toFixed(1)}%\n`;
-      }
-      if (result.verification.verification_details) {
-        markdown += `- **Details:** ${result.verification.verification_details}\n`;
-      }
-      markdown += `\n`;
-    }
-    
+
+    markdown += this.formatMarkdownOutput(result);
+    markdown += this.formatMarkdownError(result);
+    markdown += this.formatMarkdownVerification(result);
     markdown += this.formatContractRequirementsMarkdown(contract);
-    
+
     return markdown;
   }
   
