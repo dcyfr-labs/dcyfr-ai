@@ -304,6 +304,48 @@ export class AgentRouter {
   }
 
   /**
+   * Try single agent execution with fallback handling
+   */
+  private async trySingleAgentExecution(
+    agent: Agent,
+    context: AgentExecutionContext,
+    isFallback: boolean,
+    primaryAgentName: string
+  ): Promise<AgentExecutionResult> {
+    const startTime = Date.now();
+    const result = await this.runAgentExecution(agent, context, isFallback, primaryAgentName);
+    return result;
+  }
+
+  /**
+   * Handle agent execution error
+   */
+  private async handleAgentError(
+    agent: Agent,
+    error: Error,
+    context: AgentExecutionContext,
+    isFallback: boolean,
+    primaryAgentName: string
+  ): Promise<AgentExecutionResult> {
+    if (agent.onError) {
+      await agent.onError(error, context);
+    }
+
+    const executionTime = Date.now() - Date.now();
+    return {
+      success: false,
+      agentName: agent.manifest.name,
+      executionTime,
+      fallbackUsed: isFallback,
+      originalAgent: isFallback ? primaryAgentName : undefined,
+      filesModified: [],
+      violations: [],
+      warnings: [],
+      error,
+    };
+  }
+
+  /**
    * Execute task with automatic fallback
    */
   async executeWithFallback(
@@ -315,37 +357,31 @@ export class AgentRouter {
 
     for (let i = 0; i < agents.length; i++) {
       const agent = agents[i];
-      const startTime = Date.now();
+      const isFallback = i > 0;
+      const isLastAgent = i === agents.length - 1;
 
       try {
-        const result = await this.runAgentExecution(agent, context, i > 0, primaryAgent.manifest.name);
+        const result = await this.trySingleAgentExecution(
+          agent,
+          context,
+          isFallback,
+          primaryAgent.manifest.name
+        );
 
-        if (result.success) {
-          return result;
-        }
-
-        if (i === agents.length - 1) {
+        if (result.success || isLastAgent) {
           return result;
         }
 
         console.warn(`⚠️  Agent '${agent.manifest.name}' failed, trying fallback...`);
       } catch (error) {
-        if (agent.onError) {
-          await agent.onError(error as Error, context);
-        }
-
-        if (i === agents.length - 1) {
-          return {
-            success: false,
-            agentName: agent.manifest.name,
-            executionTime: Date.now() - startTime,
-            fallbackUsed: i > 0,
-            originalAgent: i > 0 ? primaryAgent.manifest.name : undefined,
-            filesModified: [],
-            violations: [],
-            warnings: [],
-            error: error as Error,
-          };
+        if (isLastAgent) {
+          return await this.handleAgentError(
+            agent,
+            error as Error,
+            context,
+            isFallback,
+            primaryAgent.manifest.name
+          );
         }
 
         console.warn(

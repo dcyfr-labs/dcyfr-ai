@@ -244,6 +244,25 @@ export class FeatureFlagManager {
   }
 
   /**
+   * Create ordered list of feature checks
+   */
+  private createFeatureChecks(
+    flag: DelegationFeatureFlag,
+    config: FeatureFlagConfig,
+    context: FeatureFlagContext
+  ): Array<() => FeatureEvaluation | null> {
+    return [
+      () => this.checkExpiration(flag, config),
+      () => this.checkMasterSwitch(flag, context),
+      () => this.checkUserOverride(flag, config, context),
+      () => this.checkTenantOverride(flag, config, context),
+      () => this.checkEnvironment(flag, config, context),
+      () => this.checkRollout(flag, config, context),
+      () => this.checkDependencies(flag, config, context),
+    ];
+  }
+
+  /**
    * Evaluate whether a feature is enabled for given context
    */
   isEnabled(
@@ -261,15 +280,7 @@ export class FeatureFlagManager {
     }
     
     // Run all checks in sequence
-    const checks = [
-      () => this.checkExpiration(flag, config),
-      () => this.checkMasterSwitch(flag, context),
-      () => this.checkUserOverride(flag, config, context),
-      () => this.checkTenantOverride(flag, config, context),
-      () => this.checkEnvironment(flag, config, context),
-      () => this.checkRollout(flag, config, context),
-      () => this.checkDependencies(flag, config, context),
-    ];
+    const checks = this.createFeatureChecks(flag, config, context);
 
     for (const check of checks) {
       const result = check();

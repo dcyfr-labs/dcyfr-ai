@@ -340,6 +340,34 @@ export class ProviderRegistry {
   }
 
   /**
+   * Try executing with a single provider
+   */
+  private async tryProviderExecution<T>(
+    provider: ProviderType,
+    task: TaskContext,
+    executor: (provider: ProviderType) => Promise<T>
+  ): Promise<ExecutionResult<T> | null> {
+    // Check provider health first
+    const health = await this.checkProviderHealth(provider);
+    this.healthStatus.set(provider, health);
+
+    if (!health.available) {
+      console.warn(`⚠️  Provider ${provider} not available, skipping...`);
+      return null;
+    }
+
+    // Attempt execution
+    const result = await this.executeWithProvider(provider, task, executor);
+
+    // Update current provider if fallback was used
+    if (result.fallbackUsed && provider !== this.currentProvider) {
+      await this.switchProvider(provider);
+    }
+
+    return result;
+  }
+
+  /**
    * Execute a task with automatic fallback on failure
    */
   public async executeWithFallback<T>(
@@ -351,24 +379,8 @@ export class ProviderRegistry {
 
     for (const provider of providers) {
       try {
-        // Check provider health first
-        const health = await this.checkProviderHealth(provider);
-        this.healthStatus.set(provider, health);
-
-        if (!health.available) {
-          console.warn(`⚠️  Provider ${provider} not available, skipping...`);
-          continue;
-        }
-
-        // Attempt execution
-        const result = await this.executeWithProvider(provider, task, executor);
-
-        // Update current provider if fallback was used
-        if (result.fallbackUsed && provider !== this.currentProvider) {
-          await this.switchProvider(provider);
-        }
-
-        return result;
+        const result = await this.tryProviderExecution(provider, task, executor);
+        if (result) return result;
       } catch (error) {
         lastError = error as Error;
 
