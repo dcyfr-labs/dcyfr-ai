@@ -64,6 +64,35 @@ interface ModelBreakdown {
  */
 export class RuntimeValidator {
   
+  private displayProviderStatus(
+    envVars: Record<ProviderType, { apiKey?: string; endpoint?: string; configured: boolean }>,
+    providerValidation: { available: ProviderType[]; configured: ProviderType[] }
+  ): void {
+    console.log('\n📊 Provider Status:');
+    const setupInstructions = ProviderRegistry.getProviderSetupInstructions();
+    
+    for (const provider of Object.keys(envVars) as ProviderType[]) {
+      const available = providerValidation.available.includes(provider);
+      const configured = providerValidation.configured.includes(provider);
+      const status = available ? '🟢' : configured ? '🟡' : '🔴';
+      const statusText = available ? 'Available' : configured ? 'Configured' : 'Not configured';
+      console.log(`   ${status} ${provider}: ${statusText}`);
+      
+      if (!configured && setupInstructions[provider]) {
+        console.log(`      Missing: ${setupInstructions[provider].environmentVariables.join(', ')}`);
+      }
+    }
+  }
+
+  private displayProviderErrors(errors: Array<{ provider: string; error: string }>): void {
+    if (errors.length === 0) return;
+    
+    console.log('\n⚠️  Provider Errors:');
+    for (const error of errors) {
+      console.log(`   • ${error.provider}: ${error.error}`);
+    }
+  }
+
   private async validateProviders(issues: string[]): Promise<{
     configured: number;
     available: number;
@@ -90,25 +119,8 @@ export class RuntimeValidator {
       issues.push('No providers available - check API keys and network connectivity');
     }
 
-    console.log('\n📊 Provider Status:');
-    const setupInstructions = ProviderRegistry.getProviderSetupInstructions();
-    for (const provider of Object.keys(envVars) as ProviderType[]) {
-      const available = providerValidation.available.includes(provider);
-      const configured = providerValidation.configured.includes(provider);
-      const status = available ? '🟢' : configured ? '🟡' : '🔴';
-      const statusText = available ? 'Available' : configured ? 'Configured' : 'Not configured';
-      console.log(`   ${status} ${provider}: ${statusText}`);
-      if (!configured && setupInstructions[provider]) {
-        console.log(`      Missing: ${setupInstructions[provider].environmentVariables.join(', ')}`);
-      }
-    }
-
-    if (providerValidation.errors.length > 0) {
-      console.log('\n⚠️  Provider Errors:');
-      for (const error of providerValidation.errors) {
-        console.log(`   • ${error.provider}: ${error.error}`);
-      }
-    }
+    this.displayProviderStatus(envVars, providerValidation);
+    this.displayProviderErrors(providerValidation.errors);
 
     return {
       configured: providerValidation.configured.length,
@@ -145,6 +157,34 @@ export class RuntimeValidator {
     return memoryConfigured;
   }
 
+  private async validateTelemetryDatabase(): Promise<boolean> {
+    console.log('\n📈 Checking Telemetry Configuration...');
+    const telemetryPath = join(homedir(), '.dcyfr', 'telemetry.db');
+    
+    try {
+      await fs.access(telemetryPath);
+      console.log(`   ✓ Telemetry database found: ${telemetryPath}`);
+      return true;
+    } catch {
+      console.log(`   🟡 Telemetry database not found: ${telemetryPath}`);
+      console.log(`   ℹ️  Database will be created on first use`);
+      return true;
+    }
+  }
+
+  private displayValidationSummary(valid: boolean, issues: string[]): void {
+    console.log('\n📋 Validation Summary:');
+    
+    if (valid) {
+      console.log('   🎉 Runtime environment is properly configured!');
+    } else {
+      console.log('   ⚠️  Issues found:');
+      for (const issue of issues) {
+        console.log(`      • ${issue}`);
+      }
+    }
+  }
+
   /**
    * Validate the complete runtime environment
    */
@@ -164,31 +204,13 @@ export class RuntimeValidator {
 
     // 2. Validate Memory Configuration
     const memoryConfigured = this.validateMemoryProviders(issues);
-    console.log('\n📈 Checking Telemetry Configuration...');
-    let telemetryConfigured = true;
-    
-    const telemetryPath = join(homedir(), '.dcyfr', 'telemetry.db');
-    
-    try {
-      await fs.access(telemetryPath);
-      console.log(`   ✓ Telemetry database found: ${telemetryPath}`);
-    } catch {
-      console.log(`   🟡 Telemetry database not found: ${telemetryPath}`);
-      console.log(`   ℹ️  Database will be created on first use`);
-    }
 
-    // 4. Summary
-    console.log('\n📋 Validation Summary:');
+    // 3. Validate Telemetry Configuration
+    const telemetryConfigured = await this.validateTelemetryDatabase();
+
+    // 4. Display Summary
     const valid = issues.length === 0;
-    
-    if (valid) {
-      console.log('   🎉 Runtime environment is properly configured!');
-    } else {
-      console.log('   ⚠️  Issues found:');
-      for (const issue of issues) {
-        console.log(`      • ${issue}`);
-      }
-    }
+    this.displayValidationSummary(valid, issues);
 
     return {
       valid,
