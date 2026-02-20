@@ -221,6 +221,35 @@ export class CapabilityRegistry {
     return results;
   }
 
+  /** Check capability category against criteria — returns null if criterion not applicable */
+  private checkCategoryMatch(capability: AgentCapability, criteria: CapabilityMatchCriteria): { match: boolean; bonus: number } | null {
+    if (!criteria.required_categories || criteria.required_categories.length === 0) return null;
+    const match = criteria.required_categories.includes(capability.category);
+    return { match, bonus: match ? 0.3 : 0 };
+  }
+
+  /** Check capability confidence against minimum threshold */
+  private checkConfidenceMatch(capability: AgentCapability, criteria: CapabilityMatchCriteria): { match: boolean; bonus: number } | null {
+    if (criteria.min_confidence === undefined) return null;
+    const match = capability.confidence_level >= criteria.min_confidence;
+    return { match, bonus: match ? 0.3 * (capability.confidence_level / criteria.min_confidence) : 0 };
+  }
+
+  /** Check capability proficiency level against minimum required */
+  private checkProficiencyMatch(capability: AgentCapability, criteria: CapabilityMatchCriteria): { match: boolean; bonus: number } | null {
+    if (!criteria.min_proficiency_level) return null;
+    const score = this.getProficiencyScore(capability.proficiency_level);
+    const min = this.getProficiencyScore(criteria.min_proficiency_level);
+    return { match: score >= min, bonus: score >= min ? 0.2 : 0 };
+  }
+
+  /** Check capability completion time against maximum allowed */
+  private checkCompletionTimeMatch(capability: AgentCapability, criteria: CapabilityMatchCriteria): { match: boolean; bonus: number } | null {
+    if (criteria.max_completion_time_ms === undefined) return null;
+    const match = capability.estimated_completion_time_ms <= criteria.max_completion_time_ms;
+    return { match, bonus: match ? 0.2 : 0 };
+  }
+
   /**
    * Match agents to task requirements
    */
@@ -228,67 +257,50 @@ export class CapabilityRegistry {
     capability: AgentCapability,
     criteria: CapabilityMatchCriteria
   ): { matches: boolean; score: number } {
-    let capabilityMatchScore = 0;
-    let matches = true;
+    const checks = [
+      this.checkCategoryMatch(capability, criteria),
+      this.checkConfidenceMatch(capability, criteria),
+      this.checkProficiencyMatch(capability, criteria),
+      this.checkCompletionTimeMatch(capability, criteria),
+    ].filter((c): c is { match: boolean; bonus: number } => c !== null);
 
-    // Category match
-    if (criteria.required_categories && criteria.required_categories.length > 0) {
-      if (!criteria.required_categories.includes(capability.category)) {
-        matches = false;
-      } else {
-        capabilityMatchScore += 0.3;
-      }
-    }
+    const matches = checks.length === 0 || checks.every(c => c.match);
+    const score = checks.reduce((sum, c) => sum + c.bonus, 0);
+    return { matches, score };
+  }
 
-    // Confidence threshold
-    if (criteria.min_confidence !== undefined) {
-      if (capability.confidence_level < criteria.min_confidence) {
-        matches = false;
-      } else {
-        capabilityMatchScore += 0.3 * (capability.confidence_level / criteria.min_confidence);
-      }
-    }
+  /** Check if an agent manifest meets capacity and TLP eligibility criteria */
+  private isAgentEligible(manifest: AgentCapabilityManifest, criteria: CapabilityMatchCriteria): boolean {
+    if (criteria.exclude_at_capacity && manifest.current_workload && manifest.current_workload >= 1.0) return false;
+    if (criteria.required_tlp_clearance && !manifest.tlp_clearance?.includes(criteria.required_tlp_clearance)) return false;
+    return true;
+  }
 
-    // Proficiency level
-    if (criteria.min_proficiency_level) {
-      const proficiencyScore = this.getProficiencyScore(capability.proficiency_level);
-      const minProficiencyScore = this.getProficiencyScore(criteria.min_proficiency_level);
-      if (proficiencyScore < minProficiencyScore) {
-        matches = false;
-      } else {
-        capabilityMatchScore += 0.2;
-      }
-    }
-
-    // Completion time
-    if (criteria.max_completion_time_ms !== undefined) {
-      if (capability.estimated_completion_time_ms > criteria.max_completion_time_ms) {
-        matches = false;
-      } else {
-        capabilityMatchScore += 0.2;
-      }
-    }
-
-    return { matches, score: capabilityMatchScore };
+  /** Build a CapabilityMatchResult from matched capabilities */
+  private buildAgentMatchResult(
+    manifest: AgentCapabilityManifest,
+    matchedCapabilities: AgentCapability[],
+    totalMatchScore: number
+  ): CapabilityMatchResult {
+    const aggregateConfidence = matchedCapabilities.reduce((sum, cap) => sum + cap.confidence_level, 0) / matchedCapabilities.length;
+    const estimatedTime = Math.max(...matchedCapabilities.map(cap => cap.estimated_completion_time_ms));
+    return {
+      agent_id: manifest.agent_id,
+      agent_name: manifest.agent_name,
+      matched_capabilities: matchedCapabilities,
+      match_score: totalMatchScore / matchedCapabilities.length,
+      aggregate_confidence: aggregateConfidence,
+      estimated_completion_time_ms: estimatedTime,
+      meets_all_criteria: true,
+    };
   }
 
   matchAgents(criteria: CapabilityMatchCriteria): CapabilityMatchResult[] {
     const results: CapabilityMatchResult[] = [];
 
     for (const manifest of this.manifests.values()) {
-      // Check availability
-      if (criteria.exclude_at_capacity && manifest.current_workload && manifest.current_workload >= 1.0) {
-        continue;
-      }
+      if (!this.isAgentEligible(manifest, criteria)) continue;
 
-      // Check TLP clearance
-      if (criteria.required_tlp_clearance) {
-        if (!manifest.tlp_clearance?.includes(criteria.required_tlp_clearance)) {
-          continue;
-        }
-      }
-
-      // Find matching capabilities
       const matchedCapabilities: AgentCapability[] = [];
       let totalMatchScore = 0;
 
@@ -300,26 +312,8 @@ export class CapabilityRegistry {
         }
       }
 
-      // Only include agents with matching capabilities
       if (matchedCapabilities.length > 0) {
-        const aggregateConfidence = matchedCapabilities.reduce(
-          (sum, cap) => sum + cap.confidence_level, 
-          0
-        ) / matchedCapabilities.length;
-
-        const estimatedTime = Math.max(
-          ...matchedCapabilities.map(cap => cap.estimated_completion_time_ms)
-        );
-
-        results.push({
-          agent_id: manifest.agent_id,
-          agent_name: manifest.agent_name,
-          matched_capabilities: matchedCapabilities,
-          match_score: totalMatchScore / matchedCapabilities.length,
-          aggregate_confidence: aggregateConfidence,
-          estimated_completion_time_ms: estimatedTime,
-          meets_all_criteria: true,
-        });
+        results.push(this.buildAgentMatchResult(manifest, matchedCapabilities, totalMatchScore));
       }
     }
 

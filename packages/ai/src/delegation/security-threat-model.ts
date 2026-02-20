@@ -389,6 +389,28 @@ export class SecurityThreatValidator {
     return usual_hours[current_hour] === undefined && Object.keys(usual_hours).length > 5;
   }
 
+  /** Build a high-detail anomaly ThreatDetectionResult from accumulated score */
+  private buildAnomalyThreat(
+    anomaly_score: number,
+    suspicious_patterns: string[],
+    contract: DelegationContract
+  ): ThreatDetectionResult {
+    const isCritical = anomaly_score > 0.6;
+    const isModerate = anomaly_score > 0.4;
+    return {
+      threat_detected: true,
+      threat_type: 'anomaly',
+      severity: isCritical ? 'high' : isModerate ? 'medium' : 'low',
+      description: `Anomalous delegation behavior detected with score ${anomaly_score.toFixed(2)}`,
+      action: isCritical ? 'escalate' : isModerate ? 'warn' : 'allow',
+      evidence: {
+        metrics: { anomaly_score, pattern_count: suspicious_patterns.length },
+        related_entities: [contract.delegator_agent_id],
+      },
+      confidence: Math.min(anomaly_score, 0.9)
+    };
+  }
+
   /**
    * Detect anomalous delegation behavior
    */
@@ -421,18 +443,7 @@ export class SecurityThreatValidator {
     }
 
     if (anomaly_score > 0.3) {
-      return {
-        threat_detected: true,
-        threat_type: 'anomaly',
-        severity: anomaly_score > 0.6 ? 'high' : anomaly_score > 0.4 ? 'medium' : 'low',
-        description: `Anomalous delegation behavior detected with score ${anomaly_score.toFixed(2)}`,
-        action: anomaly_score > 0.6 ? 'escalate' : anomaly_score > 0.4 ? 'warn' : 'allow',
-        evidence: {
-          metrics: { anomaly_score, pattern_count: suspicious_patterns.length },
-          related_entities: [contract.delegator_agent_id],
-        },
-        confidence: Math.min(anomaly_score, 0.9)
-      };
+      return this.buildAnomalyThreat(anomaly_score, suspicious_patterns, contract);
     }
 
     return { threat_detected: false, threat_type: 'none', severity: 'low', description: 'No anomalies detected', action: 'allow', evidence: {}, confidence: 0.1 };
@@ -606,6 +617,40 @@ export class SecurityThreatValidator {
     return { risk, patterns };
   }
 
+  /** Build a context-insufficiency ThreatDetectionResult from accumulated risk score */
+  private buildContextInsufficiencyThreat(
+    risk_score: number,
+    suspicious_patterns: string[],
+    contract: DelegationContract,
+    estimatedComplexity: number | undefined
+  ): ThreatDetectionResult {
+    const isHigh = risk_score > 0.7;
+    const isMedium = risk_score > 0.5;
+    return {
+      threat_detected: true,
+      threat_type: 'context_insufficiency',
+      severity: isHigh ? 'high' : isMedium ? 'medium' : 'low',
+      description: `Context insufficiency risk detected (score: ${risk_score.toFixed(2)}) — delegatee agent may make assumption-based decisions`,
+      action: isHigh ? 'block' : 'warn',
+      evidence: {
+        metrics: {
+          risk_score,
+          pattern_count: suspicious_patterns.length,
+          estimated_complexity: estimatedComplexity ?? 0,
+          has_success_criteria: (contract.success_criteria?.required_checks?.length ?? 0) > 0 ? 1 : 0,
+          context_verification_required: contract.context_verification_required ? 1 : 0,
+        },
+        related_entities: [contract.delegator_agent_id, contract.delegatee_agent_id],
+        activity_timeline: [{
+          timestamp: new Date().toISOString(),
+          event: 'context_insufficiency_analysis',
+          details: { suspicious_patterns, contract_id: contract.contract_id }
+        }]
+      },
+      confidence: Math.min(risk_score, 0.9)
+    };
+  }
+
   private async detectContextInsufficiency(contract: DelegationContract): Promise<ThreatDetectionResult> {
     const suspicious_patterns: string[] = [];
     let risk_score = 0;
@@ -639,29 +684,7 @@ export class SecurityThreatValidator {
     suspicious_patterns.push(...scopeCheck.patterns);
 
     if (risk_score > 0.3) {
-      return {
-        threat_detected: true,
-        threat_type: 'context_insufficiency',
-        severity: risk_score > 0.7 ? 'high' : risk_score > 0.5 ? 'medium' : 'low',
-        description: `Context insufficiency risk detected (score: ${risk_score.toFixed(2)}) — delegatee agent may make assumption-based decisions`,
-        action: risk_score > 0.7 ? 'block' : 'warn',
-        evidence: {
-          metrics: {
-            risk_score,
-            pattern_count: suspicious_patterns.length,
-            estimated_complexity: estimatedComplexity ?? 0,
-            has_success_criteria: (contract.success_criteria?.required_checks?.length ?? 0) > 0 ? 1 : 0,
-            context_verification_required: contract.context_verification_required ? 1 : 0,
-          },
-          related_entities: [contract.delegator_agent_id, contract.delegatee_agent_id],
-          activity_timeline: [{
-            timestamp: new Date().toISOString(),
-            event: 'context_insufficiency_analysis',
-            details: { suspicious_patterns, contract_id: contract.contract_id }
-          }]
-        },
-        confidence: Math.min(risk_score, 0.9)
-      };
+      return this.buildContextInsufficiencyThreat(risk_score, suspicious_patterns, contract, estimatedComplexity);
     }
 
     return {
