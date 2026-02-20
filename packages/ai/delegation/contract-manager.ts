@@ -326,6 +326,40 @@ export class DelegationContractManager extends EventEmitter {
   /**
    * Query contracts with filters
    */
+  /** Add status condition (array or single value) */
+  private addStatusCondition(
+    status: ContractQueryOptions['status'],
+    conditions: string[],
+    params: any[]
+  ): void {
+    if (!status) return;
+    if (Array.isArray(status)) {
+      conditions.push(`status IN (${status.map(() => '?').join(',')})`);
+      params.push(...status);
+    } else {
+      conditions.push('status = ?');
+      params.push(status);
+    }
+  }
+
+  /** Append ORDER BY / LIMIT / OFFSET clauses */
+  private appendQueryTail(
+    query: string,
+    options: ContractQueryOptions,
+    params: any[]
+  ): string {
+    if (options.sort_by) {
+      query += ` ORDER BY ${options.sort_by} ${options.sort_order === 'asc' ? 'ASC' : 'DESC'}`;
+    }
+    if (options.limit !== undefined) { query += ' LIMIT ?'; params.push(options.limit); }
+    if (options.offset !== undefined) {
+      if (options.limit === undefined) query += ' LIMIT -1';
+      query += ' OFFSET ?';
+      params.push(options.offset);
+    }
+    return query;
+  }
+
   /** Build WHERE clause and params from query options */
   private buildQueryFromOptions(options: ContractQueryOptions): { query: string; params: any[] } {
     const conditions: string[] = [];
@@ -338,15 +372,7 @@ export class DelegationContractManager extends EventEmitter {
     if (delegateeId) { conditions.push('delegatee_agent_id = ?'); params.push(delegateeId); }
     if (options.task_id) { conditions.push('task_id = ?'); params.push(options.task_id); }
 
-    if (options.status) {
-      if (Array.isArray(options.status)) {
-        conditions.push(`status IN (${options.status.map(() => '?').join(',')})`);
-        params.push(...options.status);
-      } else {
-        conditions.push('status = ?');
-        params.push(options.status);
-      }
-    }
+    this.addStatusCondition(options.status, conditions, params);
 
     if (options.delegation_depth !== undefined) { conditions.push('delegation_depth = ?'); params.push(options.delegation_depth); }
     if (options.parent_contract_id) { conditions.push('parent_contract_id = ?'); params.push(options.parent_contract_id); }
@@ -354,14 +380,7 @@ export class DelegationContractManager extends EventEmitter {
 
     let query = 'SELECT * FROM delegation_contracts';
     if (conditions.length > 0) query += ' WHERE ' + conditions.join(' AND ');
-    if (options.sort_by) query += ` ORDER BY ${options.sort_by} ${options.sort_order === 'asc' ? 'ASC' : 'DESC'}`;
-
-    if (options.limit !== undefined) { query += ' LIMIT ?'; params.push(options.limit); }
-    if (options.offset !== undefined) {
-      if (options.limit === undefined) query += ' LIMIT -1';
-      query += ' OFFSET ?';
-      params.push(options.offset);
-    }
+    query = this.appendQueryTail(query, options, params);
 
     return { query, params };
   }

@@ -735,51 +735,50 @@ export class AgentRuntime {
    * Parse LLM response into Decision object
    * Supports both tool_use format and text-based format
    */
+  /** Parse Anthropic-style tool_use response from content array */
+  private parseToolUseContent(
+    content: any[]
+  ): Decision | null {
+    const textBlock = content.find((block: any) => block.type === 'text');
+    const toolBlock = content.find((block: any) => block.type === 'tool_use');
+    if (!toolBlock) return null;
+    return {
+      thought: textBlock?.text || 'Using tool',
+      action: { tool: toolBlock.name, input: toolBlock.input },
+    };
+  }
+
+  /** Parse an object-shaped response into a Decision */
+  private parseObjectResponse(resp: Record<string, unknown>, original: unknown): Decision {
+    // Check for tool_use format (Anthropic-style)
+    if (resp.content && Array.isArray(resp.content)) {
+      const toolUse = this.parseToolUseContent(resp.content);
+      if (toolUse) return toolUse;
+    }
+    // Check for direct action format
+    if (resp.action) {
+      return {
+        thought: typeof resp.thought === 'string' ? resp.thought : 'Decision made',
+        action: resp.action as { tool: string; input: Record<string, unknown> },
+      };
+    }
+    // Extract text content for text-based parsing
+    const textContent =
+      typeof resp.content === 'string' ? resp.content :
+      typeof resp.text === 'string' ? resp.text :
+      String(original);
+    return this.parseTextDecision(textContent);
+  }
+
   private parseDecision(response: unknown): Decision {
     try {
-      // Try parsing as structured tool_use response first
       if (typeof response === 'object' && response !== null) {
-        const resp = response as Record<string, unknown>;
-        
-        // Check for tool_use format (Anthropic-style)
-        if (resp.content && Array.isArray(resp.content)) {
-          const textBlock = resp.content.find((block: any) => block.type === 'text');
-          const toolBlock = resp.content.find((block: any) => block.type === 'tool_use');
-          
-          if (toolBlock) {
-            return {
-              thought: textBlock?.text || 'Using tool',
-              action: {
-                tool: toolBlock.name,
-                input: toolBlock.input,
-              },
-            };
-          }
-        }
-        
-        // Check for direct action format
-        if (resp.action) {
-          return {
-            thought: typeof resp.thought === 'string' ? resp.thought : 'Decision made',
-            action: resp.action as { tool: string; input: Record<string, unknown> },
-          };
-        }
-        
-        // Extract text content for text-based parsing
-        const textContent = typeof resp.content === 'string' ? resp.content : 
-                           typeof resp.text === 'string' ? resp.text :
-                           String(response);
-        return this.parseTextDecision(textContent);
+        return this.parseObjectResponse(response as Record<string, unknown>, response);
       }
-      
-      // Fallback to text parsing
       return this.parseTextDecision(String(response));
     } catch (error) {
       console.error('[AgentRuntime] Decision parsing failed:', error);
-      return {
-        thought: 'Error parsing response',
-        action: undefined,
-      };
+      return { thought: 'Error parsing response', action: undefined };
     }
   }
 

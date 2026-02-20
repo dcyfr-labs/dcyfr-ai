@@ -42,13 +42,48 @@ export function createDesignTokenServer(provider: TokenProvider) {
   // Validation Logic
   // ============================================================================
 
+  /** Check a single className for spacing, typography, and color violations */
+  function checkClassNameViolation(className: string): TokenViolation | null {
+    if (/^(gap|space-[xy]|p[trblxy]?|m[trblxy]?|w|h)-\d+$/.test(className)) {
+      const matched = /^(gap|space-[xy]|p[trblxy]?|m[trblxy]?|w|h)-(\d+)$/.exec(className);
+      if (matched) {
+        return {
+          type: 'hardcoded-value',
+          className,
+          suggestion: `Use SPACING constant instead: gap-\${SPACING.content}`,
+          category: 'spacing',
+        };
+      }
+    }
+    if (
+      /^text-\d+xl$/.test(className) ||
+      /^font-(normal|medium|semibold|bold)$/.test(className)
+    ) {
+      return {
+        type: 'hardcoded-value',
+        className,
+        suggestion: 'Use TYPOGRAPHY constant instead: TYPOGRAPHY.h1.standard',
+        category: 'typography',
+      };
+    }
+    if (/^(text|bg|border)-(gray|zinc|slate|red|green|blue|yellow)-\d+$/.test(className)) {
+      return {
+        type: 'hardcoded-value',
+        className,
+        suggestion: 'Use COLORS constant instead',
+        category: 'colors',
+      };
+    }
+    return null;
+  }
+
   /**
    * Validate code against design tokens
    */
   function validateCode(code: string): ValidationResult {
     const violations: TokenViolation[] = [];
     const suggestions: string[] = [];
-    const categories = provider.getTokenCategories();
+    void provider.getTokenCategories(); // consumed by suggestToken
 
     // Extract all className strings
     const classNameMatches = code.matchAll(
@@ -56,57 +91,18 @@ export function createDesignTokenServer(provider: TokenProvider) {
     );
 
     let totalClasses = 0;
-    let violationCount = 0;
 
     for (const match of classNameMatches) {
       const classNames = (match[1] || match[2] || '').split(/\s+/).filter(Boolean);
-
       for (const className of classNames) {
         totalClasses++;
-
-        // Check spacing violations
-        if (/^(gap|space-[xy]|p[trblxy]?|m[trblxy]?|w|h)-\d+$/.test(className)) {
-          const matched = /^(gap|space-[xy]|p[trblxy]?|m[trblxy]?|w|h)-(\d+)$/.exec(className);
-          if (matched) {
-            violations.push({
-              type: 'hardcoded-value',
-              className,
-              suggestion: `Use SPACING constant instead: gap-\${SPACING.content}`,
-              category: 'spacing',
-            });
-            violationCount++;
-          }
-        }
-
-        // Check typography violations
-        if (
-          /^text-\d+xl$/.test(className) ||
-          /^font-(normal|medium|semibold|bold)$/.test(className)
-        ) {
-          violations.push({
-            type: 'hardcoded-value',
-            className,
-            suggestion: 'Use TYPOGRAPHY constant instead: TYPOGRAPHY.h1.standard',
-            category: 'typography',
-          });
-          violationCount++;
-        }
-
-        // Check color violations
-        if (/^(text|bg|border)-(gray|zinc|slate|red|green|blue|yellow)-\d+$/.test(className)) {
-          violations.push({
-            type: 'hardcoded-value',
-            className,
-            suggestion: 'Use COLORS constant instead',
-            category: 'colors',
-          });
-          violationCount++;
-        }
+        const violation = checkClassNameViolation(className);
+        if (violation) violations.push(violation);
       }
     }
 
     const compliance =
-      totalClasses > 0 ? Math.round(((totalClasses - violationCount) / totalClasses) * 100) : 100;
+      totalClasses > 0 ? Math.round(((totalClasses - violations.length) / totalClasses) * 100) : 100;
 
     if (violations.length > 0) {
       suggestions.push(provider.getTokenImportStatement());

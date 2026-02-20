@@ -21,6 +21,58 @@ import { Redis } from '@upstash/redis';
 let redisClient: Redis | null = null;
 
 /**
+ * Get production Redis credentials
+ */
+function getProductionCredentials(): { url: string; token: string } | null {
+  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (!url || !token) {
+    console.error('❌ CRITICAL: Production Redis credentials missing');
+    return null;
+  }
+  return { url, token };
+}
+
+/**
+ * Get preview Redis credentials (with production fallback)
+ */
+function getPreviewCredentials(): { url: string; token: string } | null {
+  const url = process.env.UPSTASH_REDIS_REST_URL_PREVIEW;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN_PREVIEW;
+  if (url && token) {
+    console.warn('Preview Redis connected (shared preview database)');
+    return { url, token };
+  }
+  // ✅ FIX: Check production credentials exist before using as fallback
+  const prodUrl = process.env.UPSTASH_REDIS_REST_URL;
+  const prodToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (prodUrl && prodToken) {
+    console.warn('⚠️ Preview Redis not configured, using production credentials (unsafe!)');
+    return { url: prodUrl, token: prodToken };
+  }
+  console.error(
+    '❌ Preview Redis credentials missing (UPSTASH_REDIS_REST_URL_PREVIEW and UPSTASH_REDIS_REST_TOKEN_PREVIEW)'
+  );
+  return null;
+}
+
+/**
+ * Get development Redis credentials (graceful degradation)
+ */
+function getDevelopmentCredentials(): { url: string; token: string } | null {
+  const url = process.env.UPSTASH_REDIS_REST_URL_PREVIEW;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN_PREVIEW;
+  if (url && token) {
+    console.warn('Development Redis connected (shared preview database)');
+    return { url, token };
+  }
+  if (process.env.NODE_ENV !== 'test') {
+    console.warn('ℹ️ Development Redis not configured, analytics/caching disabled');
+  }
+  return null;
+}
+
+/**
  * Get environment-specific Redis credentials
  * Returns null for test environment (uses in-memory fallback)
  */
@@ -31,60 +83,10 @@ function getRedisCredentials(): { url: string; token: string } | null {
   const isDevelopment = process.env.NODE_ENV === 'development';
   const isTest = process.env.NODE_ENV === 'test';
 
-  // Test environment: No Redis (in-memory fallback)
-  if (isTest) {
-    return null;
-  }
-
-  // Production: Use production credentials
-  if (isProduction) {
-    const url = process.env.UPSTASH_REDIS_REST_URL;
-    const token = process.env.UPSTASH_REDIS_REST_TOKEN;
-    if (!url || !token) {
-      console.error('❌ CRITICAL: Production Redis credentials missing');
-      return null;
-    }
-    return { url, token };
-  }
-
-  // Preview: Use preview credentials with production fallback
-  if (isPreview) {
-    const url = process.env.UPSTASH_REDIS_REST_URL_PREVIEW;
-    const token = process.env.UPSTASH_REDIS_REST_TOKEN_PREVIEW;
-    if (url && token) {
-      console.warn('Preview Redis connected (shared preview database)');
-      return { url, token };
-    }
-    // ✅ FIX: Check production credentials exist before using as fallback
-    const prodUrl = process.env.UPSTASH_REDIS_REST_URL;
-    const prodToken = process.env.UPSTASH_REDIS_REST_TOKEN;
-    if (prodUrl && prodToken) {
-      console.warn('⚠️ Preview Redis not configured, using production credentials (unsafe!)');
-      return { url: prodUrl, token: prodToken };
-    }
-    // No credentials available
-    console.error(
-      '❌ Preview Redis credentials missing (UPSTASH_REDIS_REST_URL_PREVIEW and UPSTASH_REDIS_REST_TOKEN_PREVIEW)'
-    );
-    return null;
-  }
-
-  // Development: Use shared preview database with key namespacing
-  // Graceful degradation: features disabled, no errors
-  if (isDevelopment) {
-    const url = process.env.UPSTASH_REDIS_REST_URL_PREVIEW;
-    const token = process.env.UPSTASH_REDIS_REST_TOKEN_PREVIEW;
-    if (url && token) {
-      console.warn('Development Redis connected (shared preview database)');
-      return { url, token };
-    }
-    // Graceful degradation: No warning in production logs
-    if (process.env.NODE_ENV !== 'test') {
-      console.warn('ℹ️ Development Redis not configured, analytics/caching disabled');
-    }
-    return null;
-  }
-
+  if (isTest) return null;
+  if (isProduction) return getProductionCredentials();
+  if (isPreview) return getPreviewCredentials();
+  if (isDevelopment) return getDevelopmentCredentials();
   return null;
 }
 
