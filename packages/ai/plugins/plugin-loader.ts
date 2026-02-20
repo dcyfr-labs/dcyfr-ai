@@ -81,54 +81,50 @@ export class PluginLoader {
     };
   }
 
+  /** Resolve plugin from path string (dynamic import) or direct object reference */
+  private async resolvePlugin(pluginPath: string | Plugin): Promise<Plugin> {
+    if (typeof pluginPath === 'string') {
+      const module = await import(pluginPath);
+      return module.default || module;
+    }
+    return pluginPath;
+  }
+
+  /** Validate, deduplicate, initialize, and store a loaded plugin instance */
+  private async registerPlugin(plugin: Plugin): Promise<void> {
+    this.validateManifest(plugin.manifest);
+    if (this.plugins.has(plugin.manifest.name)) {
+      throw new PluginValidationError(
+        `Plugin '${plugin.manifest.name}' is already loaded`,
+        plugin.manifest.name
+      );
+    }
+    if (plugin.onLoad) {
+      await this.executeWithTimeout(
+        () => plugin.onLoad!(),
+        this.config.timeout!,
+        `onLoad hook for ${plugin.manifest.name}`
+      );
+    }
+    this.plugins.set(plugin.manifest.name, {
+      name: plugin.manifest.name,
+      manifest: plugin.manifest,
+      plugin,
+      loaded: new Date(),
+      enabled: true,
+    });
+    console.log(`✅ Loaded plugin: ${plugin.manifest.name} v${plugin.manifest.version}`);
+  }
+
   /**
    * Load a plugin by module path or object
    */
   async loadPlugin(pluginPath: string | Plugin): Promise<void> {
     try {
-      let plugin: Plugin;
-
-      if (typeof pluginPath === 'string') {
-        // Dynamic import
-        const module = await import(pluginPath);
-        plugin = module.default || module;
-      } else {
-        plugin = pluginPath;
-      }
-
-      // Validate manifest
-      this.validateManifest(plugin.manifest);
-
-      // Check for duplicates
-      if (this.plugins.has(plugin.manifest.name)) {
-        throw new PluginValidationError(
-          `Plugin '${plugin.manifest.name}' is already loaded`,
-          plugin.manifest.name
-        );
-      }
-
-      // Call onLoad hook if present
-      if (plugin.onLoad) {
-        await this.executeWithTimeout(
-          () => plugin.onLoad!(),
-          this.config.timeout!,
-          `onLoad hook for ${plugin.manifest.name}`
-        );
-      }
-
-      // Store plugin
-      this.plugins.set(plugin.manifest.name, {
-        name: plugin.manifest.name,
-        manifest: plugin.manifest,
-        plugin,
-        loaded: new Date(),
-        enabled: true,
-      });
-
-      console.log(`✅ Loaded plugin: ${plugin.manifest.name} v${plugin.manifest.version}`);
+      const plugin = await this.resolvePlugin(pluginPath);
+      await this.registerPlugin(plugin);
     } catch (error) {
       const pluginName = typeof pluginPath === 'string' ? pluginPath : 'unknown';
-      
       if (this.config.failureMode === 'throw') {
         throw new PluginLoadError(
           `Failed to load plugin: ${error instanceof Error ? error.message : String(error)}`,

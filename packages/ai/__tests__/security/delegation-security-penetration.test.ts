@@ -192,39 +192,23 @@ class ContractManager {
     }
   }
 
-  private detectPermissionEscalation(permissions: PermissionToken, parentContractId?: string): void {
-    if (!parentContractId) return;
-    
-    const parent = this.contracts.get(parentContractId);
-    if (!parent) return;
-    
-    // Check if child permissions exceed parent permissions
-    const parentScopes = new Set(parent.permissions.scope);
-    const childScopes = permissions.scope;
-    
-    // Every child scope must be covered by at least one parent scope
-    for (const childScope of childScopes) {
-      let isCovered = false;
-      
-      for (const parentScope of parentScopes) {
-        // Check if parent scope covers child scope
-        if (parentScope === childScope) {
-          isCovered = true;
-          break;
-        }
-        
-        // Check if parent has wildcard that covers child
-        if (parentScope.includes('*')) {
-          const parentPrefix = parentScope.split(':')[0];
-          const childPrefix = childScope.split(':')[0];
-          if (parentPrefix === childPrefix) {
-            isCovered = true;
-            break;
-          }
-        }
+  /** Check if a single child scope is covered by any scope in the parent set */
+  private isScopeCovered(childScope: string, parentScopes: Set<string>): boolean {
+    for (const parentScope of parentScopes) {
+      if (parentScope === childScope) return true;
+      if (parentScope.includes('*')) {
+        const parentPrefix = parentScope.split(':')[0];
+        const childPrefix = childScope.split(':')[0];
+        if (parentPrefix === childPrefix) return true;
       }
-      
-      if (!isCovered) {
+    }
+    return false;
+  }
+
+  /** Validate that no child scope exceeds parent scope coverage */
+  private validateChildScopes(childScopes: string[], parentScopes: Set<string>): void {
+    for (const childScope of childScopes) {
+      if (!this.isScopeCovered(childScope, parentScopes)) {
         this.logThreat({
           type: 'permission_escalation',
           severity: 'critical',
@@ -236,11 +220,10 @@ class ContractManager {
         throw new Error('Permission escalation detected: child exceeds parent scope');
       }
     }
-    
-    // Check if child actions exceed parent actions
-    const parentActions = new Set(parent.permissions.allowedActions);
-    const childActions = permissions.allowedActions;
-    
+  }
+
+  /** Validate that no child action exceeds parent allowed actions */
+  private validateChildActions(childActions: string[], parentActions: Set<string>): void {
     for (const action of childActions) {
       if (!parentActions.has(action)) {
         this.logThreat({
@@ -254,6 +237,15 @@ class ContractManager {
         throw new Error('Permission escalation detected: child exceeds parent scope');
       }
     }
+  }
+
+  private detectPermissionEscalation(permissions: PermissionToken, parentContractId?: string): void {
+    if (!parentContractId) return;
+    const parent = this.contracts.get(parentContractId);
+    if (!parent) return;
+
+    this.validateChildScopes(permissions.scope, new Set(parent.permissions.scope));
+    this.validateChildActions(permissions.allowedActions, new Set(parent.permissions.allowedActions));
   }
 
   validateContract(contractId: string): boolean {
