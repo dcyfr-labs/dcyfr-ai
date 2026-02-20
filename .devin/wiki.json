@@ -1,0 +1,64 @@
+{
+  "repo_notes": [
+    {
+      "content": "dcyfr-ai is the public AI agent framework package (@dcyfr/ai on npm). Provides core abstractions for building AI agents with MCP (Model Context Protocol) integration, LLM provider support, and agent lifecycle management. Published as open-source MIT licensed package.",
+      "author": "DCYFR Workspace Agent"
+    },
+    {
+      "content": "Architecture: packages/ai/ contains core framework with agents/, agents-builtin/ (15 generic agents), llm/ (LLM providers), mcp/ (Model Context Protocol servers), runtime/ (agent execution). Designed for extensibility through plugin system and agent manifests.",
+      "author": "DCYFR Workspace Agent"
+    },
+    {
+      "content": "Priority documentation: packages/ai/agents/ (agent abstractions, loader, manifest schema), packages/ai/agents-builtin/ (15 built-in agents like cli-expert, security-engineer, test-engineer), packages/ai/llm/ (OpenAI, Anthropic, Ollama providers), packages/ai/mcp/ (MCP server implementations), packages/ai/runtime/ (agent execution engine).",
+      "author": "DCYFR Workspace Agent"
+    },
+    {
+      "content": "Key patterns: Agent manifests define capabilities/permissions/tools (YAML frontmatter + markdown body), MCP servers provide tool context, LLM providers abstract API differences, runtime orchestrates agent execution with memory/delegation support. See docs/architecture/ for ADRs.",
+      "author": "DCYFR Workspace Agent"
+    }
+  ],
+  "pages": [
+    {
+      "title": "Framework Architecture",
+      "purpose": "High-level architecture of @dcyfr/ai framework, core concepts (agents, manifests, MCP, providers, runtime), design philosophy, extensibility model"
+    },
+    {
+      "title": "Agent System",
+      "purpose": "Agent abstraction layer, manifest format (YAML frontmatter), agent loader, capability system, permission model, tool access patterns",
+      "parent": "Framework Architecture"
+    },
+    {
+      "title": "Built-in Agents",
+      "purpose": "Documentation of 15 generic agents in packages/ai/agents-builtin/ including cli-expert, security-engineer, test-engineer, performance-optimizer, accessibility-specialist, etc. Capabilities and use cases for each.",
+      "parent": "Agent System"
+    },
+    {
+      "title": "LLM Provider Integration",
+      "purpose": "LLM provider abstraction in packages/ai/llm/, OpenAI integration, Anthropic Claude integration, Ollama local models, provider selection strategy, streaming support, error handling",
+      "parent": "Framework Architecture"
+    },
+    {
+      "title": "MCP (Model Context Protocol)",
+      "purpose": "MCP server implementations in packages/ai/mcp/, protocol specification, server discovery, tool registration, context management, custom MCP server development",
+      "parent": "Framework Architecture"
+    },
+    {
+      "title": "Agent Runtime",
+      "purpose": "Agent execution engine in packages/ai/runtime/, lifecycle management, memory layer integration, delegation framework, observability, error recovery, resource limits",
+      "parent": "Framework Architecture"
+    },
+    {
+      "title": "Plugin System",
+      "purpose": "Plugin architecture for extending framework, plugin manifest format, lifecycle hooks, capability registration, examples of custom plugins",
+      "parent": "Framework Architecture"
+    },
+    {
+      "title": "Development Guide",
+      "purpose": "How to create custom agents, write agent manifests, integrate new LLM providers, build MCP servers, contribute to framework, testing patterns"
+    },
+    {
+      "title": "API Reference",
+      "purpose": "Complete TypeScript API documentation, core interfaces and types, agent manifest schema, MCP protocol types, provider interfaces, runtime APIs"
+    }
+  ]
+}
