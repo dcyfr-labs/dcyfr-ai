@@ -78,6 +78,112 @@ export interface AgentSkill {
 }
 
 /**
+ * Personality trait value (0-1 scale)
+ * Examples: warmth=0.7, formality=0.5, humor=0.3
+ */
+export type PersonalityTrait = number;
+
+/**
+ * Personality traits defining agent voice characteristics
+ * All values on 0-1 scale (e.g., warmth: 0.7 = fairly warm)
+ */
+export interface PersonalityTraits {
+  /** Warmth level (collaborative, supportive) */
+  warmth?: PersonalityTrait;
+  /** Formality level (structured, professional) */
+  formality?: PersonalityTrait;
+  /** Humor level (playful, lighthearted) */
+  humor?: PersonalityTrait;
+  /** Directness level (clear, straightforward) */
+  directness?: PersonalityTrait;
+  /** Technical depth level (precise, expert-level) */
+  technicality?: PersonalityTrait;
+  /** Empathy level (understanding, patient) */
+  empathy?: PersonalityTrait;
+  /** Custom traits (extend as needed) */
+  [key: string]: PersonalityTrait | undefined;
+}
+
+/**
+ * Situational tone adjustment
+ * Modifies base personality for specific contexts
+ */
+export interface SituationalTone {
+  /** Tone identifier (e.g., 'teaching', 'error_handling', 'security_warning') */
+  situation: string;
+  /** Trait adjustments relative to base (e.g., {warmth: '+0.2', formality: '-0.1'}) */
+  traitAdjustments: Partial<Record<keyof PersonalityTraits, string>>;
+  /** Guidance for applying this tone */
+  guidance: string;
+}
+
+/**
+ * Intent signal for proactive guidance
+ * Detects user intent from context to adjust response style
+ */
+export interface IntentSignal {
+  /** Intent type */
+  type: 'learning' | 'debugging' | 'building' | 'reviewing' | 'exploring' | 'rushing';
+  /** File patterns that signal this intent (glob or regex strings) */
+  filePatterns?: string[];
+  /** Context keywords that signal this intent */
+  keywords?: string[];
+  /** Guidance for responding to this intent */
+  guidance: string;
+}
+
+/**
+ * Proactive guidance configuration
+ * Enables anticipatory agent behavior based on context
+ */
+export interface ProactiveGuidance {
+  /** Intent signals the agent can recognize */
+  intentSignals?: IntentSignal[];
+  /** Custom context adaptation instructions */
+  contextAdaptation?: string;
+}
+
+/**
+ * Agent persona - voice, identity, and interaction style
+ * Inherits from brand_voice in DCYFR_CONTEXT.json by default
+ * Agent-specific overrides merge with brand personality
+ */
+export interface AgentPersona {
+  /** Agent identity (optional - uses brand identity if not specified) */
+  identity?: {
+    /** Agent name (e.g., "Security Guardian", "Architecture Advisor") */
+    name?: string;
+    /** Agent archetype (e.g., "The Mentor", "The Detective") */
+    archetype?: string;
+    /** Identity description */
+    description?: string;
+  };
+  /** Voice attributes (optional - inherits from brand_voice) */
+  voice?: {
+    /** Voice attribute strings (e.g., ["Precise", "Empowering", "Security-first"]) */
+    attributes?: string[];
+    /** Personality trait overrides (merges with brand traits) */
+    personalityTraits?: Partial<PersonalityTraits>;
+    /** Perspective (e.g., "first-person-plural" = "we/our") */
+    perspective?: 'first-person-singular' | 'first-person-plural' | 'second-person' | 'third-person';
+    /** Pronouns (e.g., "we/our", "I/my") */
+    pronouns?: string;
+  };
+  /** Situational tone adjustments (optional - extends brand tones) */
+  situationalTones?: SituationalTone[];
+  /** Anti-patterns specific to this agent (optional - extends brand anti-patterns) */
+  antiPatterns?: string[];
+  /** Proactive guidance configuration (optional) */
+  proactiveGuidance?: ProactiveGuidance;
+  /**
+   * Whether this agent inherits from the canonical brand voice defaults.
+   * Defaults to `true`. Set to `false` for fully custom agent personas that
+   * should not merge with brand_voice in DCYFR_CONTEXT.json.
+   */
+  inheritsBrandVoice?: boolean;
+}
+
+/**
  * Agent manifest - complete agent definition
  */
 export interface AgentManifest {
@@ -97,6 +203,8 @@ export interface AgentManifest {
   permissionMode: AgentPermissionMode;
   /** Tools the agent can use */
   tools: string[];
+  /** Agent persona - voice, identity, and interaction style (optional) */
+  persona?: AgentPersona;
   /** Agents this agent can delegate to */
   delegatesTo?: string[];
   /** Agents that delegate to this one */

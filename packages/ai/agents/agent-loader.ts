@@ -386,6 +386,7 @@ export class AgentLoader {
       tools: (frontmatter.tools as string[]) || [],
       delegatesTo: frontmatter.delegatesTo as string[] | undefined,
       tags: frontmatter.tags as string[] | undefined,
+      persona: frontmatter.persona as AgentManifest['persona'] | undefined,
     };
 
     return {
