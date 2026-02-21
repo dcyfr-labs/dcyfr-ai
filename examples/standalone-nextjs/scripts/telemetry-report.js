@@ -32,6 +32,51 @@ function formatPercent(value) {
 }
 
 /**
+ * Print statistics block for one agent.
+ */
+async function printAgentBlock(agent, agentSessions, engine) {
+  const stats = await engine.getAgentStats(agent, '30d');
+
+  console.log(`\n${agent.toUpperCase()}`);
+  console.log(`  Total Sessions: ${stats.totalSessions}`);
+  console.log(`  Success Rate: ${formatPercent(stats.successRate)}`);
+  console.log(`  Avg Quality: ${formatPercent(stats.avgQuality)}`);
+  console.log(`  Total Cost: $${stats.totalCost.toFixed(2)}`);
+
+  const byTaskType = agentSessions.reduce((acc, s) => {
+    acc[s.taskType] = (acc[s.taskType] || 0) + 1;
+    return acc;
+  }, {});
+
+  console.log(`  Task Types:`);
+  for (const [type, count] of Object.entries(byTaskType)) {
+    console.log(`    - ${type}: ${count}`);
+  }
+}
+
+/**
+ * Print one recent session line.
+ */
+function printRecentSession(session) {
+  const duration = session.endTime
+    ? session.endTime - session.startTime
+    : Date.now() - session.startTime;
+
+  let status;
+  if (session.outcome === 'success') status = '✅';
+  else if (session.outcome === 'failed') status = '❌';
+  else status = '⏳';
+
+  console.log(`${status} [${session.agent}] ${session.taskDescription}`);
+  console.log(`   Type: ${session.taskType} | Duration: ${formatDuration(duration)}`);
+
+  if (session.metrics) {
+    console.log(`   Quality: ${formatPercent(session.metrics.tokenCompliance || 0)}`);
+  }
+  console.log('');
+}
+
+/**
  * Generate telemetry report
  */
 async function generateReport() {
@@ -76,24 +121,7 @@ async function generateReport() {
     console.log('-'.repeat(60));
     
     for (const [agent, agentSessions] of Object.entries(byAgent)) {
-      const stats = await engine.getAgentStats(agent, '30d');
-      
-      console.log(`\n${agent.toUpperCase()}`);
-      console.log(`  Total Sessions: ${stats.totalSessions}`);
-      console.log(`  Success Rate: ${formatPercent(stats.successRate)}`);
-      console.log(`  Avg Quality: ${formatPercent(stats.avgQuality)}`);
-      console.log(`  Total Cost: $${stats.totalCost.toFixed(2)}`);
-      
-      // Task type breakdown
-      const byTaskType = agentSessions.reduce((acc, s) => {
-        acc[s.taskType] = (acc[s.taskType] || 0) + 1;
-        return acc;
-      }, {});
-      
-      console.log(`  Task Types:`);
-      for (const [type, count] of Object.entries(byTaskType)) {
-        console.log(`    - ${type}: ${count}`);
-      }
+      await printAgentBlock(agent, agentSessions, engine);
     }
     
     // Recent sessions
@@ -106,20 +134,7 @@ async function generateReport() {
       .slice(0, 10);
     
     for (const session of recent) {
-      const duration = session.endTime 
-        ? session.endTime - session.startTime
-        : Date.now() - session.startTime;
-      
-      const status = session.outcome === 'success' ? '✅' : 
-                     session.outcome === 'failed' ? '❌' : '⏳';
-      
-      console.log(`${status} [${session.agent}] ${session.taskDescription}`);
-      console.log(`   Type: ${session.taskType} | Duration: ${formatDuration(duration)}`);
-      
-      if (session.metrics) {
-        console.log(`   Quality: ${formatPercent(session.metrics.tokenCompliance || 0)}`);
-      }
-      console.log('');
+      printRecentSession(session);
     }
     
     // Quality trends
