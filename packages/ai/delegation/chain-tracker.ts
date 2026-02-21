@@ -110,7 +110,7 @@ export class DelegationChainTracker {
   async buildChain(contractId: string): Promise<DelegationChain> {
     const chain: DelegationContract[] = [];
     const visited = new Set<string>();
-    let current = await this.contractManager.getContract(contractId);
+    let current = this.contractManager.getContract(contractId);
     
     if (!current) {
       throw new Error(`Contract not found: ${contractId}`);
@@ -127,7 +127,7 @@ export class DelegationChainTracker {
       visited.add(current.contract_id);
       
       if (current.parent_contract_id) {
-        current = await this.contractManager.getContract(current.parent_contract_id);
+        current = this.contractManager.getContract(current.parent_contract_id);
       } else {
         break; // Reached root
       }
@@ -366,7 +366,7 @@ export class DelegationChainTracker {
       visited.add(currentId);
       
       // Find all contracts that have this as parent
-      const children = await this.contractManager.queryContracts({
+      const children = this.contractManager.queryContracts({
         parent_contract_id: currentId,
       });
       
@@ -383,7 +383,7 @@ export class DelegationChainTracker {
   async getAncestors(contractId: string): Promise<DelegationContract[]> {
     const ancestors: DelegationContract[] = [];
     const visited = new Set<string>();
-    let current = await this.contractManager.getContract(contractId);
+    let current = this.contractManager.getContract(contractId);
     
     while (current && current.parent_contract_id) {
       if (visited.has(current.parent_contract_id)) {
@@ -391,7 +391,7 @@ export class DelegationChainTracker {
       }
       visited.add(current.parent_contract_id);
       
-      const parent = await this.contractManager.getContract(current.parent_contract_id);
+      const parent = this.contractManager.getContract(current.parent_contract_id);
       if (parent) {
         ancestors.unshift(parent); // Add to beginning (root to current order)
         current = parent;
@@ -411,7 +411,7 @@ export class DelegationChainTracker {
     reason?: string;
   }> {
     // Get parent contract
-    const parent = await this.contractManager.getContract(parentId);
+    const parent = this.contractManager.getContract(parentId);
     if (!parent) {
       return { valid: false, reason: 'Parent contract not found' };
     }

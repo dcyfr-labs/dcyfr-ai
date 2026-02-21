@@ -168,7 +168,7 @@ export class RuntimeValidator {
     } catch {
       console.log(`   🟡 Telemetry database not found: ${telemetryPath}`);
       console.log(`   ℹ️  Database will be created on first use`);
-      return true;
+      return false;
     }
   }
 

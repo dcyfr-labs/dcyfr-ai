@@ -83,7 +83,7 @@ export function createDesignTokenServer(provider: TokenProvider) {
   function validateCode(code: string): ValidationResult {
     const violations: TokenViolation[] = [];
     const suggestions: string[] = [];
-    void provider.getTokenCategories(); // consumed by suggestToken
+    provider.getTokenCategories(); // consumed by suggestToken
 
     // Extract all className strings
     const classNameMatches = code.matchAll(

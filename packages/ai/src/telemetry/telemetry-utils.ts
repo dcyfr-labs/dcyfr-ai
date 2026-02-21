@@ -359,9 +359,8 @@ export function findChainAnomalies(
   const anomalies: ChainAnomaly[] = [];
   const chainGroups = groupBy(events, event => event.chain_correlation.root_delegation_id);
   
-  for (const [rootId, chainEvents] of Object.entries(chainGroups)) {
+  for (const [rootId, _chainEvents] of Object.entries(chainGroups)) {
     const analysis = analyzeDelegationChain(events, rootId);
-    void chainEvents; // consumed via analyzeDelegationChain
     anomalies.push(...checkChainForAnomalies(rootId, analysis, thresholds));
   }
   
