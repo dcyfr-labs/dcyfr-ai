@@ -319,5 +319,21 @@ export type {
   BootstrapResult,
 } from './src/capability-bootstrap';
 
+// Personas and brand voice exports
+export type {
+  ToneProfile,
+  PersonalityTraits,
+  SituationalTone,
+  BrandIdentity,
+  CoreVoice,
+  ToneSpectrum,
+  BrandVoice,
+  AgentPersona,
+  VoiceResolverOptions,
+  ResolvedVoice,
+  PersonaLoaderOptions,
+  PersonaLoadResult,
+} from './src/personas';
+
 // Version
 export const VERSION = '1.0.0';
