@@ -355,3 +355,8 @@ npm publish --access public
 **Last Updated:** February 1, 2026  
 **Maintained By:** DCYFR Team  
 **NPM:** [@dcyfr/ai](https://www.npmjs.com/package/@dcyfr/ai)
+
+## Quality Gates
+- TypeScript: 0 errors (`npm run typecheck`)
+- Tests: ≥99% pass rate (`npm run test`)
+- Lint: 0 errors (`npm run lint`)
