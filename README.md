@@ -910,13 +910,13 @@ This package is dual-licensed:
 - 💼 **Executive** ($4,800/yr) - Business license + 2hr consultation/mo + 50 employees
 - 🏢 **Enterprise** ($9,600/yr) - Enterprise license + 4hr consultation/mo + unlimited scale
 
-**Learn more:** [SPONSORS.md](../../SPONSORS.md)
+**Learn more:** [SPONSORS.md](../SPONSORS.md)
 **Join:** [GitHub Sponsors](https://github.com/sponsors/dcyfr)
 **Contact:** licensing@dcyfr.ai
 
 ### Trademark
 
-"DCYFR" is a trademark of DCYFR Labs. See [TRADEMARK.md](../../TRADEMARK.md) for usage guidelines.
+"DCYFR" is a trademark of DCYFR Labs. See [TRADEMARK.md](../TRADEMARK.md) for usage guidelines.
 
 ---
 
