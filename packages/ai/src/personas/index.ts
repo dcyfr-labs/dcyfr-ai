@@ -5,3 +5,6 @@
  */
 
 export * from './types';
+export * from './voice-resolver';
+export * from './persona-loader';
+export * from './hooks/before-llm-call';
