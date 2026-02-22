@@ -155,6 +155,81 @@ npx @dcyfr/ai config:validate --verbose
 
 ---
 
+## 🔄 Migration Guides
+
+### Migrating from LangChain
+
+**Why migrate:** 10x smaller bundle (~200KB vs 2.3MB), built-in telemetry, simpler API
+
+```typescript
+// LangChain (before)
+import { ChatOpenAI } from "langchain/chat_models/openai";
+import { HumanMessage } from "langchain/schema";
+
+const model = new ChatOpenAI({ temperature: 0.9 });
+const response = await model.call([new HumanMessage("Hello")]);
+
+// @dcyfr/ai (after)
+import { AgentRuntime } from '@dcyfr/ai';
+
+const runtime = new AgentRuntime({
+  provider: 'openai',
+  model: 'gpt-4',
+  temperature: 0.9
+});
+
+const response = await runtime.chat({ messages: [{ role: 'user', content: 'Hello' }] });
+```
+
+**Key Differences:**
+- Simpler configuration (YAML/JSON vs code-only)
+- Built-in telemetry tracking (no additional setup)
+- Smaller bundle size (200KB vs 2.3MB)
+- Type-safe validation with Zod
+- Quality gates included out of the box
+
+### Migrating from Vercel AI SDK
+
+**Why migrate:** Quality gates, telemetry, multi-provider validation framework
+
+```typescript
+// Vercel AI SDK (before)
+import { openai } from '@ai-sdk/openai';
+import { generateText } from 'ai';
+
+const { text } = await generateText({
+  model: openai('gpt-4-turbo'),
+  prompt: 'Hello'
+});
+
+// @dcyfr/ai (after)
+import { AgentRuntime, ValidationFramework } from '@dcyfr/ai';
+
+const runtime = new AgentRuntime({
+  provider: 'openai',
+  model: 'gpt-4-turbo'
+});
+
+const response = await runtime.chat({
+  messages: [{ role: 'user', content: 'Hello' }]
+});
+
+// Bonus: Built-in validation
+const validator = new ValidationFramework();
+const report = await validator.validate({ /* config */ });
+```
+
+**Key Differences:**
+- Configuration system (YAML/JSON files)
+- Validation framework with quality gates
+- Comprehensive telemetry tracking
+- Plugin system for custom validators
+- Zero-config startup option
+
+**Full Migration Docs:** See [docs/migrations/](./docs/migrations/) for detailed guides
+
+---
+
 ## Getting Started with AgentRuntime (Phase 0 Autonomous Operations)
 
 ### Prerequisites
