@@ -27,8 +27,37 @@ import { z } from 'zod';
 import {
   handleToolError,
   logToolExecution,
+  MCPToolError,
   measurePerformance,
 } from '../shared/utils.js';
+
+// ============================================================================
+// Authentication
+// ============================================================================
+
+/**
+ * Validates a bearer token for write operations.
+ * If DELEGATION_MCP_WRITE_TOKEN is set, the provided token must match.
+ * If the env var is unset (dev mode), all writes are permitted.
+ *
+ * @throws MCPToolError with code UNAUTHORIZED if validation fails
+ */
+export function validateWriteToken(token: string | undefined): void {
+  const expectedToken = process.env['DELEGATION_MCP_WRITE_TOKEN'];
+  if (!expectedToken) {
+    // Dev/unprotected mode — allow all writes
+    return;
+  }
+  if (!token) {
+    throw new MCPToolError(
+      'UNAUTHORIZED',
+      'Write operations require a bearer token. Provide authToken in the request.',
+    );
+  }
+  if (token !== expectedToken) {
+    throw new MCPToolError('UNAUTHORIZED', 'Invalid bearer token for write operation.');
+  }
+}
 // Temporary: Use stub implementations until we wire up actual instances
 // TODO: Inject real ContractManager and ReputationEngine from main module exports
 
@@ -103,8 +132,9 @@ const telemetryEngine = new StubTelemetryEngine();
 server.addTool({
   name: 'delegation:logEvent',
   description:
-    'Log a delegation event to the telemetry system. Use this to track contract lifecycle events, performance metrics, and delegation chain activities.',
+    'Log a delegation event to the telemetry system. Use this to track contract lifecycle events, performance metrics, and delegation chain activities. Requires bearer token authentication (authToken).',
   parameters: z.object({
+    authToken: z.string().optional().describe('Bearer token for write authorization'),
     eventType: z
       .enum([
         'delegation_contract_created',
@@ -127,6 +157,7 @@ server.addTool({
   },
   execute: async (
     args: {
+      authToken?: string;
       eventType:
         | 'delegation_contract_created'
         | 'delegation_progress'
@@ -140,6 +171,7 @@ server.addTool({
     { log }: { log: any }
   ) => {
     try {
+      validateWriteToken(args.authToken);
       const { result, durationMs } = await measurePerformance(async () => {
         // Create simple delegation event (telemetry API not yet fully implemented)
         const event_id = `evt_${Date.now()}_${Math.random().toString(36).substring(7)}`;
@@ -381,8 +413,9 @@ server.addTool({
 server.addTool({
   name: 'delegation:triggerEscalation',
   description:
-    'Manually escalate a delegation contract for human review. Use this when automated verification is insufficient or when manual_required verification policy is in effect. Creates an escalation ticket and marks contract for human attention.',
+    'Manually escalate a delegation contract for human review. Use this when automated verification is insufficient or when manual_required verification policy is in effect. Creates an escalation ticket and marks contract for human attention. Requires bearer token authentication (authToken).',
   parameters: z.object({
+    authToken: z.string().optional().describe('Bearer token for write authorization'),
     contractId: z.string().describe('Delegation contract to escalate'),
     reason: z.string().describe('Reason for escalation (human-readable)'),
     priority: z
@@ -402,6 +435,7 @@ server.addTool({
   },
   execute: async (
     args: {
+      authToken?: string;
       contractId: string;
       reason: string;
       priority?: 'low' | 'medium' | 'high' | 'critical';
@@ -411,6 +445,7 @@ server.addTool({
     { log }: { log: any }
   ) => {
     try {
+      validateWriteToken(args.authToken);
       const { result, durationMs } = await measurePerformance(async () => {
         // Get contract
         const contract = contractManager.getContract(args.contractId);
