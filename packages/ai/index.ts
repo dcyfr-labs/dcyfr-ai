@@ -333,6 +333,23 @@ export type {
   ResolvedVoice,
   PersonaLoaderOptions,
   PersonaLoadResult,
+  BeforeLLMCallInput,
+  BeforeLLMCallOutput,
+  BeforeLLMCallHookConfig,
+  BeforeLLMCallHook,
+} from './src/personas';
+export {
+  resolveVoice,
+  renderPersonaBlock,
+  applyToneGuidelines,
+  loadBrandVoice,
+  clearBrandVoiceCache,
+  loadPersona,
+  getPersona,
+  validatePersona,
+  clearPersonaCache,
+  BrandVoiceHook,
+  createBrandVoiceHook,
 } from './src/personas';
 
 // Version
