@@ -1,5 +1,7 @@
 # @dcyfr/ai
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/dcyfr/dcyfr-ai)
+
 > Portable AI agent framework with plugin architecture for multi-provider integration, telemetry tracking, and quality validation.
 
 [![npm](https://img.shields.io/npm/v/@dcyfr/ai?style=flat-square&logo=npm&logoColor=white)](https://www.npmjs.com/package/@dcyfr/ai)
