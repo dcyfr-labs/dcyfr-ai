@@ -26,6 +26,19 @@ import { BackgroundSessionQueue, MAX_BACKGROUND_SESSIONS } from './session-queue
 import { SessionCheckpoint } from './session-checkpoint.js';
 import { SessionManager } from './session-manager.js';
 import type { CapabilityRegistry } from './capability-registry.js';
+import { SecurityMiddlewareChain } from './security-middleware-chain.js';
+import { IdentityMiddleware } from './middleware/identity-middleware.js';
+import { TLPMiddleware } from './middleware/tlp-middleware.js';
+import { ThreatValidatorMiddleware } from './middleware/threat-validator-middleware.js';
+import { RateLimiterMiddleware } from './middleware/rate-limiter-middleware.js';
+import { ChainDepthMiddleware } from './middleware/chain-depth-middleware.js';
+import { ContentPolicyMiddleware } from './middleware/content-policy-middleware.js';
+import { CircuitBreaker, CircuitBreakerMiddleware } from './circuit-breaker.js';
+import { ContractTimeoutWatchdog } from './timeout-watchdog.js';
+import { AgentRegistry } from './agent-registry.js';
+import type { SecurityContext } from '../types/security-middleware.js';
+import { TLPEnforcementEngine } from '../src/delegation/tlp-enforcement.js';
+import type { AgentClearance } from '../src/delegation/tlp-enforcement.js';
 
 /**
  * Contract creation request
@@ -124,6 +137,17 @@ export interface DelegationContractManagerConfig {
   checkpointDir?: string;
   /** Maximum concurrent background sessions (defaults to MAX_BACKGROUND_SESSIONS = 10). */
   maxBackgroundSessions?: number;
+  /**
+   * Optional agent identity registry.  When provided, enables IdentityMiddleware
+   * which enforces HMAC-token verification for delegator/delegatee on every createContract.
+   */
+  agentRegistry?: AgentRegistry;
+  /**
+   * Additional TLP clearances to seed into the TLPEnforcementEngine at startup.
+   * Useful in tests and custom deployments where agents not in DEFAULT_AGENT_CLEARANCES
+   * require access to AMBER/GREEN/RED classified contracts.
+   */
+  additionalTLPClearances?: AgentClearance[];
 }
 
 /**
@@ -146,6 +170,16 @@ export class DelegationContractManager extends EventEmitter {
   private readonly sessionManager: SessionManager;
   /** Checkpoint persistence. */
   private readonly checkpoint: SessionCheckpoint;
+  /** Pluggable security middleware chain — evaluated on every createContract. */
+  private readonly securityChain: SecurityMiddlewareChain;
+  /** Chain depth + fan-out middleware (also manages fan-out counters). */
+  private readonly chainDepthMiddleware: ChainDepthMiddleware;
+  /** Circuit breaker state machine for per-agent failure tracking. */
+  private readonly circuitBreaker: CircuitBreaker;
+  /** Periodic contract timeout watchdog. */
+  private readonly watchdog: ContractTimeoutWatchdog;
+  /** Optional agent identity registry (enables IdentityMiddleware). */
+  private readonly agentRegistry?: AgentRegistry;
 
   constructor(config: DelegationContractManagerConfig = {}) {
     super();
@@ -153,6 +187,7 @@ export class DelegationContractManager extends EventEmitter {
     this.maxDelegationDepth = config.maxDelegationDepth ?? 5;
     this.debug = config.debug ?? false;
     this.capabilityRegistry = config.capabilityRegistry;
+    this.agentRegistry = config.agentRegistry;
     
     this.backgroundQueue = new BackgroundSessionQueue(
       config.maxBackgroundSessions ?? MAX_BACKGROUND_SESSIONS,
@@ -172,6 +207,43 @@ export class DelegationContractManager extends EventEmitter {
     this.db = new Database(dbPath);
     
     this.initializeSchema();
+
+    // ── Security middleware chain ──────────────────────────────────────────
+    this.chainDepthMiddleware = new ChainDepthMiddleware({ maxDepth: this.maxDelegationDepth });
+    this.circuitBreaker = new CircuitBreaker();
+    this.watchdog = new ContractTimeoutWatchdog();
+
+    this.securityChain = new SecurityMiddlewareChain();
+    if (this.agentRegistry) {
+      this.securityChain.use(new IdentityMiddleware(this.agentRegistry));
+    }
+    // Build TLP engine with any caller-supplied extra clearances
+    const tlpEngine = new TLPEnforcementEngine();
+    if (config.additionalTLPClearances) {
+      for (const c of config.additionalTLPClearances) {
+        tlpEngine.setAgentClearance(c);
+      }
+    }
+    this.securityChain.use(new TLPMiddleware(tlpEngine));
+    this.securityChain.use(this.chainDepthMiddleware);
+    this.securityChain.use(new ThreatValidatorMiddleware());
+    this.securityChain.use(new RateLimiterMiddleware());
+    this.securityChain.use(new ContentPolicyMiddleware());
+    this.securityChain.use(new CircuitBreakerMiddleware(this.circuitBreaker));
+
+    // Forward chain events upstream for observability
+    this.securityChain.on('security_warning', (ev) => this.emit('security_warning', ev));
+    this.securityChain.on('security_blocked', (ev) => this.emit('security_blocked', ev));
+    this.securityChain.on('chain_evaluated', (ev) => this.emit('chain_evaluated', ev));
+
+    // Forward watchdog timeout events and update contract status
+    this.watchdog.on('contract_timeout', (ev) => {
+      this.emit('contract_timeout', ev);
+      try {
+        void this.updateContract({ contract_id: ev.contract_id, status: 'timeout' as any });
+      } catch { /* contract may have already completed/been removed */ }
+    });
+    this.watchdog.start();
   }
 
   /**
@@ -236,12 +308,14 @@ export class DelegationContractManager extends EventEmitter {
   }
 
   /** Run security validation, emit threat event and throw if a threat is detected */
-  private validateContractSecurity(
+  private async validateContractSecurity(
     request: CreateDelegationContractRequest,
     legacyRequest: Record<string, any>,
     normalizedPermissionTokens: Array<{ token_id: string; scopes: string[]; delegatable?: boolean; max_delegation_depth?: number }> | undefined,
-  ): void {
+  ): Promise<void> {
     this.securityValidationCount++;
+
+    // ── Legacy inline threat detection (preserved for backward compatibility) ─
     const threat = this.detectSecurityThreat({
       permission_token: legacyRequest?.permission_token,
       permission_tokens: normalizedPermissionTokens,
@@ -263,6 +337,52 @@ export class DelegationContractManager extends EventEmitter {
       this.securityThreatEvents.push(threatEvent);
       this.emit('security_threat_detected', threatEvent);
       throw new Error(`Security threat detected: ${threat.threat_type}`);
+    }
+
+    // ── SecurityMiddlewareChain ────────────────────────────────────────────
+    const rawTlp = request.tlp_classification || legacyRequest?.tlp_classification;
+    const tlpLevel = rawTlp ? (rawTlp.replace('TLP:', '') as any) : undefined;
+    const context: SecurityContext = {
+      operation: 'create',
+      contract: {
+        contract_id: request.contract_id,
+        delegator: request.delegator,
+        delegatee: request.delegatee,
+        delegation_depth: 0,
+        tlp_classification: tlpLevel,
+        permission_tokens: normalizedPermissionTokens,
+      },
+      task_content: (legacyRequest as any)?.task_content,
+      metadata: legacyRequest?.metadata,
+      timestamp_ms: Date.now(),
+      // Enable core security gates by default; callers may override via metadata
+      feature_flags: {
+        security_monitoring: true,
+        chain_tracking: true,
+        identity_auth: !!(this.agentRegistry),
+        content_security: true,
+        ...((legacyRequest as any)?.feature_flags ?? {}),
+      },
+    };
+
+    const chainResult = await this.securityChain.evaluate(context);
+    if (chainResult.action === 'block') {
+      this.securityThreatCount++;
+      const bv = chainResult.blocking_verdict!;
+      const threatEvent = {
+        contract_id: request.contract_id || request.task_id || `preflight-${Date.now()}`,
+        threat_detected: true,
+        threat_type: bv.threat_type ?? 'security_chain_block',
+        severity: bv.severity ?? 'critical',
+        description: bv.reason ?? 'Security middleware chain blocked this contract.',
+        action: 'block',
+        timestamp: new Date().toISOString(),
+        blocked_by: chainResult.blocked_by,
+        evidence: bv.evidence,
+      };
+      this.securityThreatEvents.push(threatEvent);
+      this.emit('security_threat_detected', threatEvent);
+      throw new Error(`Security threat detected: ${bv.threat_type ?? 'security_chain_block'}`);
     }
   }
 
@@ -305,7 +425,7 @@ export class DelegationContractManager extends EventEmitter {
           }]
         : undefined);
 
-    this.validateContractSecurity(request, legacyRequest, normalizedPermissionTokens);
+    await this.validateContractSecurity(request, legacyRequest, normalizedPermissionTokens);
 
     // Use explicit contract_id if provided (for testing), otherwise generate
     const contract_id = request.contract_id || `contract-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -379,6 +499,19 @@ export class DelegationContractManager extends EventEmitter {
     
     // Emit event
     this.emit('contract_created', contract);
+
+    // Track fan-out counter for the delegator
+    if (request.parent_contract_id) {
+      this.chainDepthMiddleware.incrementFanOut(normalizedDelegator.agent_id);
+    }
+
+    // Register contract with timeout watchdog
+    this.watchdog.track({
+      contract_id,
+      created_at,
+      timeout_ms: normalizedTimeout,
+      status,
+    });
     
     if (this.debug) {
       console.log(`[ContractManager] Created contract ${contract_id}`);
@@ -516,6 +649,21 @@ export class DelegationContractManager extends EventEmitter {
     if (updates.status === 'completed') {
       this.emit('contract_completed', contract);
     }
+
+    // On terminal status: release fan-out slot + untrack from watchdog
+    const terminalStatuses = ['completed', 'failed', 'cancelled', 'revoked', 'timeout'];
+    if (updates.status && terminalStatuses.includes(updates.status)) {
+      if (contract.parent_contract_id) {
+        this.chainDepthMiddleware.decrementFanOut(contract.delegator.agent_id);
+      }
+      this.watchdog.untrack(contract_id);
+      // Record circuit breaker outcome
+      if (updates.status === 'completed') {
+        this.circuitBreaker.recordSuccess(contract.delegatee.agent_id);
+      } else if (updates.status === 'failed') {
+        this.circuitBreaker.recordFailure(contract.delegatee.agent_id);
+      }
+    }
     
     if (this.debug) {
       console.log(`[ContractManager] Updated contract ${contract_id}: status=${updates.status}`);
@@ -587,6 +735,24 @@ export class DelegationContractManager extends EventEmitter {
     if (this.debug) {
       console.log(`[ContractManager] Cancelled contract ${contract_id}: ${reason ?? 'no reason'}`);
     }
+  }
+
+  /**
+   * Send a heartbeat for a long-running active contract.
+   * Extends the timeout watchdog deadline by `heartbeatGraceMs` (default 30 s).
+   * The contract's `last_heartbeat_at` is recorded in metadata.
+   *
+   * @param contract_id - The active contract to keep alive.
+   */
+  async heartbeat(contract_id: string): Promise<void> {
+    const contract = this.getContractById(contract_id);
+    if (!contract) throw new Error(`Contract not found: ${contract_id}`);
+    if (contract.status !== 'active') throw new Error(`Contract ${contract_id} is not active (status: ${contract.status})`);
+
+    const now = new Date().toISOString();
+    const metadata = { ...(contract.metadata ?? {}), last_heartbeat_at: now };
+    await this.updateContract({ contract_id, metadata });
+    this.watchdog.heartbeat(contract_id);
   }
 
   /**

@@ -94,6 +94,41 @@ export interface VerificationResult {
 }
 
 /**
+ * TLP classification levels — shared across delegation & security modules.
+ */
+export type TLPLevel = 'CLEAR' | 'GREEN' | 'AMBER' | 'RED';
+
+/**
+ * Authenticated agent — extends DelegationAgent with optional HMAC-SHA256
+ * identity proof fields.  All fields are optional for backward compatibility;
+ * auth is enforced when the `security_middleware` feature flag is enabled.
+ * @since 1.2.0
+ */
+export interface AuthenticatedAgent extends DelegationAgent {
+  /** HMAC-SHA256 hex token over (agent_id + ':' + timestamp_ms) */
+  auth_token?: string;
+  /** ISO 8601 timestamp used as the HMAC message component */
+  auth_timestamp?: string;
+  /** Registered key identifier used to look up the signing secret */
+  key_id?: string;
+}
+
+/**
+ * Structured task content for content-policy evaluation.
+ * Supplied alongside task_description when the `content_security`
+ * feature flag is enabled.
+ * @since 1.2.0
+ */
+export interface TaskContent {
+  /** Primary instruction text sent to the delegatee */
+  instruction: string;
+  /** Optional system/context prompt prepended to instruction */
+  context?: string;
+  /** Content policy strictness — defaults to 'standard' */
+  content_policy?: 'strict' | 'standard' | 'permissive';
+}
+
+/**
  * Agent identification in delegation context
  */
 export interface DelegationAgent {
@@ -169,7 +204,21 @@ export interface DelegationContract {
   delegation_depth: number;
   
   /** TLP classification for this delegation */
-  tlp_classification?: 'CLEAR' | 'GREEN' | 'AMBER' | 'RED';
+  tlp_classification?: TLPLevel;
+
+  /**
+   * Agent ID of the original top-level delegator (root of the chain).
+   * Populated automatically on sub-delegations for blast-radius tracking.
+   * @since 1.2.0
+   */
+  root_delegator_id?: string;
+
+  /**
+   * ISO 8601 timestamp of the last heartbeat for active contracts.
+   * Updated periodically by ContractTimeoutWatchdog.
+   * @since 1.2.0
+   */
+  last_heartbeat_at?: string;
   
   /**
    * Execution mode for this delegation contract.
@@ -255,7 +304,7 @@ export interface CreateDelegationContractRequest {
   parent_contract_id?: string;
   
   /** Optional TLP classification */
-  tlp_classification?: 'CLEAR' | 'GREEN' | 'AMBER' | 'RED';
+  tlp_classification?: TLPLevel;
   
   /**
    * Requested execution mode for this contract.
