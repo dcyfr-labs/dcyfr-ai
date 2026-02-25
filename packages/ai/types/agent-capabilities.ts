@@ -448,6 +448,8 @@ export interface SessionHandoff {
   contextSnapshot?: {
     conversationHistory: unknown[];
     artifacts: unknown[];
+    /** ID of the checkpoint created before the handoff, if any. */
+    checkpointId?: string;
   };
 }
 
