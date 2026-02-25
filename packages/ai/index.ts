@@ -270,6 +270,15 @@ export type {
   VerificationPolicy,
 } from './types/delegation-contracts';
 
+// Execution mode and session types (v1.1.0)
+export { ExecutionMode } from './types/agent-capabilities';
+export type {
+  SessionState,
+  SessionHandoff,
+  SessionHandoffRequest,
+  ModeTransitionPolicy,
+} from './types/agent-capabilities';
+
 // Reputation system exports
 export { ReputationEngine } from './reputation/reputation-engine';
 export type {

@@ -20,6 +20,7 @@ import type {
   SuccessCriteria,
   VerificationPolicy,
 } from '../types/delegation-contracts.js';
+import { ExecutionMode } from '../types/agent-capabilities.js';
 
 /**
  * Contract creation request
@@ -44,6 +45,18 @@ export interface CreateDelegationContractRequest {
   tlp_classification?: string;
   status?: DelegationContractStatus;  // Optional: for testing, default='pending'
   created_at?: string;  // Optional: for testing, default=now
+  /**
+   * Execution mode for this contract.
+   * Defaults to `ExecutionMode.INTERACTIVE` when omitted.
+   * @since 1.1.0
+   */
+  execution_mode?: ExecutionMode;
+  /**
+   * Session identifier to associate with an existing session.
+   * Populated automatically for BACKGROUND / ASYNC modes when absent.
+   * @since 1.1.0
+   */
+  session_id?: string;
 }
 
 /**
@@ -292,6 +305,21 @@ export class DelegationContractManager extends EventEmitter {
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     
+    // Store execution mode and session ID in metadata (backward-compatible, no schema migration needed)
+    const executionMode = request.execution_mode ?? ExecutionMode.INTERACTIVE;
+    const sessionId = request.session_id ?? (
+      executionMode !== ExecutionMode.INTERACTIVE
+        ? `session-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+        : undefined
+    );
+    const initialMetadata: Record<string, unknown> = {};
+    if (executionMode !== ExecutionMode.INTERACTIVE) {
+      initialMetadata['execution_mode'] = executionMode;
+    }
+    if (sessionId) {
+      initialMetadata['session_id'] = sessionId;
+    }
+
     stmt.run(
       contract_id,
       normalizedDelegator.agent_id,
@@ -303,7 +331,7 @@ export class DelegationContractManager extends EventEmitter {
       normalizedTimeout,
       request.priority ?? 3,
       normalizedPermissionTokens ? JSON.stringify(normalizedPermissionTokens) : null,
-      null,  // metadata initially null
+      Object.keys(initialMetadata).length > 0 ? JSON.stringify(initialMetadata) : null,
       request.parent_contract_id ?? null,
       delegation_depth,
       request.tlp_classification ?? 'TLP:CLEAR',
@@ -763,6 +791,13 @@ export class DelegationContractManager extends EventEmitter {
    * Convert database row to DelegationContract
    */
   private rowToContract(row: any): DelegationContract {
+    const metadata: Record<string, unknown> = row.metadata ? JSON.parse(row.metadata) : {};
+
+    // Recover execution_mode / session_id stored in metadata (backward-compatible)
+    const executionMode = (metadata['execution_mode'] as ExecutionMode | undefined)
+      ?? ExecutionMode.INTERACTIVE;
+    const sessionId = metadata['session_id'] as string | undefined;
+
     return {
       contract_id: row.contract_id,
       delegator: {
@@ -788,7 +823,9 @@ export class DelegationContractManager extends EventEmitter {
       parent_contract_id: row.parent_contract_id ?? undefined,
       delegation_depth: row.delegation_depth ?? 0,
       tlp_classification: row.tlp_classification ?? 'CLEAR',
-      metadata: row.metadata ? JSON.parse(row.metadata) : {},
+      execution_mode: executionMode,
+      session_id: sessionId,
+      metadata,
     };
   }
 }
