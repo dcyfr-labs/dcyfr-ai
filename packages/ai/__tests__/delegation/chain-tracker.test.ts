@@ -76,10 +76,21 @@ describe('DelegationChainTracker', () => {
     db.close();
     
     // Initialize manager and tracker
+    // Supply TLP clearances for the generic test-agent IDs so that
+    // TLP-classified contracts created in this test suite are not blocked.
+    const testAgentClearances = ['agent-root', 'agent-level-1', 'agent-level-2', 'agent-level-3'].map(id => ({
+      agent_id: id,
+      agent_name: id,
+      max_tlp_level: 'TLP:RED' as const,
+      issued_at: new Date().toISOString(),
+      issued_by: 'test-setup',
+      metadata: { background_check: false, violation_count: 0 },
+    }));
     manager = new DelegationContractManager({
       databasePath: TEST_DB_PATH,
       maxDelegationDepth: 5,
       debug: false,
+      additionalTLPClearances: testAgentClearances,
     });
     
     tracker = new DelegationChainTracker(manager, {
