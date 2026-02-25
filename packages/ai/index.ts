@@ -261,6 +261,14 @@ export {
 export { ContractManager } from './delegation/contract-manager';
 export type { ContractManagerConfig, ContractQuery, ContractUpdate } from './delegation/contract-manager';
 
+// Phase 3: Background/async session infrastructure (v1.1.0)
+export { BackgroundSessionQueue, MAX_BACKGROUND_SESSIONS } from './delegation/session-queue';
+export type { BackgroundQueueStatus, QueueEntry } from './delegation/session-queue';
+export { SessionCheckpoint, CHECKPOINT_MESSAGE_INTERVAL } from './delegation/session-checkpoint';
+export type { CheckpointRecord, CheckpointReason } from './delegation/session-checkpoint';
+export { SessionManager } from './delegation/session-manager';
+export type { ManagedSession, SessionStatus, SessionManagerOptions } from './delegation/session-manager';
+
 export type {
   DelegationContract,
   DelegationContractStatus,
@@ -288,6 +296,10 @@ export type {
   ReputationQuery,
   AuditLogEntry,
 } from './reputation/reputation-engine';
+
+// Execution mode reputation exports (Phase 3)
+export { ExecutionModeReputationAdjuster, MODE_DIMENSION_WEIGHTS, SCORE_DECAY_PER_30_DAYS } from './reputation/execution-mode-reputation';
+export type { ModeAdjustedScore, ReputationGetter } from './reputation/execution-mode-reputation';
 
 // Capability system exports
 export {

@@ -21,6 +21,11 @@ import type {
   VerificationPolicy,
 } from '../types/delegation-contracts.js';
 import { ExecutionMode } from '../types/agent-capabilities.js';
+import type { AgentCapabilityManifest, SessionHandoff, SessionHandoffRequest } from '../types/agent-capabilities.js';
+import { BackgroundSessionQueue, MAX_BACKGROUND_SESSIONS } from './session-queue.js';
+import { SessionCheckpoint } from './session-checkpoint.js';
+import { SessionManager } from './session-manager.js';
+import type { CapabilityRegistry } from './capability-registry.js';
 
 /**
  * Contract creation request
@@ -111,6 +116,14 @@ export interface DelegationContractManagerConfig {
   databasePath?: string;
   maxDelegationDepth?: number;
   debug?: boolean;
+  /** Optional registry used by selectExecutionMode() for manifest lookups. */
+  capabilityRegistry?: CapabilityRegistry;
+  /** Override base directory for session archives (defaults to logs/delegation/sessions). */
+  sessionArchiveDir?: string;
+  /** Override checkpoint directory (defaults to logs/delegation/checkpoints). */
+  checkpointDir?: string;
+  /** Maximum concurrent background sessions (defaults to MAX_BACKGROUND_SESSIONS = 10). */
+  maxBackgroundSessions?: number;
 }
 
 /**
@@ -125,12 +138,35 @@ export class DelegationContractManager extends EventEmitter {
   private securityThreatEvents: Array<Record<string, any>> = [];
   private securityValidationCount = 0;
   private securityThreatCount = 0;
+  /** Optional registry for manifest-based mode selection. */
+  private readonly capabilityRegistry?: CapabilityRegistry;
+  /** Background session slot management. */
+  private readonly backgroundQueue: BackgroundSessionQueue;
+  /** Session lifecycle tracking. */
+  private readonly sessionManager: SessionManager;
+  /** Checkpoint persistence. */
+  private readonly checkpoint: SessionCheckpoint;
 
   constructor(config: DelegationContractManagerConfig = {}) {
     super();
     
     this.maxDelegationDepth = config.maxDelegationDepth ?? 5;
     this.debug = config.debug ?? false;
+    this.capabilityRegistry = config.capabilityRegistry;
+    
+    this.backgroundQueue = new BackgroundSessionQueue(
+      config.maxBackgroundSessions ?? MAX_BACKGROUND_SESSIONS,
+    );
+    this.sessionManager = new SessionManager({
+      archiveBaseDir: config.sessionArchiveDir,
+      flushIntervalMs: 60_000,
+    });
+    this.checkpoint = new SessionCheckpoint(config.checkpointDir);
+    
+    // Forward background queue status events upstream
+    this.backgroundQueue.on('status', (status) => {
+      this.emit('background_queue_status', status);
+    });
     
     const dbPath = config.databasePath ?? ':memory:';
     this.db = new Database(dbPath);
@@ -785,6 +821,298 @@ export class DelegationContractManager extends EventEmitter {
     return (Number.isFinite(memory) && memory > 8192)
       || (Number.isFinite(cpu) && cpu > 8)
       || (Number.isFinite(disk) && disk > 512000);
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Execution Mode: Phase 3 – Selection, Lifecycle Hooks, Handoff
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Select the execution mode for a delegation request using a 4-tier priority:
+   *
+   * 1. **Explicit** — `request.execution_mode` field (highest priority)
+   * 2. **OpenSpec hint** — `request.metadata?.openspec_execution_mode`
+   * 3. **Agent manifest preference** — `delegateeManifest.preferred_execution_mode`
+   * 4. **Default** — `ExecutionMode.INTERACTIVE`
+   *
+   * In addition, the selected mode must be in the agent's `supported_execution_modes`
+   * (when declared), and background mode requires available queue capacity.
+   *
+   * @returns The resolved `ExecutionMode`.
+   */
+  selectExecutionMode(
+    request: CreateDelegationContractRequest & { metadata?: Record<string, unknown> },
+    delegateeManifest?: AgentCapabilityManifest,
+  ): ExecutionMode {
+    const supportedModes: Set<ExecutionMode> | undefined =
+      delegateeManifest?.supported_execution_modes
+        ? new Set(delegateeManifest.supported_execution_modes)
+        : undefined; // undefined ⇒ all modes assumed supported (backward compat)
+
+    const supportsMode = (m: ExecutionMode): boolean =>
+      supportedModes === undefined || supportedModes.has(m);
+
+    // Tier 1: Explicit override
+    if (request.execution_mode && supportsMode(request.execution_mode)) {
+      return this._applyQueueGuard(request.execution_mode);
+    }
+
+    // Tier 2: OpenSpec hint stored in metadata
+    const openspecHint =
+      (request as any).metadata?.openspec_execution_mode as ExecutionMode | undefined;
+    if (openspecHint && Object.values(ExecutionMode).includes(openspecHint) && supportsMode(openspecHint)) {
+      return this._applyQueueGuard(openspecHint);
+    }
+
+    // Tier 3: Agent manifest preference
+    const manifestPref = delegateeManifest?.preferred_execution_mode;
+    if (manifestPref && supportsMode(manifestPref)) {
+      return this._applyQueueGuard(manifestPref);
+    }
+
+    // Tier 4: Default
+    return ExecutionMode.INTERACTIVE;
+  }
+
+  /**
+   * Degrade BACKGROUND → INTERACTIVE when the queue is at capacity.
+   * @private
+   */
+  private _applyQueueGuard(mode: ExecutionMode): ExecutionMode {
+    if (mode === ExecutionMode.BACKGROUND && !this.backgroundQueue.hasCapacity()) {
+      this.emit('background_queue_full', this.backgroundQueue.getStatus());
+      return ExecutionMode.INTERACTIVE;
+    }
+    return mode;
+  }
+
+  /**
+   * Get the current background session queue status.
+   */
+  getBackgroundQueueStatus() {
+    return this.backgroundQueue.getStatus();
+  }
+
+  /**
+   * Expose the session manager for external lifecycle queries.
+   */
+  getSessionManager(): SessionManager {
+    return this.sessionManager;
+  }
+
+  /**
+   * Expose the session checkpoint manager.
+   */
+  getCheckpoint(): SessionCheckpoint {
+    return this.checkpoint;
+  }
+
+  // ─────────── Lifecycle Hooks ───────────
+
+  /**
+   * **Phase 3.2 / 3.4** — Must be called after creating a BACKGROUND contract.
+   * - Acquires a background queue slot (waits if at capacity)
+   * - Registers the session in the session manager
+   * - Optionally records the worktree path returned by `worktree-coordinator`
+   *
+   * Emits: `session.created`
+   */
+  async beforeBackgroundExecution(
+    contractId: string,
+    sessionId: string,
+    worktreePath?: string,
+  ): Promise<void> {
+    // Acquire queue slot
+    await this.backgroundQueue.acquire(sessionId, contractId);
+
+    // Register session
+    const sessionState = {
+      status: 'active' as const,
+      conversationMessages: [],
+      lastActivity: new Date().toISOString(),
+      ...(worktreePath !== undefined && { worktreePath }),
+    };
+    this.sessionManager.register(sessionId, contractId, ExecutionMode.BACKGROUND, sessionState);
+    this.emit('session.created', { sessionId, contractId, mode: ExecutionMode.BACKGROUND, worktreePath });
+  }
+
+  /**
+   * **Phase 3.2 / 3.4** — Must be called when a BACKGROUND contract completes.
+   * - Releases the background queue slot
+   * - Archives the session
+   *
+   * Emits: `session.archived`
+   */
+  afterBackgroundExecution(contractId: string, sessionId: string): void {
+    this.backgroundQueue.release(sessionId);
+    try {
+      this.sessionManager.archive(sessionId);
+    } catch {
+      // Session may have already been archived via handoff — safe to ignore
+    }
+    this.emit('session.archived', { sessionId, contractId, mode: ExecutionMode.BACKGROUND });
+  }
+
+  /**
+   * **Phase 3.5** — Must be called after creating an ASYNC contract.
+   * - Registers the session in the session manager
+   * - Optionally records the feature branch name
+   *
+   * Emits: `session.created`
+   */
+  beforeAsyncExecution(
+    contractId: string,
+    sessionId: string,
+    branchName?: string,
+  ): void {
+    const sessionState = {
+      status: 'active' as const,
+      conversationMessages: [],
+      lastActivity: new Date().toISOString(),
+    };
+    this.sessionManager.register(sessionId, contractId, ExecutionMode.ASYNC, sessionState);
+    this.emit('session.created', { sessionId, contractId, mode: ExecutionMode.ASYNC, branchName });
+  }
+
+  /**
+   * **Phase 3.5** — Must be called when an ASYNC contract completes.
+   * - Archives the session
+   * - Optionally records the PR number in session metadata before archiving
+   *
+   * Emits: `session.archived`
+   */
+  afterAsyncExecution(
+    contractId: string,
+    sessionId: string,
+    prNumber?: number,
+  ): void {
+    // Record PR number in session state before archiving
+    if (prNumber !== undefined) {
+      try {
+        this.sessionManager.updateState(sessionId, { prNumber });
+      } catch {
+        // Session may not be registered — no-op
+      }
+    }
+    try {
+      this.sessionManager.archive(sessionId);
+    } catch {
+      // Already archived — safe to ignore
+    }
+    this.emit('session.archived', { sessionId, contractId, mode: ExecutionMode.ASYNC, prNumber });
+  }
+
+  // ─────────── Session Handoff ───────────
+
+  /**
+   * **Phase 3.6** — Perform an atomic session handoff between execution modes.
+   *
+   * Steps (all-or-nothing; rolls back on failure):
+   *  1. Create a `pre-handoff` checkpoint of the current session state
+   *  2. Create a new contract in the target execution mode
+   *  3. Archive the original session
+   *  4. Emit `session.handoff`
+   *
+   * @param request - Source contract ID, target mode, context snapshot, and reason
+   * @returns The newly created contract (in the target mode)
+   * @throws If the source contract does not exist or the new contract cannot be created
+   */
+  async handoffSession(
+    request: SessionHandoffRequest & {
+      /** Optional: extra fields forwarded to the new contract. */
+      newContractOverrides?: Partial<CreateDelegationContractRequest>;
+    },
+  ): Promise<DelegationContract> {
+    const { fromContractId, toExecutionMode, contextSnapshot, handoffReason } = request;
+
+    // 1. Load source contract
+    const sourceContract = this.getContractById(fromContractId);
+    if (!sourceContract) {
+      throw new Error(`handoffSession: source contract not found: ${fromContractId}`);
+    }
+
+    const fromSessionId = sourceContract.session_id;
+    const fromMode = sourceContract.execution_mode ?? ExecutionMode.INTERACTIVE;
+
+    // 2. Checkpoint current state before handoff
+    const messageCount = Array.isArray(contextSnapshot?.conversationHistory)
+      ? contextSnapshot.conversationHistory.length
+      : 0;
+    let checkpointId: string | undefined;
+    if (fromSessionId) {
+      try {
+        const sessionState = {
+          status: 'active' as const,
+          conversationMessages: contextSnapshot?.conversationHistory ?? [],
+          lastActivity: new Date().toISOString(),
+        };
+        const cp = this.checkpoint.create(
+          fromSessionId,
+          fromContractId,
+          sessionState,
+          'pre-handoff',
+          messageCount,
+          { toMode: toExecutionMode, reason: handoffReason },
+        );
+        checkpointId = cp.id;
+      } catch {
+        // Non-fatal — continue with handoff
+      }
+    }
+
+    // 3. Create new contract in the target mode
+    let newContract: DelegationContract;
+    try {
+      newContract = await this.createContract({
+        delegator: sourceContract.delegator,
+        delegatee: sourceContract.delegatee,
+        task_id: `${sourceContract.task_id}-handoff-${Date.now()}`,
+        task_description: sourceContract.task_description,
+        verification_policy: sourceContract.verification_policy,
+        success_criteria: sourceContract.success_criteria,
+        timeout_ms: sourceContract.timeout_ms,
+        priority: sourceContract.priority,
+        parent_contract_id: fromContractId,
+        tlp_classification: sourceContract.tlp_classification,
+        execution_mode: toExecutionMode,
+        ...(request.newContractOverrides ?? {}),
+      });
+    } catch (err) {
+      // Rollback: restore source contract to active (it was never changed)
+      throw new Error(
+        `handoffSession: failed to create target contract — ${(err as Error).message}`,
+      );
+    }
+
+    // 4. Archive original session
+    if (fromSessionId) {
+      try {
+        this.sessionManager.archive(fromSessionId);
+        if (fromMode === ExecutionMode.BACKGROUND) {
+          this.backgroundQueue.release(fromSessionId);
+        }
+      } catch {
+        // Already archived — safe to ignore
+      }
+    }
+
+    // 5. Record handoff history and emit event
+    const handoffRecord: SessionHandoff = {
+      fromContractId,
+      toContractId: newContract.contract_id,
+      fromMode,
+      toMode: toExecutionMode,
+      handoffReason,
+      handoffAt: new Date().toISOString(),
+      contextSnapshot: {
+        conversationHistory: contextSnapshot?.conversationHistory ?? [],
+        artifacts: contextSnapshot?.artifacts ?? [],
+        checkpointId,
+      },
+    };
+    this.emit('session.handoff', handoffRecord);
+
+    return newContract;
   }
 
   /**

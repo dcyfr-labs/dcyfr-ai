@@ -10,15 +10,19 @@
  * - delegation:queryReputation - Query agent reputation scores and history
  * - delegation:getTaskStatus - Check delegation contract execution status
  * - delegation:triggerEscalation - Manual escalation for human review
+ * - delegation:querySessionsByMode - Query sessions filtered by execution mode (Phase 3)
+ * - delegation:getSessionHandoffHistory - Get handoff events for a session (Phase 3)
+ * - delegation:triggerSessionHandoff - Trigger an execution mode transition (Phase 3)
  * 
  * Resources:
  * - delegation://contracts/active - Active delegation contracts
  * - delegation://reputation/top - Top-performing agents by reputation
  * - delegation://events/recent - Recent delegation events
  * - delegation://escalations/pending - Pending manual reviews
+ * - delegation://sessions/by-mode - Sessions grouped by execution mode (Phase 3)
  * 
  * @module mcp/servers/delegation-monitor
- * @version 1.0.0
+ * @version 1.1.0
  * @date 2026-02-13
  */
 
@@ -83,6 +87,81 @@ class StubContractManager {
   
   getStats(): any {
     return { total_contracts: this.contracts.size };
+  }
+
+  /**
+   * Query contracts filtered by execution mode (stored in metadata).
+   * Phase 3.1: Returns contracts whose metadata.execution_mode matches.
+   */
+  querySessionsByMode(mode: string): any[] {
+    return Array.from(this.contracts.values()).filter((c) => {
+      try {
+        const meta = typeof c.metadata === 'string' ? JSON.parse(c.metadata) : (c.metadata ?? {});
+        return (meta.execution_mode ?? 'interactive') === mode;
+      } catch {
+        return mode === 'interactive'; // default
+      }
+    });
+  }
+
+  /**
+   * Get handoff history entries for a given session ID.
+   * Phase 3.6: Searches contracts for parent_contract_id chain.
+   */
+  getSessionHandoffHistory(sessionId: string): any[] {
+    // In the stub implementation, return an empty history.
+    // Real implementation would trace the parent_contract_id chain.
+    return Array.from(this.contracts.values())
+      .filter((c) => {
+        try {
+          const meta = typeof c.metadata === 'string' ? JSON.parse(c.metadata) : (c.metadata ?? {});
+          return meta.session_id === sessionId;
+        } catch {
+          return false;
+        }
+      })
+      .map((c) => ({
+        contractId: c.contract_id ?? c.id,
+        executionMode: (() => {
+          try {
+            const meta = typeof c.metadata === 'string' ? JSON.parse(c.metadata) : (c.metadata ?? {});
+            return meta.execution_mode ?? 'interactive';
+          } catch { return 'interactive'; }
+        })(),
+        status: c.status,
+        createdAt: c.created_at,
+        parentContractId: c.parent_contract_id,
+      }));
+  }
+
+  /**
+   * Trigger a session handoff (stub — returns a synthetic new contract).
+   * Phase 3.6: Real implementation calls DelegationContractManager.handoffSession().
+   */
+  async triggerSessionHandoff(request: {
+    fromContractId: string;
+    toExecutionMode: string;
+    handoffReason: string;
+  }): Promise<any> {
+    const source = this.contracts.get(request.fromContractId);
+    if (!source) {
+      throw new Error(`Contract not found: ${request.fromContractId}`);
+    }
+    const newContract = {
+      ...source,
+      contract_id: `${request.fromContractId}-handoff-${Date.now()}`,
+      parent_contract_id: request.fromContractId,
+      metadata: JSON.stringify({
+        ...((() => { try { return JSON.parse(source.metadata ?? '{}'); } catch { return {}; } })()),
+        execution_mode: request.toExecutionMode,
+        handoff_reason: request.handoffReason,
+        handed_off_at: new Date().toISOString(),
+      }),
+      created_at: new Date().toISOString(),
+      status: 'active',
+    };
+    this.contracts.set(newContract.contract_id, newContract);
+    return newContract;
   }
 }
 
@@ -513,6 +592,159 @@ server.addTool({
 });
 
 // ============================================================================
+// Tool 5: Query Sessions By Mode (Phase 3)
+// ============================================================================
+
+server.addTool({
+  name: 'delegation:querySessionsByMode',
+  description:
+    'Query delegation sessions (contracts) filtered by execution mode (interactive, background, async). Returns session IDs, status, and metadata.',
+  parameters: z.object({
+    mode: z
+      .enum(['interactive', 'background', 'async'])
+      .describe('Execution mode to filter by'),
+    limit: z
+      .number()
+      .int()
+      .min(1)
+      .max(100)
+      .default(20)
+      .describe('Maximum number of sessions to return'),
+  }),
+  async execute(args) {
+    const startTime = performance.now();
+    try {
+      const { mode, limit } = args;
+      const sessions = (contractManager as any).querySessionsByMode(mode) as any[];
+      const limited = sessions.slice(0, limit);
+
+      const result = {
+        mode,
+        total_found: sessions.length,
+        returned: limited.length,
+        sessions: limited.map((c: any) => ({
+          contract_id: c.contract_id ?? c.id,
+          session_id: (() => {
+            try { return JSON.parse(c.metadata ?? '{}').session_id ?? null; } catch { return null; }
+          })(),
+          status: c.status,
+          task_id: c.task_id,
+          delegatee: c.delegatee_agent_id ?? c.delegatee?.agent_id,
+          created_at: c.created_at,
+        })),
+        generated_at: new Date().toISOString(),
+      };
+
+      const durationMs = Math.round(performance.now() - startTime);
+      logToolExecution('delegation:querySessionsByMode', args, true, durationMs);
+      return JSON.stringify(result, null, 2);
+    } catch (error) {
+      logToolExecution('delegation:querySessionsByMode', args, false);
+      return handleToolError(error);
+    }
+  },
+});
+
+// ============================================================================
+// Tool 6: Get Session Handoff History (Phase 3)
+// ============================================================================
+
+server.addTool({
+  name: 'delegation:getSessionHandoffHistory',
+  description:
+    'Retrieve the execution mode handoff history for a delegation session. Returns the chain of contracts created by session handoffs.',
+  parameters: z.object({
+    sessionId: z
+      .string()
+      .min(1)
+      .describe('Session ID to retrieve handoff history for (stored in contract metadata)'),
+  }),
+  async execute(args) {
+    const startTime = performance.now();
+    try {
+      const { sessionId } = args;
+      const history = (contractManager as any).getSessionHandoffHistory(sessionId) as any[];
+
+      const result = {
+        sessionId,
+        handoffCount: history.length,
+        history,
+        generated_at: new Date().toISOString(),
+      };
+
+      const durationMs = Math.round(performance.now() - startTime);
+      logToolExecution('delegation:getSessionHandoffHistory', args, true, durationMs);
+      return JSON.stringify(result, null, 2);
+    } catch (error) {
+      logToolExecution('delegation:getSessionHandoffHistory', args, false);
+      return handleToolError(error);
+    }
+  },
+});
+
+// ============================================================================
+// Tool 7: Trigger Session Handoff (Phase 3)
+// ============================================================================
+
+server.addTool({
+  name: 'delegation:triggerSessionHandoff',
+  description:
+    'Trigger an execution mode transition for a delegation session. Creates a new contract in the target mode and archives the current one.',
+  parameters: z.object({
+    fromContractId: z
+      .string()
+      .min(1)
+      .describe('Contract ID of the session to hand off from'),
+    toExecutionMode: z
+      .enum(['interactive', 'background', 'async'])
+      .describe('Target execution mode for the new session'),
+    handoffReason: z
+      .string()
+      .min(5)
+      .describe('Human-readable reason for the handoff (min 5 chars)'),
+    authToken: z
+      .string()
+      .optional()
+      .describe('Bearer token for authentication (required unless DELEGATION_MCP_WRITE_TOKEN is unset)'),
+  }),
+  async execute(args) {
+    const startTime = performance.now();
+    try {
+      validateWriteToken(args.authToken);
+
+      const newContract = await (contractManager as any).triggerSessionHandoff({
+        fromContractId: args.fromContractId,
+        toExecutionMode: args.toExecutionMode,
+        handoffReason: args.handoffReason,
+      });
+
+      const result = {
+        success: true,
+        handoff: {
+          fromContractId: args.fromContractId,
+          toContractId: newContract.contract_id,
+          toExecutionMode: args.toExecutionMode,
+          handoffReason: args.handoffReason,
+          handedOffAt: new Date().toISOString(),
+        },
+        newContract: {
+          contract_id: newContract.contract_id,
+          status: newContract.status,
+          task_id: newContract.task_id,
+        },
+      };
+
+      const durationMs = Math.round(performance.now() - startTime);
+      logToolExecution('delegation:triggerSessionHandoff', args, true, durationMs);
+      return JSON.stringify(result, null, 2);
+    } catch (error) {
+      logToolExecution('delegation:triggerSessionHandoff', args, false);
+      return handleToolError(error);
+    }
+  },
+});
+
+// ============================================================================
 // Resource 1: Active Contracts
 // ============================================================================
 
@@ -578,6 +810,49 @@ server.addResource({
           tasks_completed: p.tasks_completed,
           confidence: p.confidence,
         })),
+        generated_at: new Date().toISOString(),
+      };
+
+      return { text: JSON.stringify(summary, null, 2) };
+    } catch (error) {
+      return { text: handleToolError(error) };
+    }
+  },
+});
+
+// ============================================================================
+// Resource 3: Sessions By Mode (Phase 3)
+// ============================================================================
+
+server.addResource({
+  uri: 'delegation://sessions/by-mode',
+  name: 'Sessions By Execution Mode',
+  description: 'Delegation sessions grouped by execution mode (interactive, background, async)',
+  mimeType: 'application/json',
+  async load() {
+    try {
+      const modes = ['interactive', 'background', 'async'] as const;
+      const grouped: Record<string, any[]> = {};
+
+      for (const mode of modes) {
+        grouped[mode] = ((contractManager as any).querySessionsByMode(mode) as any[]).map((c: any) => ({
+          contract_id: c.contract_id ?? c.id,
+          status: c.status,
+          task_id: c.task_id,
+          delegatee: c.delegatee_agent_id ?? c.delegatee?.agent_id,
+          created_at: c.created_at,
+        }));
+      }
+
+      const summary = {
+        interactive: grouped['interactive'],
+        background: grouped['background'],
+        async: grouped['async'],
+        totals: {
+          interactive: grouped['interactive']?.length ?? 0,
+          background: grouped['background']?.length ?? 0,
+          async: grouped['async']?.length ?? 0,
+        },
         generated_at: new Date().toISOString(),
       };
 
