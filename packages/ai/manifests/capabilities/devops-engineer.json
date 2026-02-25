@@ -169,8 +169,14 @@
     "GREEN"
   ],
   "created_at": "2026-02-15T09:33:39.150Z",
-  "updated_at": "2026-02-15T09:33:39.150Z",
+  "updated_at": "2026-02-26T00:00:00.000Z",
   "metadata": {
     "tier": "workspace"
-  }
+  },
+  "supported_execution_modes": [
+    "interactive",
+    "background",
+    "async"
+  ],
+  "preferred_execution_mode": "background"
 }

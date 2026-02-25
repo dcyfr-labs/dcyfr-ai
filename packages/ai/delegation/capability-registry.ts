@@ -21,6 +21,9 @@ import type {
   UpdateCapabilityRequest,
   ProficiencyLevel,
 } from '../types/agent-capabilities.js';
+import { ExecutionMode } from '../types/agent-capabilities.js';
+
+const VALID_EXECUTION_MODES = new Set<string>(Object.values(ExecutionMode));
 
 /**
  * In-memory capability registry
@@ -41,6 +44,45 @@ export class CapabilityRegistry {
 
     if (!manifest.capabilities || manifest.capabilities.length === 0) {
       throw new Error('At least one capability must be declared');
+    }
+
+    // Execution mode validation (backward-compatible — missing = all modes supported)
+    if (manifest.supported_execution_modes !== undefined) {
+      for (const mode of manifest.supported_execution_modes) {
+        if (!VALID_EXECUTION_MODES.has(mode as string)) {
+          throw new Error(
+            `Invalid execution mode "${mode}" in manifest for agent "${manifest.agent_id}". ` +
+            `Valid values: ${[...VALID_EXECUTION_MODES].join(', ')}`,
+          );
+        }
+      }
+
+      if (manifest.preferred_execution_mode !== undefined) {
+        if (!manifest.supported_execution_modes.includes(manifest.preferred_execution_mode)) {
+          throw new Error(
+            `preferredExecutionMode "${manifest.preferred_execution_mode}" is not in ` +
+            `supportedExecutionModes for agent "${manifest.agent_id}"`,
+          );
+        }
+      }
+
+      if (manifest.mode_transition_policies) {
+        const supportedSet = new Set(manifest.supported_execution_modes as string[]);
+        for (const policy of manifest.mode_transition_policies) {
+          if (!VALID_EXECUTION_MODES.has(policy.fromMode as string)) {
+            throw new Error(`Invalid fromMode "${policy.fromMode}" in transition policy for agent "${manifest.agent_id}"`);
+          }
+          if (!VALID_EXECUTION_MODES.has(policy.toMode as string)) {
+            throw new Error(`Invalid toMode "${policy.toMode}" in transition policy for agent "${manifest.agent_id}"`);
+          }
+          if (!supportedSet.has(policy.fromMode as string) || !supportedSet.has(policy.toMode as string)) {
+            throw new Error(
+              `Transition policy references mode not in supportedExecutionModes ` +
+              `for agent "${manifest.agent_id}": ${policy.fromMode} → ${policy.toMode}`,
+            );
+          }
+        }
+      }
     }
 
     // Store manifest

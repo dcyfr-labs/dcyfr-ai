@@ -247,7 +247,28 @@ export interface AgentCapabilityManifest {
   
   /** Last manifest update timestamp */
   updated_at: string;
-  
+
+  /**
+   * Execution modes this agent supports.
+   * If absent, all modes are assumed supported (backward-compatible default).
+   * @since 1.1.0
+   */
+  supported_execution_modes?: ExecutionMode[];
+
+  /**
+   * Preferred execution mode for the agent's primary workload.
+   * Used when no explicit mode is supplied by the delegator.
+   * @since 1.1.0
+   */
+  preferred_execution_mode?: ExecutionMode;
+
+  /**
+   * Policies that govern mode transitions for this agent.
+   * Each policy defines source/target mode pairs and transition conditions.
+   * @since 1.1.0
+   */
+  mode_transition_policies?: ModeTransitionPolicy[];
+
   /** Additional manifest metadata */
   metadata?: Record<string, unknown>;
 }
@@ -354,6 +375,122 @@ export interface UpdateCapabilityRequest {
   
   /** Updated metadata */
   metadata?: Record<string, unknown>;
+}
+
+/**
+ * Execution mode for delegation contracts.
+ * Controls how and when a delegated agent performs its work.
+ *
+ * - `INTERACTIVE`: Synchronous, real-time collaboration within the current
+ *   session. Context and tool results are shared immediately.
+ * - `BACKGROUND`: Asynchronous parallel execution inside a dedicated git
+ *   worktree while the main session continues. Limited to 10 concurrent slots.
+ * - `ASYNC`: Fully decoupled execution on a feature branch, surfaced back to
+ *   the delegator as a Pull Request for review.
+ *
+ * @since 1.1.0
+ */
+export enum ExecutionMode {
+  INTERACTIVE = 'interactive',
+  BACKGROUND = 'background',
+  ASYNC = 'async',
+}
+
+/**
+ * Snapshot of a delegation session's runtime state.
+ * Enables pause, resume, and handoff between execution modes.
+ *
+ * @since 1.1.0
+ */
+export interface SessionState {
+  /** Lifecycle status of the session */
+  status: 'active' | 'paused' | 'archived';
+
+  /** Captured conversation messages at the time of snapshot */
+  conversationMessages: unknown[];
+
+  /** ISO 8601 timestamp of the most recent activity */
+  lastActivity: string;
+
+  /** Absolute path to the worktree directory (background mode only) */
+  worktreePath?: string;
+
+  /** Pull request number created for this session (async mode only) */
+  prNumber?: number;
+}
+
+/**
+ * Record of a single session handoff event.
+ * Appended to `DelegationContract.handoffHistory` on each mode transition.
+ *
+ * @since 1.1.0
+ */
+export interface SessionHandoff {
+  /** Contract ID the session transitioned from */
+  fromContractId: string;
+
+  /** Contract ID the session transitioned to (undefined if pending) */
+  toContractId?: string;
+
+  /** Execution mode the session was running in before the handoff */
+  fromMode: ExecutionMode;
+
+  /** Execution mode the session transitioned to */
+  toMode: ExecutionMode;
+
+  /** Human-readable reason for the handoff */
+  handoffReason: string;
+
+  /** ISO 8601 timestamp when the handoff was requested */
+  handoffAt: string;
+
+  /** Context snapshot captured at the moment of handoff */
+  contextSnapshot?: {
+    conversationHistory: unknown[];
+    artifacts: unknown[];
+  };
+}
+
+/**
+ * Request to initiate a session handoff between execution modes.
+ *
+ * @since 1.1.0
+ */
+export interface SessionHandoffRequest {
+  /** Source contract identifier */
+  fromContractId: string;
+
+  /** Target execution mode after the handoff */
+  toExecutionMode: ExecutionMode;
+
+  /** Full context snapshot to carry forward */
+  contextSnapshot: {
+    conversationHistory: unknown[];
+    artifacts: unknown[];
+  };
+
+  /** Human-readable reason triggering the handoff */
+  handoffReason: string;
+}
+
+/**
+ * Policy governing when and how a session may transition between execution modes.
+ * Added to `AgentCapabilityManifest.modeTransitionPolicies`.
+ *
+ * @since 1.1.0
+ */
+export interface ModeTransitionPolicy {
+  /** Source execution mode */
+  fromMode: ExecutionMode;
+
+  /** Target execution mode */
+  toMode: ExecutionMode;
+
+  /** Conditions that must be satisfied before the transition is allowed */
+  allowedConditions: string[];
+
+  /** Whether a session checkpoint must be created before transitioning */
+  requiresCheckpoint: boolean;
 }
 
 /**

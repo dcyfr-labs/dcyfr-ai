@@ -12,6 +12,7 @@
  */
 
 import type { PermissionToken } from './permission-tokens';
+import type { ExecutionMode, SessionState, SessionHandoff } from './agent-capabilities';
 
 /**
  * Verification policy types for delegation contracts
@@ -170,6 +171,34 @@ export interface DelegationContract {
   /** TLP classification for this delegation */
   tlp_classification?: 'CLEAR' | 'GREEN' | 'AMBER' | 'RED';
   
+  /**
+   * Execution mode for this delegation contract.
+   * Defaults to `ExecutionMode.INTERACTIVE` when not specified.
+   * @since 1.1.0
+   */
+  execution_mode?: ExecutionMode;
+
+  /**
+   * Session identifier shared across all contracts in a delegation session.
+   * Populated for BACKGROUND and ASYNC mode contracts.
+   * @since 1.1.0
+   */
+  session_id?: string;
+
+  /**
+   * Current runtime state of the delegation session.
+   * Includes conversation snapshot, worktree path, and PR number.
+   * @since 1.1.0
+   */
+  session_state?: SessionState;
+
+  /**
+   * Ordered history of mode transitions for this contract's session.
+   * Appended on each handoff.
+   * @since 1.1.0
+   */
+  handoff_history?: SessionHandoff[];
+
   /** Additional contract metadata */
   metadata?: Record<string, unknown>;
 }
@@ -228,6 +257,20 @@ export interface CreateDelegationContractRequest {
   /** Optional TLP classification */
   tlp_classification?: 'CLEAR' | 'GREEN' | 'AMBER' | 'RED';
   
+  /**
+   * Requested execution mode for this contract.
+   * Defaults to `ExecutionMode.INTERACTIVE` when omitted.
+   * @since 1.1.0
+   */
+  execution_mode?: ExecutionMode;
+
+  /**
+   * Session identifier to associate this contract with an existing session.
+   * When omitted a new session ID is generated for BACKGROUND / ASYNC modes.
+   * @since 1.1.0
+   */
+  session_id?: string;
+
   /** Optional metadata */
   metadata?: Record<string, unknown>;
 }

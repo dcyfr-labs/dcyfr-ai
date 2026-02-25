@@ -212,7 +212,7 @@
     "RED"
   ],
   "created_at": "2026-02-15T09:33:39.145Z",
-  "updated_at": "2026-02-15T09:33:39.145Z",
+  "updated_at": "2026-02-26T00:00:00.000Z",
   "metadata": {
     "tier": "proprietary",
     "delegatesTo": [
@@ -221,5 +221,11 @@
       "content-creator",
       "security-specialist"
     ]
-  }
+  },
+  "supported_execution_modes": [
+    "interactive",
+    "background",
+    "async"
+  ],
+  "preferred_execution_mode": "interactive"
 }

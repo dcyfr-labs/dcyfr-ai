@@ -90,6 +90,11 @@
     "CLEAR"
   ],
   "created_at": "2026-02-15T09:33:39.147Z",
-  "updated_at": "2026-02-15T09:33:39.147Z",
-  "metadata": {}
+  "updated_at": "2026-02-26T00:00:00.000Z",
+  "metadata": {},
+  "supported_execution_modes": [
+    "interactive",
+    "async"
+  ],
+  "preferred_execution_mode": "interactive"
 }
