@@ -260,6 +260,19 @@ export {
 // Delegation system exports
 export { ContractManager } from './delegation/contract-manager';
 export type { ContractManagerConfig, ContractQuery, ContractUpdate } from './delegation/contract-manager';
+export {
+  DelegationHealthMonitor,
+  getHealthMonitor,
+  startHealthMonitoring,
+  stopHealthMonitoring,
+} from './delegation/monitoring';
+export type {
+  SystemHealthMetrics,
+  AlertRule,
+  AlertCondition,
+  AlertChannel,
+  Alert,
+} from './delegation/monitoring';
 
 // Phase 3: Background/async session infrastructure (v1.1.0)
 export { BackgroundSessionQueue, MAX_BACKGROUND_SESSIONS } from './delegation/session-queue';
