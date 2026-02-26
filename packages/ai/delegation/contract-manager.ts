@@ -664,6 +664,25 @@ export class DelegationContractManager extends EventEmitter {
     
     // Store execution mode and session ID in metadata (backward-compatible, no schema migration needed)
     const executionMode = request.execution_mode ?? ExecutionMode.INTERACTIVE;
+
+    // 8.1: Emit runtime warning when executionMode is not explicitly specified
+    if (request.execution_mode === undefined) {
+      const warningMsg =
+        `[DCYFR Delegation] No executionMode specified for contract '${contract_id}' ` +
+        `(task: '${request.task_id}'). Defaulting to INTERACTIVE. ` +
+        `Specify an explicit executionMode to avoid this warning. ` +
+        `Migration guide: docs/guides/delegation-execution-modes-migration.md`;
+      console.warn(warningMsg);
+      this.emit('execution_mode_warning', {
+        contract_id,
+        task_id: request.task_id,
+        defaulted_to: ExecutionMode.INTERACTIVE,
+        message: warningMsg,
+        migration_guide: 'docs/guides/delegation-execution-modes-migration.md',
+        timestamp: new Date().toISOString(),
+      });
+    }
+
     const sessionId = request.session_id ?? (
       executionMode !== ExecutionMode.INTERACTIVE
         ? `session-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
