@@ -174,5 +174,6 @@
     "interactive",
     "async"
   ],
-  "preferred_execution_mode": "interactive"
+  "preferred_execution_mode": "interactive",
+  "signing_key_id": "pending-provisioning"
 }

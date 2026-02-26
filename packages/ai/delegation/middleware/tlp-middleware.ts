@@ -11,13 +11,14 @@
  * @date 2026-02-24
  */
 
-import type { SecurityMiddleware, SecurityContext, SecurityVerdict } from '../../types/security-middleware.js';
+import type { SecurityMiddleware, SecurityContext, SecurityVerdict, SecurityOperationType } from '../../types/security-middleware.js';
 import { TLPEnforcementEngine } from '../../src/delegation/tlp-enforcement.js';
 
 
 export class TLPMiddleware implements SecurityMiddleware {
   readonly name = 'tlp';
   readonly featureFlag = 'security_monitoring';
+  readonly appliesTo: SecurityOperationType[] = ['create'];
 
   private readonly engine: TLPEnforcementEngine;
 

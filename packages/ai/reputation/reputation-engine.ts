@@ -246,7 +246,8 @@ export class ReputationEngine {
         min_completion_time_ms REAL DEFAULT 0.0,
         max_completion_time_ms REAL DEFAULT 0.0,
         recent_contracts TEXT DEFAULT '[]',
-        last_updated TEXT NOT NULL,
+        last_updated_at TEXT NOT NULL,
+        last_task_at TEXT NOT NULL DEFAULT (datetime('now')),
         created_at TEXT NOT NULL DEFAULT (datetime('now'))
       );
       

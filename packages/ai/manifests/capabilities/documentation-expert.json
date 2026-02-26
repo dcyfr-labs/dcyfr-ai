@@ -139,5 +139,6 @@
     "background",
     "async"
   ],
-  "preferred_execution_mode": "background"
+  "preferred_execution_mode": "background",
+  "signing_key_id": "pending-provisioning"
 }

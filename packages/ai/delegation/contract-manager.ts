@@ -30,15 +30,24 @@ import { SecurityMiddlewareChain } from './security-middleware-chain.js';
 import { IdentityMiddleware } from './middleware/identity-middleware.js';
 import { TLPMiddleware } from './middleware/tlp-middleware.js';
 import { ThreatValidatorMiddleware } from './middleware/threat-validator-middleware.js';
-import { RateLimiterMiddleware } from './middleware/rate-limiter-middleware.js';
+import { RateLimiterMiddleware, type RateLimiterOptions } from './middleware/rate-limiter-middleware.js';
 import { ChainDepthMiddleware } from './middleware/chain-depth-middleware.js';
 import { ContentPolicyMiddleware } from './middleware/content-policy-middleware.js';
+import { PermissionsMiddleware } from './middleware/permissions-middleware.js';
+import { ReputationMiddleware } from './middleware/reputation-middleware.js';
 import { CircuitBreaker, CircuitBreakerMiddleware } from './circuit-breaker.js';
 import { ContractTimeoutWatchdog } from './timeout-watchdog.js';
 import { AgentRegistry } from './agent-registry.js';
+import { BlastRadiusTracker } from './blast-radius-tracker.js';
 import type { SecurityContext } from '../types/security-middleware.js';
 import { TLPEnforcementEngine } from '../src/delegation/tlp-enforcement.js';
 import type { AgentClearance } from '../src/delegation/tlp-enforcement.js';
+import { ReputationEngine } from '../reputation/reputation-engine.js';
+import { DelegationHealthMonitor } from './monitoring.js';
+import { FeatureFlagMiddleware } from './middleware/feature-flag-middleware.js';
+import { ChainTrackerMiddleware } from './middleware/chain-tracker-middleware.js';
+import { ResourceLimiterMiddleware } from './middleware/resource-limiter-middleware.js';
+import { FeatureFlagManager, getFeatureFlagManager, DEFAULT_FEATURE_FLAGS } from './feature-flags.js';
 
 /**
  * Contract creation request
@@ -103,6 +112,8 @@ export interface ContractQueryOptions {
  */
 export interface ContractUpdateOptions {
   contract_id: string;
+  /** Optional caller agent ID — when set, ownership is verified before applying the update. */
+  caller_id?: string;
   status?: DelegationContractStatus;
   activated_at?: string;
   completed_at?: string;
@@ -148,6 +159,28 @@ export interface DelegationContractManagerConfig {
    * require access to AMBER/GREEN/RED classified contracts.
    */
   additionalTLPClearances?: AgentClearance[];
+  /**
+   * Optional ReputationEngine instance.  When provided, enables:
+   *  - ReputationMiddleware (7.1): blocks low-reputation agents on TLP:AMBER+ tasks
+   *  - Security violation penalty (7.2): reduces security_score when a threat is detected
+   */
+  reputationEngine?: ReputationEngine;
+  /**
+   * Optional DelegationHealthMonitor instance.  When provided, the manager wires
+   * a live contract data provider so that collectMetrics() returns real counts (8.1).
+   */
+  healthMonitor?: DelegationHealthMonitor;
+  /**
+   * Optional rate-limiter overrides.  Useful in tests to set a lower `maxOps`
+   * and shorter `windowMs` to verify rate-limiting without hitting 50 ops/hour.
+   */
+  rateLimiterOptions?: RateLimiterOptions;
+  /**
+   * Optional FeatureFlagManager instance.  When provided, the FeatureFlagMiddleware
+   * uses this instance to check `delegation_enabled` kill-switch.  Defaults to the
+   * global singleton from getFeatureFlagManager().
+   */
+  featureFlagManager?: FeatureFlagManager;
 }
 
 /**
@@ -180,6 +213,12 @@ export class DelegationContractManager extends EventEmitter {
   private readonly watchdog: ContractTimeoutWatchdog;
   /** Optional agent identity registry (enables IdentityMiddleware). */
   private readonly agentRegistry?: AgentRegistry;
+  /** Blast-radius limiter — caps contract-creation rate per root delegator tree. */
+  private readonly blastRadiusTracker: BlastRadiusTracker;
+  /** Optional reputation engine (enables ReputationMiddleware + security penalties). */
+  private readonly reputationEngine?: ReputationEngine;
+  /** Optional health monitor wired to live contract stats (8.1). */
+  private readonly healthMonitor?: DelegationHealthMonitor;
 
   constructor(config: DelegationContractManagerConfig = {}) {
     super();
@@ -188,6 +227,14 @@ export class DelegationContractManager extends EventEmitter {
     this.debug = config.debug ?? false;
     this.capabilityRegistry = config.capabilityRegistry;
     this.agentRegistry = config.agentRegistry;
+    this.reputationEngine = config.reputationEngine;
+
+    // 8.1: Wire health monitor to live contract data
+    this.healthMonitor = config.healthMonitor;
+    if (this.healthMonitor) {
+      const mgr = this;
+      this.healthMonitor.setContractDataProvider(() => mgr.getStatistics());
+    }
     
     this.backgroundQueue = new BackgroundSessionQueue(
       config.maxBackgroundSessions ?? MAX_BACKGROUND_SESSIONS,
@@ -209,11 +256,20 @@ export class DelegationContractManager extends EventEmitter {
     this.initializeSchema();
 
     // ── Security middleware chain ──────────────────────────────────────────
+    this.blastRadiusTracker = new BlastRadiusTracker();
     this.chainDepthMiddleware = new ChainDepthMiddleware({ maxDepth: this.maxDelegationDepth });
     this.circuitBreaker = new CircuitBreaker();
     this.watchdog = new ContractTimeoutWatchdog();
 
     this.securityChain = new SecurityMiddlewareChain();
+    // 1.3: FeatureFlagMiddleware — kill-switch, must be first in chain.
+    // When no featureFlagManager is provided, create a local instance with
+    // delegation_enabled=true so existing consumers work out of the box.
+    const flagManager = config.featureFlagManager ?? new FeatureFlagManager({
+      ...DEFAULT_FEATURE_FLAGS,
+      delegation_enabled: true,
+    });
+    this.securityChain.use(new FeatureFlagMiddleware(flagManager));
     if (this.agentRegistry) {
       this.securityChain.use(new IdentityMiddleware(this.agentRegistry));
     }
@@ -227,9 +283,23 @@ export class DelegationContractManager extends EventEmitter {
     this.securityChain.use(new TLPMiddleware(tlpEngine));
     this.securityChain.use(this.chainDepthMiddleware);
     this.securityChain.use(new ThreatValidatorMiddleware());
-    this.securityChain.use(new RateLimiterMiddleware());
+    this.securityChain.use(new RateLimiterMiddleware(config.rateLimiterOptions));
     this.securityChain.use(new ContentPolicyMiddleware());
+    this.securityChain.use(new PermissionsMiddleware((parentContractId) => {
+      const parent = this.getContractById(parentContractId);
+      return parent?.permission_tokens ?? null;
+    }));
+    // 7.1: ReputationMiddleware — block low-reputation agents on TLP:AMBER+ tasks
+    if (this.reputationEngine) {
+      this.securityChain.use(new ReputationMiddleware(this.reputationEngine));
+    }
     this.securityChain.use(new CircuitBreakerMiddleware(this.circuitBreaker));
+    // 3.4: ChainTrackerMiddleware — loop detection and depth validation (create-only)
+    this.securityChain.use(new ChainTrackerMiddleware(this, { maxChainDepth: this.maxDelegationDepth }));
+    // 4.3: ResourceLimiterMiddleware — aggregate resource cap (create-only)
+    this.securityChain.use(new ResourceLimiterMiddleware(
+      () => this.queryContracts({ status: 'active' }),
+    ));
 
     // Forward chain events upstream for observability
     this.securityChain.on('security_warning', (ev) => this.emit('security_warning', ev));
@@ -243,6 +313,30 @@ export class DelegationContractManager extends EventEmitter {
         void this.updateContract({ contract_id: ev.contract_id, status: 'timeout' as any });
       } catch { /* contract may have already completed/been removed */ }
     });
+
+    // Forward circuit breaker open → circuit_breaker_tripped (8.4)
+    this.circuitBreaker.on('circuit_opened', (ev: { agent_id: string; failure_count: number }) => {
+      this.emit('circuit_breaker_tripped', { agent_id: ev.agent_id, failure_count: ev.failure_count });
+    });
+
+    // 7.2: Security violation penalty — penalise delegatee reputation on threat detection
+    if (this.reputationEngine) {
+      const reputationEngine = this.reputationEngine;
+      this.on('security_threat_detected', (ev: Record<string, any>) => {
+        const contract = ev.contract_id ? this.getContractById(ev.contract_id) : undefined;
+        if (!contract?.delegatee?.agent_id) return;
+        void reputationEngine.updateReputation({
+          contract_id: ev.contract_id ?? 'unknown',
+          agent_id: contract.delegatee.agent_id,
+          agent_name: contract.delegatee.agent_name ?? contract.delegatee.agent_id,
+          task_id: contract.task_id ?? 'unknown',
+          success: false,
+          completion_time_ms: 0,
+          security_violations: 1,
+        });
+      });
+    }
+
     this.watchdog.start();
   }
 
@@ -307,6 +401,40 @@ export class DelegationContractManager extends EventEmitter {
     return raw;
   }
 
+  /**
+   * 5.3 Sanitize task description text — strip null bytes and Unicode direction
+   * override characters while preserving legitimate Unicode (emoji, CJK, etc.).
+   */
+  private sanitizeTaskDescription(text: string): string {
+    return text
+      // Remove null bytes
+      .replace(/\0/g, '')
+      // Remove Unicode direction override characters (U+202A–U+202E, U+2066–U+2069)
+      .replace(/[\u202A-\u202E\u2066-\u2069]/g, '');
+  }
+
+  /**
+   * 6.2: Walk the parent chain to find the root delegator agent_id.
+   * Falls back to the provided delegator ID if no traceable parent exists.
+   */
+  private getRootDelegatorId(
+    parentContractId: string | null,
+    fallbackDelegatorId: string,
+  ): string {
+    if (!parentContractId) {
+      return fallbackDelegatorId;
+    }
+    // Walk up the chain (guard against cycles with a depth cap)
+    let current = this.getContractById(parentContractId);
+    for (let i = 0; i < 20 && current; i++) {
+      if (!current.parent_contract_id) {
+        return current.delegator.agent_id;
+      }
+      current = this.getContractById(current.parent_contract_id);
+    }
+    return fallbackDelegatorId;
+  }
+
   /** Run security validation, emit threat event and throw if a threat is detected */
   private async validateContractSecurity(
     request: CreateDelegationContractRequest,
@@ -315,28 +443,81 @@ export class DelegationContractManager extends EventEmitter {
   ): Promise<void> {
     this.securityValidationCount++;
 
-    // ── Legacy inline threat detection (preserved for backward compatibility) ─
-    const threat = this.detectSecurityThreat({
-      permission_token: legacyRequest?.permission_token,
-      permission_tokens: normalizedPermissionTokens,
-      resource_requirements: legacyRequest?.resource_requirements,
-      metadata: legacyRequest?.metadata,
-      tlp_classification: request.tlp_classification || legacyRequest?.tlp_classification,
-    });
-    if (threat) {
-      this.securityThreatCount++;
-      const threatEvent = {
-        contract_id: request.contract_id || request.task_id || `preflight-${Date.now()}`,
-        threat_detected: true,
-        threat_type: threat.threat_type,
-        severity: threat.severity,
-        description: threat.description,
-        action: threat.action,
-        timestamp: new Date().toISOString(),
-      };
-      this.securityThreatEvents.push(threatEvent);
-      this.emit('security_threat_detected', threatEvent);
-      throw new Error(`Security threat detected: ${threat.threat_type}`);
+    // 2.6: Validate PermissionToken holder/issuer identity binding
+    if (normalizedPermissionTokens) {
+      for (const token of normalizedPermissionTokens) {
+        const t = token as typeof token & { holder?: string; issuer?: string };
+        if (t.holder !== undefined && t.holder !== request.delegatee.agent_id) {
+          throw new Error(
+            `Permission token '${token.token_id}': holder '${t.holder}' does not match delegatee '${request.delegatee.agent_id}'`,
+          );
+        }
+        if (t.issuer !== undefined && t.issuer !== request.delegator.agent_id) {
+          throw new Error(
+            `Permission token '${token.token_id}': issuer '${t.issuer}' does not match delegator '${request.delegator.agent_id}'`,
+          );
+        }
+      }
+    }
+
+    // ── Pre-flight threat guards ───────────────────────────────────────────
+    // These three checks mirror the behaviour of the original detectSecurityThreat()
+    // whose private helpers were removed in task 1.6.  We keep them as inline
+    // pre-chain guards because the SecurityMiddlewareChain cannot (a) access
+    // permission_token.scopes from the array form, (b) evaluate resource
+    // requirements outside the DelegationContract type, or (c) guarantee the
+    // same risk-score thresholds as the original contract-level checks.
+
+    // Guard 1: critical permission scopes / actions → permission_escalation
+    {
+      const allScopes = new Set<string>();
+      const allActions = new Set<string>();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const legacyPt = (legacyRequest as any)?.permission_token;
+      if (legacyPt && typeof legacyPt === 'object' && !Array.isArray(legacyPt)) {
+        for (const s of legacyPt.scopes ?? []) allScopes.add(String(s).toLowerCase());
+        for (const a of legacyPt.actions ?? []) allActions.add(String(a).toLowerCase());
+      }
+      for (const token of normalizedPermissionTokens ?? []) {
+        for (const s of (token as any).scopes ?? []) allScopes.add(String(s).toLowerCase()); // eslint-disable-line @typescript-eslint/no-explicit-any
+        for (const a of (token as any).actions ?? []) allActions.add(String(a).toLowerCase()); // eslint-disable-line @typescript-eslint/no-explicit-any
+      }
+      const joined = `${Array.from(allScopes).join(' ')} ${Array.from(allActions).join(' ')}`;
+      if (/(root|admin|execute|delete|modify_system|system_admin|root_access|execute_arbitrary)/i.test(joined)) {
+        this.securityThreatCount++;
+        const te = { contract_id: request.contract_id || `preflight-${Date.now()}`, threat_detected: true, threat_type: 'permission_escalation', severity: 'critical' as const, description: 'Detected high-risk permission scopes or actions.', action: 'block', timestamp: new Date().toISOString() };
+        this.securityThreatEvents.push(te);
+        this.emit('security_threat_detected', te);
+        throw new Error('Security threat detected: permission_escalation');
+      }
+    }
+
+    // Guard 2: excessive delegation depth in metadata → permission_escalation
+    {
+      const depth = Number(legacyRequest?.metadata?.delegation_depth ?? 0);
+      if (Number.isFinite(depth) && depth >= 6) {
+        this.securityThreatCount++;
+        const te = { contract_id: request.contract_id || `preflight-${Date.now()}`, threat_detected: true, threat_type: 'permission_escalation', severity: 'critical' as const, description: 'Delegation chain depth exceeds safe limits.', action: 'block', timestamp: new Date().toISOString() };
+        this.securityThreatEvents.push(te);
+        this.emit('security_threat_detected', te);
+        throw new Error('Security threat detected: permission_escalation');
+      }
+    }
+
+    // Guard 3: excessive per-contract resource requirements → abuse_pattern
+    {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const rr = (legacyRequest as any)?.resource_requirements;
+      const memory = Number(rr?.memory_mb ?? 0);
+      const cpu    = Number(rr?.cpu_cores   ?? 0);
+      const disk   = Number(rr?.disk_space_mb ?? 0);
+      if ((Number.isFinite(memory) && memory > 8192) || (Number.isFinite(cpu) && cpu > 8) || (Number.isFinite(disk) && disk > 512000)) {
+        this.securityThreatCount++;
+        const te = { contract_id: request.contract_id || `preflight-${Date.now()}`, threat_detected: true, threat_type: 'abuse_pattern', severity: 'critical' as const, description: 'Resource requirements indicate possible abuse or exhaustion attempt.', action: 'block', timestamp: new Date().toISOString() };
+        this.securityThreatEvents.push(te);
+        this.emit('security_threat_detected', te);
+        throw new Error('Security threat detected: abuse_pattern');
+      }
     }
 
     // ── SecurityMiddlewareChain ────────────────────────────────────────────
@@ -350,9 +531,18 @@ export class DelegationContractManager extends EventEmitter {
         delegatee: request.delegatee,
         delegation_depth: 0,
         tlp_classification: tlpLevel,
-        permission_tokens: normalizedPermissionTokens,
+        permission_tokens: normalizedPermissionTokens as any,
+        parent_contract_id: request.parent_contract_id,
+        // Expose these fields so ThreatValidatorMiddleware can run its full checks
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ...(legacyRequest?.resource_requirements ? { resource_requirements: legacyRequest.resource_requirements as any } : {}),
+        metadata: legacyRequest?.metadata,
       },
-      task_content: (legacyRequest as any)?.task_content,
+      // Provide auth fields so IdentityMiddleware can verify signatures
+      delegator_auth: request.delegator as any,
+      delegatee_auth: request.delegatee as any,
+      task_content: (legacyRequest as any)?.task_content ??
+        (request.task_description ? { instruction: request.task_description } : undefined),
       metadata: legacyRequest?.metadata,
       timestamp_ms: Date.now(),
       // Enable core security gates by default; callers may override via metadata
@@ -361,6 +551,7 @@ export class DelegationContractManager extends EventEmitter {
         chain_tracking: true,
         identity_auth: !!(this.agentRegistry),
         content_security: true,
+        reputation_tracking: !!(this.reputationEngine),
         ...((legacyRequest as any)?.feature_flags ?? {}),
       },
     };
@@ -406,7 +597,9 @@ export class DelegationContractManager extends EventEmitter {
     const { delegator: normalizedDelegator, delegatee: normalizedDelegatee } =
       this.normalizeContractAgents(request, legacyRequest);
 
-    const normalizedTaskDescription = request.task_description || legacyRequest?.description || request.task_id || 'Delegated task';
+    const normalizedTaskDescription = this.sanitizeTaskDescription(
+      request.task_description || legacyRequest?.description || request.task_id || 'Delegated task'
+    );
     const normalizedTimeout = request.timeout_ms ?? legacyRequest?.timeout_ms ?? 30000;
     const normalizedSuccessCriteria = Array.isArray(request.success_criteria)
       ? { required_checks: request.success_criteria }
@@ -445,11 +638,19 @@ export class DelegationContractManager extends EventEmitter {
       }
     }
     
-    // Validate max delegation depth
-    if (delegation_depth >= this.maxDelegationDepth) {
-      throw new Error(`Maximum delegation depth exceeded (max: ${this.maxDelegationDepth}, attempted: ${delegation_depth})`);
+    // 6.2: Blast radius check — cap contract-creation rate per root delegator tree
+    const rootDelegatorId = this.getRootDelegatorId(
+      request.parent_contract_id ?? null,
+      normalizedDelegator.agent_id,
+    );
+    const blastCheck = this.blastRadiusTracker.check(rootDelegatorId);
+    if (!blastCheck.allowed) {
+      throw new Error(
+        `Blast radius limit exceeded for root delegator '${rootDelegatorId}': ` +
+        `${blastCheck.currentCount}/${blastCheck.limit} contracts in the current window`,
+      );
     }
-    
+
     // Insert contract
     const stmt = this.db.prepare(`
       INSERT INTO delegation_contracts (
@@ -499,6 +700,9 @@ export class DelegationContractManager extends EventEmitter {
     
     // Emit event
     this.emit('contract_created', contract);
+
+    // 6.2: Record contract in blast radius tracker
+    this.blastRadiusTracker.record(rootDelegatorId);
 
     // Track fan-out counter for the delegator
     if (request.parent_contract_id) {
@@ -628,7 +832,65 @@ export class DelegationContractManager extends EventEmitter {
     if (!existing) {
       throw new Error(`Contract not found: ${contract_id}`);
     }
-    
+
+    // 2.4: Caller ownership check
+    if (updates.caller_id) {
+      const isOwner =
+        existing.delegator.agent_id === updates.caller_id ||
+        existing.delegatee.agent_id === updates.caller_id;
+      if (!isOwner) {
+        throw new Error(
+          `Unauthorized: agent '${updates.caller_id}' is not the delegator or delegatee of contract '${contract_id}'`,
+        );
+      }
+    }
+
+    // 1.5: Run security chain (FeatureFlags + Identity) for update operations.
+    // Heavy create-only middleware (TLP, ThreatValidator, etc.) are skipped via appliesTo.
+    const updateContext: SecurityContext = {
+      operation: 'update',
+      contract: {
+        contract_id: existing.contract_id,
+        delegator: existing.delegator,
+        delegatee: existing.delegatee,
+      },
+      timestamp_ms: Date.now(),
+      feature_flags: { identity_auth: !!(this.agentRegistry) },
+    };
+    const updateResult = await this.securityChain.evaluate(updateContext);
+    if (updateResult.action === 'block') {
+      const bv = updateResult.blocking_verdict!;
+      throw new Error(`Security check failed for contract update: ${bv.reason ?? bv.threat_type}`);
+    }
+
+    // 5.1: State machine — once a contract reaches a terminal state it cannot be changed
+    const terminalStates = new Set(['completed', 'failed', 'cancelled', 'revoked', 'timeout']);
+    if (updates.status && terminalStates.has(existing.status)) {
+      throw new Error(
+        `Invalid state transition: ${existing.status} → ${updates.status} (terminal state cannot be changed)`,
+      );
+    }
+
+    // 4.6: Non-empty output validation — reject completion without verification_result
+    if (updates.status === 'completed' && !updates.verification_result) {
+      throw new Error('Cannot complete contract without verification_result');
+    }
+
+    // 6.5: Quarantine on failed verification or quality below threshold
+    if (updates.status === 'completed' && updates.verification_result) {
+      const vr = updates.verification_result;
+      const qualityFail = typeof vr.quality_score === 'number' && vr.quality_score < 0.7;
+      if (vr.verified === false || qualityFail) {
+        const quarantineReason = vr.verified === false ? 'verification_failed' : 'quality_below_threshold';
+        return this.updateContract({
+          contract_id,
+          status: 'failed' as DelegationContractStatus,
+          verification_result: vr,
+          metadata: { ...(existing.metadata ?? {}), quarantined: true, quarantine_reason: quarantineReason },
+        });
+      }
+    }
+
     const { fields, params } = this.buildUpdateFields(updates);
     
     if (fields.length === 0) {
@@ -648,6 +910,25 @@ export class DelegationContractManager extends EventEmitter {
     // Emit events based on status
     if (updates.status === 'completed') {
       this.emit('contract_completed', contract);
+    } else if (updates.status === 'failed') {
+      this.emit('contract_failed', contract);
+    } else if (updates.status === 'revoked') {
+      this.emit('contract_revoked', contract);
+    } else if (updates.status === 'cancelled') {
+      this.emit('contract_cancelled', contract);
+    } else if (updates.status === 'timeout') {
+      this.emit('contract_timeout_fired', contract);
+    }
+
+    // 6.3: Cascading revocation — when a contract is revoked, revoke all non-terminal children
+    if (updates.status === 'revoked') {
+      const terminalSet = new Set(['completed', 'failed', 'cancelled', 'revoked', 'timeout']);
+      const children = this.queryContracts({ parent_contract_id: contract_id });
+      for (const child of children) {
+        if (!terminalSet.has(child.status)) {
+          await this.updateContract({ contract_id: child.contract_id, status: 'revoked' as DelegationContractStatus });
+        }
+      }
     }
 
     // On terminal status: release fan-out slot + untrack from watchdog
@@ -934,61 +1215,6 @@ export class DelegationContractManager extends EventEmitter {
     };
   }
 
-  private detectSecurityThreat(input: {
-    permission_token?: any;
-    permission_tokens?: any[];
-    resource_requirements?: any;
-    metadata?: Record<string, any>;
-    tlp_classification?: string;
-  }): { threat_type: string; severity: 'warning' | 'critical'; description: string; action: 'block' | 'notify' } | null {
-    const { scopes, actions } = this.collectScopesAndActions(input);
-    const joined = `${Array.from(scopes).join(' ')} ${Array.from(actions).join(' ')}`;
-    const hasCriticalPermission = /(root|admin|execute|delete|modify_system|system_admin|root_access|execute_arbitrary)/i.test(joined);
-    if (hasCriticalPermission) {
-      return { threat_type: 'permission_escalation', severity: 'critical', description: 'Detected high-risk permission scopes or actions.', action: 'block' };
-    }
-
-    const depth = Number(input.metadata?.delegation_depth ?? 0);
-    if (Number.isFinite(depth) && depth >= 6) {
-      return { threat_type: 'permission_escalation', severity: 'critical', description: 'Delegation chain depth exceeds safe limits.', action: 'block' };
-    }
-
-    if (this.isExcessiveResourceRequirement(input.resource_requirements)) {
-      return { threat_type: 'abuse_pattern', severity: 'critical', description: 'Resource requirements indicate possible abuse or exhaustion attempt.', action: 'block' };
-    }
-
-    if (input.tlp_classification === 'TLP:RED' && hasCriticalPermission) {
-      return { threat_type: 'permission_escalation', severity: 'critical', description: 'High-sensitivity contract with excessive permissions.', action: 'block' };
-    }
-
-    return null;
-  }
-
-  /** @private Collect all scopes and actions from permission tokens */
-  private collectScopesAndActions(input: { permission_token?: any; permission_tokens?: any[] }): { scopes: Set<string>; actions: Set<string> } {
-    const scopes = new Set<string>();
-    const actions = new Set<string>();
-    if (input.permission_token) {
-      for (const scope of input.permission_token.scopes || []) scopes.add(String(scope).toLowerCase());
-      for (const action of input.permission_token.actions || []) actions.add(String(action).toLowerCase());
-    }
-    for (const token of input.permission_tokens || []) {
-      for (const scope of token?.scopes || []) scopes.add(String(scope).toLowerCase());
-      for (const action of token?.actions || []) actions.add(String(action).toLowerCase());
-    }
-    return { scopes, actions };
-  }
-
-  /** @private Check if resource requirements exceed safe thresholds */
-  private isExcessiveResourceRequirement(requirements: any): boolean {
-    const memory = Number(requirements?.memory_mb ?? 0);
-    const cpu = Number(requirements?.cpu_cores ?? 0);
-    const disk = Number(requirements?.disk_space_mb ?? 0);
-    return (Number.isFinite(memory) && memory > 8192)
-      || (Number.isFinite(cpu) && cpu > 8)
-      || (Number.isFinite(disk) && disk > 512000);
-  }
-
   // ─────────────────────────────────────────────────────────────────────────
   // Execution Mode: Phase 3 – Selection, Lifecycle Hooks, Handoff
   // ─────────────────────────────────────────────────────────────────────────
@@ -1053,6 +1279,27 @@ export class DelegationContractManager extends EventEmitter {
   }
 
   /**
+   * 7.3 — Rank a list of candidate agent IDs by their reputation reliability_score,
+   * highest first. Falls back to the original order when the reputation engine is
+   * unavailable or when `featureFlags.reputation_tracking === false`.
+   */
+  async rankCandidatesByReputation(
+    agentIds: string[],
+    featureFlags?: Record<string, boolean>,
+  ): Promise<string[]> {
+    if (!this.reputationEngine || featureFlags?.reputation_tracking === false) {
+      return agentIds;
+    }
+    const scored = await Promise.all(
+      agentIds.map(async (id) => {
+        const rep = await this.reputationEngine!.getReputation(id);
+        return { id, score: rep?.reliability_score ?? 0.5 };
+      }),
+    );
+    return scored.sort((a, b) => b.score - a.score).map((e) => e.id);
+  }
+
+  /**
    * Get the current background session queue status.
    */
   getBackgroundQueueStatus() {
@@ -1071,6 +1318,14 @@ export class DelegationContractManager extends EventEmitter {
    */
   getCheckpoint(): SessionCheckpoint {
     return this.checkpoint;
+  }
+
+  /**
+   * 8.1 — Expose the optional health monitor so callers can start/stop monitoring
+   * and retrieve live metrics.
+   */
+  getHealthMonitor(): DelegationHealthMonitor | undefined {
+    return this.healthMonitor;
   }
 
   // ─────────── Lifecycle Hooks ───────────
@@ -1187,6 +1442,8 @@ export class DelegationContractManager extends EventEmitter {
     request: SessionHandoffRequest & {
       /** Optional: extra fields forwarded to the new contract. */
       newContractOverrides?: Partial<CreateDelegationContractRequest>;
+      /** Optional caller agent ID — when set, only the delegatee of the source contract may initiate the handoff. */
+      caller_id?: string;
     },
   ): Promise<DelegationContract> {
     const { fromContractId, toExecutionMode, contextSnapshot, handoffReason } = request;
@@ -1195,6 +1452,31 @@ export class DelegationContractManager extends EventEmitter {
     const sourceContract = this.getContractById(fromContractId);
     if (!sourceContract) {
       throw new Error(`handoffSession: source contract not found: ${fromContractId}`);
+    }
+
+    // 2.5: Delegatee ownership check — only the delegatee may initiate a handoff
+    if (request.caller_id && sourceContract.delegatee.agent_id !== request.caller_id) {
+      throw new Error(
+        `Unauthorized: only delegatee '${sourceContract.delegatee.agent_id}' can initiate handoff from '${fromContractId}'`,
+      );
+    }
+
+    // 1.5: Run security chain (FeatureFlags + Identity) for handoff operations.
+    // Heavy create-only middleware are skipped via appliesTo.
+    const handoffCtx: SecurityContext = {
+      operation: 'handoff',
+      contract: {
+        contract_id: sourceContract.contract_id,
+        delegator: sourceContract.delegator,
+        delegatee: sourceContract.delegatee,
+      },
+      timestamp_ms: Date.now(),
+      feature_flags: { identity_auth: !!(this.agentRegistry) },
+    };
+    const handoffResult = await this.securityChain.evaluate(handoffCtx);
+    if (handoffResult.action === 'block') {
+      const bv = handoffResult.blocking_verdict!;
+      throw new Error(`Security check failed for handoff: ${bv.reason ?? bv.threat_type}`);
     }
 
     const fromSessionId = sourceContract.session_id;

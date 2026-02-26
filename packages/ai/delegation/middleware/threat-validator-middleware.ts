@@ -11,13 +11,14 @@
  * @date 2026-02-24
  */
 
-import type { SecurityMiddleware, SecurityContext, SecurityVerdict, SecuritySeverity } from '../../types/security-middleware.js';
+import type { SecurityMiddleware, SecurityContext, SecurityVerdict, SecuritySeverity, SecurityOperationType } from '../../types/security-middleware.js';
 import { SecurityThreatValidator } from '../../src/delegation/security-threat-model.js';
 import type { DelegationContract } from '../../types/delegation-contracts.js';
 
 export class ThreatValidatorMiddleware implements SecurityMiddleware {
   readonly name = 'threat-validator';
   readonly featureFlag = 'security_monitoring';
+  readonly appliesTo: SecurityOperationType[] = ['create'];
 
   private readonly validator: SecurityThreatValidator;
 
@@ -52,6 +53,8 @@ export class ThreatValidatorMiddleware implements SecurityMiddleware {
       parent_contract_id: partial.parent_contract_id,
       metadata: partial.metadata,
     };
+    // Pass resource_requirements through (not part of DelegationContract type but used by SecurityThreatValidator)
+    (syntheticContract as any).resource_requirements = (partial as any).resource_requirements; // eslint-disable-line @typescript-eslint/no-explicit-any
 
     const result = await this.validator.validateDelegationSecurity(syntheticContract as any); // eslint-disable-line @typescript-eslint/no-explicit-any
 
