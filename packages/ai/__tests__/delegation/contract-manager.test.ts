@@ -10,10 +10,11 @@
  * @date 2026-02-13
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { unlinkSync, existsSync } from 'fs';
 import { DelegationContractManager } from '../../delegation/contract-manager';
 import type { CreateDelegationContractRequest, DelegationAgent } from '../../types/delegation-contracts';
+import { ExecutionMode } from '../../types/agent-capabilities';
 
 const TEST_DB_PATH = '/tmp/test-delegation-contracts.db';
 
@@ -599,6 +600,87 @@ describe('DelegationContractManager', () => {
       
       // All operations should complete successfully with debug logging
       expect(contract.contract_id).toBeTruthy();
+    });
+  });
+
+  describe('execution mode warnings (8.1)', () => {
+    it('should emit console.warn and execution_mode_warning event when executionMode is omitted', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const warnEvents: Array<Record<string, unknown>> = [];
+      manager.on('execution_mode_warning', (ev) => warnEvents.push(ev));
+
+      const request: CreateDelegationContractRequest = {
+        delegator: testDelegator,
+        delegatee: testDelegatee,
+        task_id: 'no-mode-task',
+        task_description: 'Task without explicit execution mode',
+        verification_policy: 'direct_inspection',
+        success_criteria: { quality_threshold: 0.8 },
+        timeout_ms: 3600000,
+        // execution_mode intentionally omitted
+      };
+
+      const contract = await manager.createContract(request);
+
+      expect(warnSpy).toHaveBeenCalledOnce();
+      const warnMessage = warnSpy.mock.calls[0][0] as string;
+      expect(warnMessage).toContain('[DCYFR Delegation]');
+      expect(warnMessage).toContain('no-mode-task');
+      expect(warnMessage).toContain('INTERACTIVE');
+      expect(warnMessage).toContain('delegation-execution-modes-migration.md');
+
+      expect(warnEvents).toHaveLength(1);
+      expect(warnEvents[0].contract_id).toBe(contract.contract_id);
+      expect(warnEvents[0].task_id).toBe('no-mode-task');
+      expect(warnEvents[0].defaulted_to).toBe(ExecutionMode.INTERACTIVE);
+      expect(warnEvents[0].migration_guide).toBe('docs/guides/delegation-execution-modes-migration.md');
+
+      warnSpy.mockRestore();
+    });
+
+    it('should NOT warn when executionMode is explicitly provided', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const warnEvents: Array<Record<string, unknown>> = [];
+      manager.on('execution_mode_warning', (ev) => warnEvents.push(ev));
+
+      const request: CreateDelegationContractRequest = {
+        delegator: testDelegator,
+        delegatee: testDelegatee,
+        task_id: 'explicit-mode-task',
+        task_description: 'Task with explicit execution mode',
+        verification_policy: 'direct_inspection',
+        success_criteria: { quality_threshold: 0.8 },
+        timeout_ms: 3600000,
+        execution_mode: ExecutionMode.INTERACTIVE,
+      };
+
+      await manager.createContract(request);
+
+      // No warning should be emitted when mode is explicitly set
+      expect(warnSpy).not.toHaveBeenCalled();
+      expect(warnEvents).toHaveLength(0);
+
+      warnSpy.mockRestore();
+    });
+
+    it('should NOT warn when executionMode is set to BACKGROUND', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const request: CreateDelegationContractRequest = {
+        delegator: testDelegator,
+        delegatee: testDelegatee,
+        task_id: 'background-task',
+        task_description: 'Background task with explicit mode',
+        verification_policy: 'direct_inspection',
+        success_criteria: { quality_threshold: 0.8 },
+        timeout_ms: 3600000,
+        execution_mode: ExecutionMode.BACKGROUND,
+      };
+
+      await manager.createContract(request);
+
+      expect(warnSpy).not.toHaveBeenCalled();
+      warnSpy.mockRestore();
     });
   });
 });
