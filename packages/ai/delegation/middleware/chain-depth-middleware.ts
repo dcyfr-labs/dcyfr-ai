@@ -13,7 +13,7 @@
  * @date 2026-02-24
  */
 
-import type { SecurityMiddleware, SecurityContext, SecurityVerdict } from '../../types/security-middleware.js';
+import type { SecurityMiddleware, SecurityContext, SecurityVerdict, SecurityOperationType } from '../../types/security-middleware.js';
 
 export interface ChainDepthMiddlewareOptions {
   /** Maximum delegation chain depth before blocking (inclusive). Default: 5 */
@@ -25,6 +25,7 @@ export interface ChainDepthMiddlewareOptions {
 export class ChainDepthMiddleware implements SecurityMiddleware {
   readonly name = 'chain-depth';
   readonly featureFlag = 'chain_tracking';
+  readonly appliesTo: SecurityOperationType[] = ['create'];
 
   private readonly maxDepth: number;
   private readonly maxFanOut: number;

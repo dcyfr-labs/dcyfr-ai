@@ -34,7 +34,7 @@ const DEFAULT_RULES: ContentRule[] = [
   },
   {
     name: 'system_override',
-    pattern: /\[SYSTEM\]|\[OVERRIDE\]|\[ADMIN\]|\[ROOT\]/,
+    pattern: /\[SYSTEM[^\]]*\]|\[OVERRIDE\]|\[ADMIN\]|\[ROOT\]|SYSTEM\s*:\s*(override|disable|bypass)/i,
     severity: 'block',
     message: 'Prompt injection attempt: system-override tag detected.',
   },

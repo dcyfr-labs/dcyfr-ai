@@ -271,6 +271,25 @@ export class DelegationHealthMonitor {
   
   private monitoringInterval?: NodeJS.Timeout;
   private collectionInterval = 10000;  // 10 seconds
+
+  /** Optional callback that returns live contract stats from the contract store (8.1) */
+  private contractDataProvider?: () => {
+    active: number;
+    completed: number;
+    failed: number;
+    total: number;
+    success_rate: number;
+  };
+
+  /**
+   * Register a live contract data provider so that collectMetrics() pulls real
+   * contract counts from the DelegationContractManager store instead of stubs.
+   */
+  setContractDataProvider(
+    provider: () => { active: number; completed: number; failed: number; total: number; success_rate: number },
+  ): void {
+    this.contractDataProvider = provider;
+  }
   
   constructor() {
     this.metrics = this.createEmptyMetrics();
@@ -313,19 +332,26 @@ export class DelegationHealthMonitor {
    * Collect current system metrics
    */
   private collectMetrics(): void {
-    // In real implementation, this would query actual system state
-    // For now, create placeholder metrics
+    // Pull live stats from the contract store when a provider is registered (8.1)
+    const live = this.contractDataProvider ? this.contractDataProvider() : null;
+    const liveActive = live?.active ?? 0;
+    const livePending = 0; // pending is a sub-state; not returned by getStatistics()
+    const liveCompleted = live?.completed ?? 0;
+    const liveFailed = live?.failed ?? 0;
+    const liveTotal = live?.total ?? 0;
+    const liveSuccessRate = live?.success_rate ?? 1.0;
+
     this.metrics = {
       healthScore: this.calculateHealthScore(),
       timestamp: new Date(),
       contracts: {
-        active: 0,
-        pending: 0,
-        completed: 0,
-        failed: 0,
-        total: 0,
+        active: liveActive,
+        pending: livePending,
+        completed: liveCompleted,
+        failed: liveFailed,
+        total: liveTotal,
         averageDuration: 0,
-        successRate: 1.0
+        successRate: liveSuccessRate
       },
       agents: {
         total: 0,

@@ -15,7 +15,7 @@
  */
 
 import { EventEmitter } from 'events';
-import type { SecurityMiddleware, SecurityContext, SecurityVerdict } from '../types/security-middleware.js';
+import type { SecurityMiddleware, SecurityContext, SecurityVerdict, SecurityOperationType } from '../types/security-middleware.js';
 
 // ──────────────────────────────────────────────────────────────────────────
 // Types
@@ -163,6 +163,7 @@ export class CircuitBreaker extends EventEmitter {
 export class CircuitBreakerMiddleware implements SecurityMiddleware {
   readonly name = 'circuit-breaker';
   readonly featureFlag = 'security_monitoring';
+  readonly appliesTo: SecurityOperationType[] = ['create'];
 
   constructor(private readonly breaker: CircuitBreaker) {}
 

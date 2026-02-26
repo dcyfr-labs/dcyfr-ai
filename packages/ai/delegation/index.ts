@@ -24,3 +24,28 @@ export { EXECUTION_MODE_EVENTS, makeSessionCreatedEvent, makeSessionArchivedEven
 export type { ExecutionModeEvent, ExecutionModeEventName, SessionCreatedEvent, SessionHandoffEvent, SessionArchivedEvent, ModeQueueStatusEvent, BackgroundQueueFullEvent } from './event-schemas.js';
 export { ExecutionModeDashboard } from './execution-mode-dashboard.js';
 export type { PerModeStats, TopAgentEntry, ExecutionModeDashboardReport, DashboardInput } from './execution-mode-dashboard.js';
+
+// ── Phase 1-6: Security hardening exports ─────────────────────────────────
+export { SecurityMiddlewareChain } from './security-middleware-chain.js';
+export { AgentRegistry } from './agent-registry.js';
+export type { AgentKey, AgentRegistryEntry } from './agent-registry.js';
+export { CircuitBreaker, CircuitBreakerMiddleware } from './circuit-breaker.js';
+export type { CircuitBreakerConfig, CircuitState } from './circuit-breaker.js';
+export { ContractTimeoutWatchdog } from './timeout-watchdog.js';
+export type { WatchdogConfig, WatchdogContract, TimeoutEvent } from './timeout-watchdog.js';
+export { BlastRadiusTracker } from './blast-radius-tracker.js';
+export type { BlastRadiusTrackerConfig, BlastRadiusCheckResult } from './blast-radius-tracker.js';
+export { IdentityMiddleware } from './middleware/identity-middleware.js';
+export { TLPMiddleware } from './middleware/tlp-middleware.js';
+export { ThreatValidatorMiddleware } from './middleware/threat-validator-middleware.js';
+export { RateLimiterMiddleware } from './middleware/rate-limiter-middleware.js';
+export { ChainDepthMiddleware } from './middleware/chain-depth-middleware.js';
+export { ContentPolicyMiddleware } from './middleware/content-policy-middleware.js';
+export { PermissionsMiddleware } from './middleware/permissions-middleware.js';
+export type { SimplifiedPermissionToken } from './middleware/permissions-middleware.js';
+export { ReputationMiddleware } from './middleware/reputation-middleware.js';
+export { FeatureFlagMiddleware, DelegationDisabledError } from './middleware/feature-flag-middleware.js';
+export { ChainTrackerMiddleware } from './middleware/chain-tracker-middleware.js';
+export type { ChainContractProvider } from './middleware/chain-tracker-middleware.js';
+export { ResourceLimiterMiddleware } from './middleware/resource-limiter-middleware.js';
+export type { ContractResources, ResourceThresholds } from './middleware/resource-limiter-middleware.js';

@@ -172,7 +172,7 @@ describe('DelegationContractManager', () => {
         parent_contract_id: parentId,
       };
       
-      await expect(manager.createContract(excessRequest)).rejects.toThrow('Maximum delegation depth exceeded');
+      await expect(manager.createContract(excessRequest)).rejects.toThrow(/Maximum delegation depth exceeded|chain_depth_exceeded/i);
     });
   });
   
@@ -482,6 +482,13 @@ describe('DelegationContractManager', () => {
       await manager.updateContract({
         contract_id: completed.contract_id,
         status: 'completed',
+        verification_result: {
+          verified: true,
+          verified_at: new Date().toISOString(),
+          verified_by: 'test',
+          verification_method: 'direct_inspection' as const,
+          quality_score: 1.0,
+        },
       });
       
       const activeContracts = await manager.getActiveContracts(testDelegatee.agent_id);
@@ -521,6 +528,13 @@ describe('DelegationContractManager', () => {
       await manager.updateContract({
         contract_id: contracts[0].contract_id,
         status: 'completed',
+        verification_result: {
+          verified: true,
+          verified_at: new Date().toISOString(),
+          verified_by: 'test',
+          verification_method: 'direct_inspection' as const,
+          quality_score: 1.0,
+        },
       });
       
       await manager.updateContract({
