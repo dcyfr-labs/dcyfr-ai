@@ -250,6 +250,16 @@ export class SessionManager extends EventEmitter {
     return this.getAll().filter((s) => s.executionMode === mode);
   }
 
+  /** Return all active sessions associated with a given contract ID. */
+  getByContractId(contractId: string): ManagedSession[] {
+    return this.getAll().filter((s) => s.contractId === contractId);
+  }
+
+  /** Return the first active session for a contract, or undefined if none found. */
+  getActiveSessionForContract(contractId: string): ManagedSession | undefined {
+    return this.getByContractId(contractId).find((s) => s.lifeCycle === 'active');
+  }
+
   /** Total count of in-memory sessions. */
   get size(): number {
     return this.sessions.size;

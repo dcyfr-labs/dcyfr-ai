@@ -222,10 +222,12 @@ export interface DelegationContract {
   
   /**
    * Execution mode for this delegation contract.
-   * Defaults to `ExecutionMode.INTERACTIVE` when not specified.
+   * Always set; never `undefined` on stored contracts. Defaults to `ExecutionMode.INTERACTIVE`
+   * when the request omits the field.
    * @since 1.1.0
+   * @breaking 2.0.0 — field is now required (was optional in 1.x)
    */
-  execution_mode?: ExecutionMode;
+  execution_mode: ExecutionMode;
 
   /**
    * Session identifier shared across all contracts in a delegation session.

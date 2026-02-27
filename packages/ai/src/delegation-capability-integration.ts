@@ -17,6 +17,7 @@ import { ContractManager } from '../delegation/contract-manager.js';
 import { DelegationChainTracker } from '../delegation/chain-tracker.js';
 
 import type { AgentSource, BootstrapResult, CapabilityDetectionConfig } from './capability-bootstrap.js';
+import { ExecutionMode } from './types/agent-capabilities.js';
 import type { AgentCapabilityManifest, DelegationCapability, DelegationRecommendation } from './types/agent-capabilities.js';
 import type { DelegationContract, SuccessCriteria } from './types/delegation-contracts.js';
 
@@ -278,6 +279,7 @@ export class DelegationCapabilityIntegration extends EventEmitter {
       priority: options.priority || 5,
       timeout_ms: options.timeout_ms || bestAgent.estimated_completion_time_ms * 1.5,
       status: 'pending',
+      execution_mode: ExecutionMode.INTERACTIVE, // 8.3: capability-driven selection is always interactive by default
       metadata: {
         delegation_depth: options.max_chart_depth || 1,
         agent_selection: {

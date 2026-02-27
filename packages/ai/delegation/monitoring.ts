@@ -76,6 +76,34 @@ export interface SystemHealthMetrics {
       score: number;
     }>;
   };
+
+  /** Execution mode metrics (8.7) */
+  executionModes: {
+    /** Contract count broken down by execution mode (INTERACTIVE / BACKGROUND / ASYNC) */
+    byMode: Record<string, number>;
+    /** Total session handoffs performed */
+    handoffCount: number;
+    /** Ratio of failed handoffs to total handoffs (0-1) */
+    handoffFailureRate: number;
+    /** Number of background contracts currently queued */
+    backgroundQueueDepth: number;
+    /** Number of background slots currently occupied */
+    backgroundSlotsActive: number;
+    /** Maximum background slots configured */
+    backgroundSlotsTotal: number;
+  };
+}
+
+/**
+ * Live data shape returned by an execution-mode data provider (8.7).
+ */
+export interface ExecutionModeSnapshot {
+  byMode: Record<string, number>;
+  handoffCount: number;
+  handoffFailureRate: number;
+  backgroundQueueDepth: number;
+  backgroundSlotsActive: number;
+  backgroundSlotsTotal: number;
 }
 
 export interface AlertRule {
@@ -253,6 +281,35 @@ export const DEFAULT_ALERT_RULES: AlertRule[] = [
     channels: ['console', 'mcp'],
     cooldown: 180000,  // 3 minutes
     enabled: true
+  },
+  // 8.7: Execution-mode-specific alert rules
+  {
+    id: 'high-handoff-failure-rate',
+    name: 'High Session Handoff Failure Rate',
+    condition: {
+      metric: 'executionModes.handoffFailureRate',
+      operator: '>',
+      threshold: 0.05,  // > 5% handoff failures
+      duration: 120000  // for 2 minutes
+    },
+    severity: 'error',
+    channels: ['console', 'mcp'],
+    cooldown: 300000,  // 5 minutes
+    enabled: true
+  },
+  {
+    id: 'background-queue-near-capacity',
+    name: 'Background Queue Near Capacity',
+    condition: {
+      metric: 'executionModes.backgroundQueueDepth',
+      operator: '>=',
+      threshold: 8,  // >= 8/10 slots used
+      duration: 60000  // for 1 minute
+    },
+    severity: 'warning',
+    channels: ['console', 'mcp'],
+    cooldown: 300000,  // 5 minutes
+    enabled: true
   }
 ];
 
@@ -281,6 +338,9 @@ export class DelegationHealthMonitor {
     success_rate: number;
   };
 
+  /** Optional callback that returns live execution-mode metrics (8.7) */
+  private executionModeDataProvider?: () => ExecutionModeSnapshot;
+
   /**
    * Register a live contract data provider so that collectMetrics() pulls real
    * contract counts from the DelegationContractManager store instead of stubs.
@@ -289,6 +349,19 @@ export class DelegationHealthMonitor {
     provider: () => { active: number; completed: number; failed: number; total: number; success_rate: number },
   ): void {
     this.contractDataProvider = provider;
+  }
+
+  /**
+   * Register a live execution-mode data provider (8.7).
+   *
+   * When set, `collectMetrics()` will call this provider on every tick to
+   * populate `SystemHealthMetrics.executionModes` with real per-mode counts,
+   * handoff stats, and background queue depth.
+   *
+   * @param provider - Callback that returns an {@link ExecutionModeSnapshot}
+   */
+  setExecutionModeDataProvider(provider: () => ExecutionModeSnapshot): void {
+    this.executionModeDataProvider = provider;
   }
   
   constructor() {
@@ -341,6 +414,18 @@ export class DelegationHealthMonitor {
     const liveTotal = live?.total ?? 0;
     const liveSuccessRate = live?.success_rate ?? 1.0;
 
+    // Pull live execution-mode metrics when a provider is registered (8.7)
+    const liveExecModes: ExecutionModeSnapshot = this.executionModeDataProvider
+      ? this.executionModeDataProvider()
+      : {
+          byMode: {},
+          handoffCount: 0,
+          handoffFailureRate: 0,
+          backgroundQueueDepth: 0,
+          backgroundSlotsActive: 0,
+          backgroundSlotsTotal: 10,
+        };
+
     this.metrics = {
       healthScore: this.calculateHealthScore(),
       timestamp: new Date(),
@@ -383,7 +468,8 @@ export class DelegationHealthMonitor {
         averageScore: 75,
         topPerformers: [],
         underperformers: []
-      }
+      },
+      executionModes: liveExecModes
     };
     
     // Add to history
@@ -672,6 +758,14 @@ export class DelegationHealthMonitor {
         averageScore: 0,
         topPerformers: [],
         underperformers: []
+      },
+      executionModes: {
+        byMode: {},
+        handoffCount: 0,
+        handoffFailureRate: 0,
+        backgroundQueueDepth: 0,
+        backgroundSlotsActive: 0,
+        backgroundSlotsTotal: 10
       }
     };
   }
