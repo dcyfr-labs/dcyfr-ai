@@ -18,6 +18,7 @@ import type {
   ResourceRequirement,
   ConfidenceCalibration,
 } from '../types/agent-capabilities.js';
+import { ExecutionMode } from '../types/agent-capabilities.js';
 
 /**
  * Agent definition from .agent.md file frontmatter
@@ -93,6 +94,7 @@ export function bootstrapCapabilityManifest(
       delegatesTo: agentDef.delegatesTo,
       qualityGates: agentDef.qualityGates,
     },
+    supported_execution_modes: [ExecutionMode.INTERACTIVE, ExecutionMode.BACKGROUND, ExecutionMode.ASYNC],
   };
 
   return manifest;
