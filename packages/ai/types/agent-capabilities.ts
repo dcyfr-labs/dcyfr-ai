@@ -250,10 +250,11 @@ export interface AgentCapabilityManifest {
 
   /**
    * Execution modes this agent supports.
-   * If absent, all modes are assumed supported (backward-compatible default).
+   * All agent manifests must declare the modes they support.
    * @since 1.1.0
+   * @breaking 2.0.0 — field is now required (was optional in 1.x)
    */
-  supported_execution_modes?: ExecutionMode[];
+  supported_execution_modes: ExecutionMode[];
 
   /**
    * Preferred execution mode for the agent's primary workload.

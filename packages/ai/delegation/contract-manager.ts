@@ -232,8 +232,7 @@ export class DelegationContractManager extends EventEmitter {
     // 8.1: Wire health monitor to live contract data
     this.healthMonitor = config.healthMonitor;
     if (this.healthMonitor) {
-      const mgr = this;
-      this.healthMonitor.setContractDataProvider(() => mgr.getStatistics());
+      this.healthMonitor.setContractDataProvider(() => this.getStatistics());
     }
     
     this.backgroundQueue = new BackgroundSessionQueue(
@@ -665,33 +664,15 @@ export class DelegationContractManager extends EventEmitter {
     // Store execution mode and session ID in metadata (backward-compatible, no schema migration needed)
     const executionMode = request.execution_mode ?? ExecutionMode.INTERACTIVE;
 
-    // 8.1: Emit runtime warning when executionMode is not explicitly specified
-    if (request.execution_mode === undefined) {
-      const warningMsg =
-        `[DCYFR Delegation] No executionMode specified for contract '${contract_id}' ` +
-        `(task: '${request.task_id}'). Defaulting to INTERACTIVE. ` +
-        `Specify an explicit executionMode to avoid this warning. ` +
-        `Migration guide: docs/guides/delegation-execution-modes-migration.md`;
-      console.warn(warningMsg);
-      this.emit('execution_mode_warning', {
-        contract_id,
-        task_id: request.task_id,
-        defaulted_to: ExecutionMode.INTERACTIVE,
-        message: warningMsg,
-        migration_guide: 'docs/guides/delegation-execution-modes-migration.md',
-        timestamp: new Date().toISOString(),
-      });
-    }
-
     const sessionId = request.session_id ?? (
       executionMode !== ExecutionMode.INTERACTIVE
         ? `session-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
         : undefined
     );
-    const initialMetadata: Record<string, unknown> = {};
-    if (executionMode !== ExecutionMode.INTERACTIVE) {
-      initialMetadata['execution_mode'] = executionMode;
-    }
+    const initialMetadata: Record<string, unknown> = {
+      // 8.4: always persist execution_mode so DelegationContract.execution_mode is never derived from default
+      execution_mode: executionMode,
+    };
     if (sessionId) {
       initialMetadata['session_id'] = sessionId;
     }
@@ -1255,13 +1236,12 @@ export class DelegationContractManager extends EventEmitter {
     request: CreateDelegationContractRequest & { metadata?: Record<string, unknown> },
     delegateeManifest?: AgentCapabilityManifest,
   ): ExecutionMode {
-    const supportedModes: Set<ExecutionMode> | undefined =
-      delegateeManifest?.supported_execution_modes
-        ? new Set(delegateeManifest.supported_execution_modes)
-        : undefined; // undefined ⇒ all modes assumed supported (backward compat)
+    const supportedModes: Set<ExecutionMode> =
+      delegateeManifest
+        ? new Set(delegateeManifest.supported_execution_modes) // 8.5: always present
+        : new Set(Object.values(ExecutionMode)); // no manifest — all modes allowed
 
-    const supportsMode = (m: ExecutionMode): boolean =>
-      supportedModes === undefined || supportedModes.has(m);
+    const supportsMode = (m: ExecutionMode): boolean => supportedModes.has(m);
 
     // Tier 1: Explicit override
     if (request.execution_mode && supportsMode(request.execution_mode)) {
@@ -1364,6 +1344,17 @@ export class DelegationContractManager extends EventEmitter {
   ): Promise<void> {
     // Acquire queue slot
     await this.backgroundQueue.acquire(sessionId, contractId);
+
+    // Persist session_id into contract metadata so handoffSession can resolve it
+    try {
+      const existing = this.getContractById(contractId);
+      if (existing) {
+        const updatedMetadata = { ...existing.metadata, session_id: sessionId };
+        await this.updateContract({ contract_id: contractId, metadata: updatedMetadata });
+      }
+    } catch {
+      // Non-fatal — handoff will fall back gracefully
+    }
 
     // Register session
     const sessionState = {
@@ -1498,8 +1489,9 @@ export class DelegationContractManager extends EventEmitter {
       throw new Error(`Security check failed for handoff: ${bv.reason ?? bv.threat_type}`);
     }
 
-    const fromSessionId = sourceContract.session_id;
-    const fromMode = sourceContract.execution_mode ?? ExecutionMode.INTERACTIVE;
+    const fromSessionId = sourceContract.session_id
+      ?? this.sessionManager.getActiveSessionForContract(fromContractId)?.sessionId;
+    const fromMode = sourceContract.execution_mode; // 8.4: always present, no fallback needed
 
     // 2. Checkpoint current state before handoff
     const messageCount = Array.isArray(contextSnapshot?.conversationHistory)

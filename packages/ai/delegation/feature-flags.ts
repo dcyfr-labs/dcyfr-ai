@@ -22,7 +22,8 @@ export type DelegationFeatureFlag =
   | 'performance_metrics'          // Performance tracking and benchmarks
   | 'predictive_routing'           // ML-based agent selection
   | 'capability_learning'          // Dynamic capability updates
-  | 'multi_tenancy';               // Multi-tenant isolation
+  | 'multi_tenancy'                // Enterprise feature - opt-in only
+  | 'execution_modes';             // Background/async execution modes (Phase 8)
 
 /**
  * Feature flag configuration
@@ -116,7 +117,8 @@ export const DEFAULT_FEATURE_FLAGS: Record<DelegationFeatureFlag, boolean> = {
   performance_metrics: true,        // Monitoring - enabled when delegation enabled
   predictive_routing: false,        // Advanced feature - opt-in only
   capability_learning: false,       // Advanced feature - opt-in only
-  multi_tenancy: false              // Enterprise feature - opt-in only
+  multi_tenancy: false,             // Enterprise feature - opt-in only
+  execution_modes: true,            // Background/async modes - enabled by default; disable via ENABLE_EXECUTION_MODES=false
 };
 
 /**
@@ -436,6 +438,42 @@ export function initializeFeatureFlags(
 }
 
 /**
+ * Initialize feature flag manager from environment variables.
+ *
+ * Reads the following env vars (all optional):
+ *   - `ENABLE_EXECUTION_MODES`   — `"false"` disables background/async execution modes
+ *   - `DELEGATION_ENABLED`       — `"true"` enables the delegation master switch
+ *
+ * All other flags retain their `DEFAULT_FEATURE_FLAGS` values.
+ *
+ * @example
+ * // In your application entry point:
+ * initializeFeatureFlagsFromEnv();
+ *
+ * // Or to mix env vars with manual overrides:
+ * initializeFeatureFlagsFromEnv({ predictive_routing: true });
+ */
+export function initializeFeatureFlagsFromEnv(
+  overrides?: Partial<Record<DelegationFeatureFlag, boolean>>
+): FeatureFlagManager {
+  const envConfig: Partial<Record<DelegationFeatureFlag, boolean>> = {};
+
+  // ENABLE_EXECUTION_MODES env var (default true)
+  const enableExecModes = process.env['ENABLE_EXECUTION_MODES'];
+  if (enableExecModes !== undefined) {
+    envConfig['execution_modes'] = enableExecModes.toLowerCase() !== 'false';
+  }
+
+  // DELEGATION_ENABLED env var (default false — explicit opt-in required)
+  const delegationEnabled = process.env['DELEGATION_ENABLED'];
+  if (delegationEnabled !== undefined) {
+    envConfig['delegation_enabled'] = delegationEnabled.toLowerCase() === 'true';
+  }
+
+  return initializeFeatureFlags({ ...envConfig, ...overrides });
+}
+
+/**
  * Quick check if delegation is enabled
  */
 export function isDelegationEnabled(context: FeatureFlagContext = {}): boolean {
@@ -450,4 +488,12 @@ export function isFeatureEnabled(
   context: FeatureFlagContext = {}
 ): boolean {
   return getFeatureFlagManager().isEnabled(flag, context).enabled;
+}
+
+/**
+ * Quick check if execution modes (background/async) are enabled.
+ * Can be disabled via `ENABLE_EXECUTION_MODES=false` env var.
+ */
+export function isExecutionModesEnabled(): boolean {
+  return isFeatureEnabled('execution_modes');
 }

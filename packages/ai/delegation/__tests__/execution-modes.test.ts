@@ -58,6 +58,7 @@ describe('DelegationContractManager.selectExecutionMode()', () => {
       agentName: 'test-agent',
       capabilities: [],
       preferred_execution_mode: ExecutionMode.BACKGROUND,
+      supported_execution_modes: [ExecutionMode.BACKGROUND, ExecutionMode.INTERACTIVE],
     } as any;
     const mode = cm.selectExecutionMode(req as any, manifest);
     expect(mode).toBe(ExecutionMode.BACKGROUND);
@@ -84,6 +85,7 @@ describe('DelegationContractManager.selectExecutionMode()', () => {
       agentName: 'test-agent',
       capabilities: [],
       preferred_execution_mode: ExecutionMode.BACKGROUND,
+      supported_execution_modes: [ExecutionMode.ASYNC, ExecutionMode.BACKGROUND, ExecutionMode.INTERACTIVE],
     } as any;
     const mode = cm.selectExecutionMode(req as any, manifest);
     expect(mode).toBe(ExecutionMode.ASYNC);
