@@ -57,7 +57,7 @@ jobs:
           env | grep ACTIONS_ID_TOKEN || echo "⚠️ No OIDC tokens found"
 
       - name: Install Dependencies
-        run: npm install --ignore-scripts
+        run: npm install --ignore-scripts --legacy-peer-deps
 
       - name: Rebuild native modules
         run: npm rebuild better-sqlite3
