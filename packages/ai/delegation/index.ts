@@ -8,6 +8,8 @@
  * @version 1.0.0
  */
 
+export { DelegationManager, FailureCategory, delegationManager } from './delegation-manager.js';
+export type { ContractResult, FailureAnalysis, RewriteTask, RewriteResult, RetryOptions, RetryAttempt, RetryResult, PromptPattern, PatternLearningOptions, TokenBudgetInfo } from './delegation-manager.js';
 export { CapabilityRegistry } from './capability-registry.js';
 export { bootstrapCapabilityManifest, parseAgentDefinition } from './capability-bootstrap.js';
 export { DelegationContractManager } from './contract-manager.js';
