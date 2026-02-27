@@ -173,13 +173,54 @@ Update relevant docs when making changes:
 
 ## Release Process
 
-(For maintainers)
+**IMPORTANT:** @dcyfr/ai uses [Changesets](https://github.com/changesets/changesets) for automated versioning and publishing. **NEVER manually run `npm publish` or update version numbers.**
 
-1. Update version in package.json
-2. Update CHANGELOG.md
-3. Create git tag: `git tag v1.x.x`
-4. Push tag: `git push --tags`
-5. Publish to npm: `npm publish`
+### For Contributors
+
+When adding a feature or fix:
+
+1. **Create a changeset** describing your changes:
+   ```bash
+   npx changeset
+   # Follow prompts to select package and version bump type (major/minor/patch)
+   ```
+
+2. **Commit the changeset file** (`.changeset/*.md`) with your code:
+   ```bash
+   git add .changeset/my-feature.md
+   git commit -m "feat: my feature description"
+   ```
+
+3. **Push to GitHub** - the changeset goes through normal PR review
+
+### For Maintainers
+
+After merging PRs with changesets:
+
+1. **Changesets bot creates "Version Packages" PR** automatically:
+   - Updates `package.json` version
+   - Updates `CHANGELOG.md`
+   - Consumes changeset files
+
+2. **Review and merge the Version Packages PR**
+
+3. **GitHub Actions publishes automatically:**
+   - `.github/workflows/release.yml` detects the version change
+   - Builds the package
+   - Publishes to npm using `NPM_TOKEN` secret
+   - Creates GitHub release with changelog
+
+**Configuration:**
+- Changesets config: `.changeset/config.json`
+- Release workflow: `.github/workflows/release.yml`
+- Uses npm provenance for supply chain security
+
+**Why this workflow?**
+- Prevents manual version conflicts
+- Ensures CHANGELOG is always current
+- Automates npm authentication (no local tokens)
+- Creates audit trail via PRs
+- Enables npm provenance signatures
 
 ## Questions?
 
