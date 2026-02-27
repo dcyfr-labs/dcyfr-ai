@@ -17,7 +17,7 @@ import { ContractManager } from '../delegation/contract-manager.js';
 import { DelegationChainTracker } from '../delegation/chain-tracker.js';
 
 import type { AgentSource, BootstrapResult, CapabilityDetectionConfig } from './capability-bootstrap.js';
-import { ExecutionMode } from './types/agent-capabilities.js';
+import { ExecutionMode } from '../types/agent-capabilities.js';
 import type { AgentCapabilityManifest, DelegationCapability, DelegationRecommendation } from './types/agent-capabilities.js';
 import type { DelegationContract, SuccessCriteria } from './types/delegation-contracts.js';
 

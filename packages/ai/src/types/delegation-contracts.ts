@@ -243,6 +243,9 @@ export interface DelegationContract {
   
   /** Current contract status */
   status: DelegationContractStatus;
+
+  /** Execution mode for this contract (interactive, background, or async) */
+  execution_mode?: string;
   
   /** Contract activation timestamp */
   activated_at?: string;

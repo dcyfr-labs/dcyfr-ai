@@ -122,6 +122,7 @@ export class CapabilityRegistry {
         capabilities: [],
         overall_confidence: 0,
         availability: 'available',
+        supported_execution_modes: [ExecutionMode.INTERACTIVE, ExecutionMode.BACKGROUND, ExecutionMode.ASYNC],
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
