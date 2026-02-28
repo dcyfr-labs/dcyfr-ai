@@ -323,7 +323,8 @@ export {
 
 export {
   generateCapabilityManifest,
-  generateDcyfrCapabilityManifests,
+  // NOTE: generateDcyfrCapabilityManifests is NOT exported - it's workspace-specific
+  // and causes build failures when @dcyfr/ai is installed as an npm package
   validateCapabilityManifest,
 } from './src/capability-manifest-generator';
 
