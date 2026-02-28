@@ -1,6 +1,6 @@
 {
   "name": "@dcyfr/ai",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "description": "Portable AI agent framework with plugin architecture",
   "main": "./dist/ai/index.js",
   "types": "./dist/ai/index.d.ts",
