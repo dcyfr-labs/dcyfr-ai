@@ -696,17 +696,18 @@ export function generateCapabilityManifest(agent: Agent): AgentCapabilityManifes
 /**
  * WORKSPACE-ONLY: Generate capability manifests for DCYFR workspace agents
  * 
- * ⚠️ This function is NOT exported in the public API because it contains
- * workspace-relative paths that break when @dcyfr/ai is installed as an npm package.
+ * ⚠️ REMOVED: This function contained workspace-relative paths that broke production builds.
  * 
- * For workspace use only. Consumer projects should use generateCapabilityManifest()
- * directly with their own agent definitions.
+ * For workspace-specific agent generation, use generateCapabilityManifest() directly
+ * with agent definitions loaded from your workspace structure.
+ * 
+ * Removed in v2.1.2 to fix production deployment issues.
  */
 export async function generateDcyfrCapabilityManifests(): Promise<AgentCapabilityManifest[]> {
-  const dcyfrAgentsEntry = '../../../../dcyfr-workspace-agents/packages/agents/dcyfr-agents/index.js';
-  const { loadDcyfrAgents } = await import(dcyfrAgentsEntry);
-  const agents = await loadDcyfrAgents();
-  return agents.map((agent: Agent) => generateCapabilityManifest(agent));
+  throw new Error(
+    'generateDcyfrCapabilityManifests() has been removed from the public npm package. ' +
+    'Use generateCapabilityManifest() directly with your agent definitions instead.'
+  );
 }
 
 export function validateCapabilityManifest(manifest: AgentCapabilityManifest): {
