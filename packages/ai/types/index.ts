@@ -8,12 +8,12 @@
 /**
  * Supported AI provider types
  */
-export type ProviderType = "claude" | "groq" | "ollama" | "copilot" | "openai" | "anthropic" | "msty";
+export type ProviderType = "claude" | "groq" | "ollama" | "copilot" | "openai" | "anthropic" | "msty" | "github-models";
 
 /**
  * Agent types - typically maps to primary providers
  */
-export type AgentType = "claude" | "copilot" | "groq" | "ollama";
+export type AgentType = "claude" | "copilot" | "groq" | "ollama" | "github-models";
 
 /**
  * Task classification types

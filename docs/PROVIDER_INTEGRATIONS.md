@@ -12,11 +12,97 @@ DCYFR AI supports multiple LLM providers through a unified configuration system.
 
 | Provider | Type | Use Case | Cost |
 |----------|------|----------|------|
+| **GitHub Models** | Cloud API | Free Claude/GPT-4o access with GitHub Pro/Teams | **FREE** |
 | **Msty Vibe CLI Proxy** | Local Proxy | Multi-model routing, unified interface | Variable (based on models) |
 | **OpenAI** | Cloud API | Production workloads, GPT-4/GPT-3.5 | Pay-per-use |
 | **Anthropic** | Cloud API | Claude models, long context | Pay-per-use |
 | **Ollama** | Local | Offline development, privacy | Free (local compute) |
 | **GitHub Copilot** | Via Proxy | Code assistance, enterprise | Subscription |
+
+---
+
+## 🆓 GitHub Models (Recommended for Production - FREE)
+
+**Free access to GPT-4o, Claude, and other premium models with your GitHub token**
+
+### Overview
+
+GitHub Models provides API access to:
+- **GPT-4o**, GPT-4o-mini (OpenAI)
+- **Claude 3.5 Sonnet** (Anthropic)
+- **Llama 3.1** (Meta)
+- **Mistral** models
+- And more...
+
+**Completely free** with GitHub Pro or Teams subscription (which you already have for Copilot).
+
+### Setup
+
+1. **Use your existing GITHUB_TOKEN**
+   ```bash
+   # Your GITHUB_TOKEN already has API access
+   echo $GITHUB_TOKEN  # Verify it's set
+   ```
+
+2. **Configure DCYFR AI**
+   ```bash
+   # No additional configuration needed!
+   # The provider auto-detects GITHUB_TOKEN
+   
+   # Or explicitly set:
+   export LLM_PROVIDER=github-models
+   export GITHUB_TOKEN=your_existing_token
+   ```
+
+3. **Available Models**
+   ```bash
+   # GPT-4o (Recommended for production)
+   LLM_MODEL=gpt-4o
+   LLM_MODEL=gpt-4o-mini
+   
+   # Claude 3.5 Sonnet (Great for coding)
+   LLM_MODEL=claude-3-5-sonnet-20241022
+   
+   # Llama 3.1
+   LLM_MODEL=llama-3.1-70b-instruct
+   LLM_MODEL=llama-3.1-8b-instruct
+   ```
+
+4. **Test Connection**
+   ```bash
+   cd dcyfr-ai
+   npm run test:run
+   ```
+
+### Example Configuration
+
+```typescript
+import { ProviderRegistry } from '@dcyfr/ai/core/provider-registry';
+
+const registry = new ProviderRegistry({
+  primaryProvider: 'github-models',
+  fallbackChain: ['anthropic', 'ollama'],
+  autoReturn: true,
+  healthCheckInterval: 60000,
+});
+```
+
+### Benefits
+
+✅ **FREE** - No additional cost with GitHub Pro/Teams  
+✅ **Premium Models** - Access to GPT-4o and Claude 3.5  
+✅ **High Limits** - Generous rate limits for production use  
+✅ **Official Integration** - Maintained by GitHub/Microsoft  
+✅ **Easy Setup** - Uses existing GITHUB_TOKEN  
+✅ **CI/CD Ready** - Perfect for GitHub Actions workflows
+
+### Rate Limits
+
+- **Requests**: 10 requests/minute, 50 requests/day (per model)
+- **Tokens**: Varies by model
+- **Usage**: Monitor at https://github.com/settings/tokens
+
+**Note**: For higher limits, consider direct provider APIs (OpenAI, Anthropic).
 
 ---
 

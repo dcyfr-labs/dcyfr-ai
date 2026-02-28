@@ -166,6 +166,7 @@ export class TelemetrySessionManager {
   private getCostPerMillionTokens(agent: AgentType): number {
     const costs: Record<AgentType, number> = {
       claude: 15, // $15 per 1M tokens (Sonnet 3.5)
+      'github-models': 0, // Free with GitHub Pro/Teams
       copilot: 0.1, // Included in subscription
       groq: 0, // Free tier
       ollama: 0, // Local
@@ -347,7 +348,7 @@ export class TelemetryEngine {
    * Compare stats across all agents
    */
   async compareAgents(period = '30d'): Promise<ComparisonStats> {
-    const agents: AgentType[] = ['claude', 'copilot', 'groq', 'ollama'];
+    const agents: AgentType[] = ['claude', 'copilot', 'groq', 'ollama', 'github-models'];
     const stats: Record<AgentType, AgentStats> = {} as Record<AgentType, AgentStats>;
 
     for (const agent of agents) {

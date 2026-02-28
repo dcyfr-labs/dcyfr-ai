@@ -143,6 +143,15 @@ export class ProviderRegistry {
         enabled: true,
       },
       {
+        name: 'github-models',
+        apiEndpoint: 'https://models.inference.ai.azure.com',
+        healthCheckUrl: 'https://models.inference.ai.azure.com/models',
+        maxRetries: 3,
+        retryDelay: 1000,
+        timeout: 30000,
+        enabled: !!process.env.GITHUB_TOKEN,
+      },
+      {
         name: 'openai',
         healthCheckUrl: 'https://api.openai.com/v1/models',
         maxRetries: 3,
@@ -460,6 +469,11 @@ export class ProviderRegistry {
       },
       copilot: {
         configured: true // GitHub Copilot uses VS Code integration
+      },
+      'github-models': {
+        apiKey: process.env.GITHUB_TOKEN,
+        endpoint: 'https://models.inference.ai.azure.com',
+        configured: !!process.env.GITHUB_TOKEN
       }
     };
 
@@ -592,6 +606,16 @@ export class ProviderRegistry {
           '2. Sign in with your GitHub account',
           '3. Ensure you have an active Copilot subscription',
           'No environment variables required'
+        ]
+      },
+      'github-models': {
+        description: 'GitHub Models (Free with GitHub Pro/Teams)',
+        environmentVariables: ['GITHUB_TOKEN'],
+        instructions: [
+          '1. Use your existing GITHUB_TOKEN (already configured)',
+          '2. Provides free access to GPT-4o, Claude, and other models',
+          '3. Endpoint: https://models.inference.ai.azure.com',
+          '4. No additional subscription required with GitHub Pro/Teams'
         ]
       }
     };

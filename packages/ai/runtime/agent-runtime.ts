@@ -1190,6 +1190,7 @@ export class AgentRuntime {
       claude: 15.0, // $15 per 1M tokens
       anthropic: 15.0, // Same as claude
       openai: 10.0, // Approximate for GPT-4
+      'github-models': 0, // Free with GitHub Pro/Teams
       copilot: 0, // Using GitHub's models
       groq: 0, // Free tier
       ollama: 0, // Local model
