@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.1.3
+
+### Patch Changes
+
+- [`c000856`](https://github.com/dcyfr/dcyfr-ai/commit/c0008565690dd929b6a8bda55200138f3f692c40) Thanks [@dcyfr](https://github.com/dcyfr)! - Remove workspace-relative import that broke production builds. The `generateDcyfrCapabilityManifests()` function now throws an error instead of attempting to import from workspace paths. Use `generateCapabilityManifest()` directly instead.
+
 ## 2.1.2
 
 ### Patch Changes
