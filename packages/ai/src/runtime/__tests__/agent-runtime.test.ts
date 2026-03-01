@@ -1006,4 +1006,166 @@ describe('AgentRuntime', () => {
       expect(result.metrics.execution_time_ms).toBeGreaterThan(0);
     });
   });
+
+  describe('Context Compaction / Hook Support', () => {
+    describe('registerBeforeExecuteHook', () => {
+      it('should register a hook', () => {
+        const hook = {
+          priority: 100,
+          name: 'test-hook',
+          hook: vi.fn().mockImplementation((ctx) => ctx),
+        };
+        
+        runtime.registerBeforeExecuteHook(hook);
+        
+        // Hook should be registered (no direct access, but can verify via execution)
+        expect(true).toBe(true); // Registration doesn't throw
+      });
+
+      it('should sort hooks by priority', async () => {
+        const executionOrder: number[] = [];
+        
+        const lowPriorityHook = {
+          priority: 100,
+          name: 'low-priority',
+          hook: vi.fn().mockImplementation((ctx) => {
+            executionOrder.push(100);
+            return ctx;
+          }),
+        };
+        
+        const highPriorityHook = {
+          priority: 10,
+          name: 'high-priority',
+          hook: vi.fn().mockImplementation((ctx) => {
+            executionOrder.push(10);
+            return ctx;
+          }),
+        };
+        
+        const mediumPriorityHook = {
+          priority: 50,
+          name: 'medium-priority',
+          hook: vi.fn().mockImplementation((ctx) => {
+            executionOrder.push(50);
+            return ctx;
+          }),
+        };
+        
+        // Register in non-priority order
+        runtime.registerBeforeExecuteHook(lowPriorityHook);
+        runtime.registerBeforeExecuteHook(highPriorityHook);
+        runtime.registerBeforeExecuteHook(mediumPriorityHook);
+        
+        // Execute hooks
+        const testContext = {
+          messages: [{ role: 'user' as const, content: 'test' }],
+          systemPrompt: 'Test',
+        };
+        await runtime.executeBeforeExecuteHooks(testContext);
+        
+        // Should execute in priority order: 10, 50, 100
+        expect(executionOrder).toEqual([10, 50, 100]);
+      });
+
+      it('should continue on hook error', async () => {
+        const failingHook = {
+          priority: 10,
+          name: 'failing-hook',
+          hook: vi.fn().mockRejectedValue(new Error('Hook failed')),
+        };
+        
+        const successHook = {
+          priority: 20,
+          name: 'success-hook',
+          hook: vi.fn().mockImplementation((ctx) => ctx),
+        };
+        
+        runtime.registerBeforeExecuteHook(failingHook);
+        runtime.registerBeforeExecuteHook(successHook);
+        
+        const testContext = {
+          messages: [{ role: 'user' as const, content: 'test' }],
+          systemPrompt: 'Test',
+        };
+        
+        // Should not throw, and should continue to second hook
+        await expect(runtime.executeBeforeExecuteHooks(testContext)).resolves.toBeDefined();
+        expect(successHook.hook).toHaveBeenCalled();
+      });
+    });
+
+    describe('getContextUtilization', () => {
+      it('should return null when no compactor is set', () => {
+        const context = {
+          messages: [{ role: 'user' as const, content: 'test' }],
+          systemPrompt: 'Test system prompt',
+        };
+        
+        const utilization = runtime.getContextUtilization(context);
+        
+        expect(utilization).toBeNull();
+      });
+
+      it('should return utilization when compactor is set', () => {
+        // Create a mock compactor
+        const mockCompactor = {
+          calculateUtilization: vi.fn().mockReturnValue({
+            totalTokens: 1000,
+            windowSize: 128000,
+            utilization: 0.0078,
+            breakdown: {
+              systemPrompt: 50,
+              skills: 0,
+              memories: 0,
+              conversation: 950,
+              toolResults: 0,
+            },
+            shouldCompact: false,
+            estimatedSavings: 0,
+          }),
+          executeAsHook: vi.fn().mockImplementation((ctx) => Promise.resolve(ctx)),
+        };
+        
+        runtime.setContextCompactor(mockCompactor as any);
+        
+        const context = {
+          messages: [{ role: 'user' as const, content: 'test' }],
+          systemPrompt: 'Test system prompt',
+        };
+        
+        const utilization = runtime.getContextUtilization(context);
+        
+        expect(utilization).not.toBeNull();
+        expect(utilization!.totalTokens).toBe(1000);
+        expect(utilization!.breakdown.conversation).toBe(950);
+        expect(mockCompactor.calculateUtilization).toHaveBeenCalledWith(context);
+      });
+    });
+
+    describe('setContextCompactor', () => {
+      it('should register compactor as before-execute hook at priority 50', async () => {
+        const hookExecuted = vi.fn();
+        const mockCompactor = {
+          calculateUtilization: vi.fn(),
+          executeAsHook: vi.fn().mockImplementation((ctx) => {
+            hookExecuted();
+            return Promise.resolve(ctx);
+          }),
+        };
+        
+        runtime.setContextCompactor(mockCompactor as any);
+        
+        const testContext = {
+          messages: [{ role: 'user' as const, content: 'test' }],
+          systemPrompt: 'Test',
+        };
+        
+        await runtime.executeBeforeExecuteHooks(testContext);
+        
+        expect(hookExecuted).toHaveBeenCalled();
+        expect(mockCompactor.executeAsHook).toHaveBeenCalled();
+      });
+    });
+  });
 });

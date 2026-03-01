@@ -13,6 +13,30 @@
     "./mcp": {
       "types": "./dist/ai/mcp/index.d.ts",
       "import": "./dist/ai/mcp/index.js"
+    },
+    "./memory": {
+      "types": "./dist/ai/memory/index.d.ts",
+      "import": "./dist/ai/memory/index.js"
+    },
+    "./compaction": {
+      "types": "./dist/ai/src/compaction/index.d.ts",
+      "import": "./dist/ai/src/compaction/index.js"
+    },
+    "./skills": {
+      "types": "./dist/ai/src/skills/index.d.ts",
+      "import": "./dist/ai/src/skills/index.js"
+    },
+    "./session": {
+      "types": "./dist/ai/src/session/index.d.ts",
+      "import": "./dist/ai/src/session/index.js"
+    },
+    "./scheduler": {
+      "types": "./dist/ai/src/scheduler/index.d.ts",
+      "import": "./dist/ai/src/scheduler/index.js"
+    },
+    "./gateway": {
+      "types": "./dist/ai/src/gateway/index.d.ts",
+      "import": "./dist/ai/src/gateway/index.js"
     }
   },
   "bin": {
@@ -26,6 +50,7 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "lint": "eslint packages/",
+    "check:docs": "npx markdownlint-cli2 'docs/**/*.md' '.github/SECURITY.md'",
     "prepack": "npm run build",
     "cli": "node bin/cli.js",
     "tui": "node bin/tui.js",

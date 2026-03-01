@@ -44,3 +44,20 @@ export {
 } from './mem0-client.js';
 
 export type { Mem0Client } from './mem0-client.js';
+
+// File-first memory (autonomous agent runtime)
+export { FileMemoryAdapter } from './file-memory-adapter.js';
+export type { FileMemoryAdapterConfig, OwnerType } from './file-memory-adapter.js';
+
+// SQLite hybrid search index
+export { SQLiteIndex } from './sqlite-index.js';
+export type { SQLiteIndexConfig, ChunkRecord, SearchResult } from './sqlite-index.js';
+
+// Working memory persistence
+export { flushWorkingMemory, loadWorkingMemory, listWorkingMemoryFiles } from './working-memory-persistence.js';
+export type {
+  WorkingMemoryPersistConfig,
+  FlushResult,
+  WorkingMemoryEntry,
+  LoadResult,
+} from './working-memory-persistence.js';

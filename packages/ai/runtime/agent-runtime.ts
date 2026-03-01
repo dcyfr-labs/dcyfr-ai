@@ -659,7 +659,9 @@ export class AgentRuntime {
         //   - Anthropic API for claude/anthropic
         //   - OpenAI API for openai/groq
         //   - Ollama API for ollama
-        //   - Copilot API for copilot
+        //   - OpenAI-compatible API via Msty Vibe CLI Proxy for copilot
+        //   - GitHub Models API (models.github.ai) for github-models
+        //   - Msty Local AI API for msty
         
         console.warn(`[AgentRuntime] Calling LLM provider: ${provider} (mock response)`);
         
@@ -1192,9 +1194,10 @@ export class AgentRuntime {
       anthropic: 15.0, // Same as claude
       openai: 10.0, // Approximate for GPT-4
       'github-models': 0, // Free with GitHub Pro/Teams
-      copilot: 0, // Using GitHub's models
+      copilot: 0, // Subscription-based via Msty Vibe CLI Proxy, no per-token cost
       groq: 0, // Free tier
       ollama: 0, // Local model
+      msty: 0, // Local Ollama-compatible models
     };
     
     const pricePerMillion = pricing[provider] || 0;
