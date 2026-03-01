@@ -42,6 +42,12 @@ export interface ReputationTaskOutcome {
   /** Number of security violations */
   security_violations?: number;
   
+  /** Plugin-specific security score (0-1) for plugin_installation tasks */
+  plugin_security_score?: number;
+  
+  /** Plugin ID if this task involved a plugin operation */
+  plugin_id?: string;
+  
   /** Additional metadata */
   metadata?: Record<string, unknown>;
 }

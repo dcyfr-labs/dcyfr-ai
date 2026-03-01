@@ -508,3 +508,70 @@ export interface PermissionScopeHierarchy {
   /** Description */
   description?: string;
 }
+
+/**
+ * Plugin permission scope constants.
+ * Used for permission attenuation in plugin delegation contracts.
+ */
+export const PLUGIN_PERMISSION_SCOPES = {
+  /** Install a plugin from the marketplace */
+  INSTALL: 'plugin.install' as PermissionScope,
+  /** Execute a plugin within its sandbox */
+  EXECUTE: 'plugin.execute' as PermissionScope,
+  /** Allow plugin to make network requests */
+  NETWORK: 'plugin.network' as PermissionScope,
+  /** Allow plugin access to the filesystem */
+  FILESYSTEM: 'plugin.filesystem' as PermissionScope,
+  /** Manage plugin registry (register, unregister, update) */
+  MANAGE: 'plugin.manage' as PermissionScope,
+  /** Parent scope that implies all plugin permissions */
+  ALL: 'plugin' as PermissionScope,
+} as const;
+
+/**
+ * Plugin scope hierarchy for attenuation validation.
+ * The 'plugin' scope is the parent of all plugin-specific scopes.
+ */
+export const PLUGIN_SCOPE_HIERARCHY: PermissionScopeHierarchy[] = [
+  {
+    scope: PLUGIN_PERMISSION_SCOPES.ALL,
+    children: [
+      PLUGIN_PERMISSION_SCOPES.INSTALL,
+      PLUGIN_PERMISSION_SCOPES.EXECUTE,
+      PLUGIN_PERMISSION_SCOPES.NETWORK,
+      PLUGIN_PERMISSION_SCOPES.FILESYSTEM,
+      PLUGIN_PERMISSION_SCOPES.MANAGE,
+    ],
+    implied_actions: ['read' as PermissionAction],
+    description: 'All plugin operations',
+  },
+  {
+    scope: PLUGIN_PERMISSION_SCOPES.INSTALL,
+    parent: PLUGIN_PERMISSION_SCOPES.ALL,
+    implied_actions: ['read' as PermissionAction, 'write' as PermissionAction],
+    description: 'Install plugins from the marketplace',
+  },
+  {
+    scope: PLUGIN_PERMISSION_SCOPES.EXECUTE,
+    parent: PLUGIN_PERMISSION_SCOPES.ALL,
+    implied_actions: ['execute' as PermissionAction],
+    description: 'Execute plugins within sandbox',
+  },
+  {
+    scope: PLUGIN_PERMISSION_SCOPES.NETWORK,
+    parent: PLUGIN_PERMISSION_SCOPES.ALL,
+    description: 'Allow plugin network access',
+  },
+  {
+    scope: PLUGIN_PERMISSION_SCOPES.FILESYSTEM,
+    parent: PLUGIN_PERMISSION_SCOPES.ALL,
+    implied_actions: ['read' as PermissionAction, 'write' as PermissionAction],
+    description: 'Allow plugin filesystem access',
+  },
+  {
+    scope: PLUGIN_PERMISSION_SCOPES.MANAGE,
+    parent: PLUGIN_PERMISSION_SCOPES.ALL,
+    implied_actions: ['read' as PermissionAction, 'write' as PermissionAction, 'delete' as PermissionAction],
+    description: 'Manage plugin registry',
+  },
+];
