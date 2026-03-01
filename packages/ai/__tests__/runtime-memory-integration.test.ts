@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Agent Runtime Memory Integration Tests
  * Tests memory retrieval, context injection, and persistence

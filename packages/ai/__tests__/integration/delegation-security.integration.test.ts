@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Delegation Security Integration Tests
  * TLP:AMBER - Internal Use Only

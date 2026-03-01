@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * mem0 Client Integration
  * 
@@ -143,7 +144,7 @@ function buildVectorStoreConfig(
   embeddingDimension: number
 ): Mem0OSSConfig['vectorStore'] {
   switch (config.provider) {
-    case 'qdrant':
+    case 'qdrant': {
       const qdrantConfig: any = {
         collectionName: config.index || 'dcyfr_memories',
         dimension: embeddingDimension,
@@ -162,6 +163,7 @@ function buildVectorStoreConfig(
         provider: 'qdrant',
         config: qdrantConfig,
       };
+    }
 
     case 'pinecone':
       return {
@@ -173,7 +175,7 @@ function buildVectorStoreConfig(
         },
       };
 
-    case 'weaviate':
+    case 'weaviate': {
       const weaviateConfig: any = {
         collectionName: config.index || 'dcyfr_memories',
         dimension: embeddingDimension,
@@ -191,6 +193,7 @@ function buildVectorStoreConfig(
         provider: 'weaviate',
         config: weaviateConfig,
       };
+    }
 
     default:
       throw new Error(`Unsupported vector DB provider: ${config.provider}`);

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /**
  * Comprehensive Unit Test Suite for Delegation Framework
  * 

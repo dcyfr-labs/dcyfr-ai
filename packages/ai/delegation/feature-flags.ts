@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Feature Flag System for Delegation Framework
  * 
@@ -392,7 +393,7 @@ export class FeatureFlagManager {
    * Import feature flag configuration
    */
   import(configs: Record<DelegationFeatureFlag, FeatureFlagConfig>): void {
-    for (const [flag, config] of Object.entries(configs)) {
+    for (const [_flag, config] of Object.entries(configs)) {
       this.configure(config);
     }
   }

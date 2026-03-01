@@ -13,7 +13,7 @@ import { FastMCP } from 'fastmcp';
 import { z } from 'zod';
 import { SimpleCache } from '../shared/cache.js';
 import { emitDelegationEvent } from '../shared/utils.js';
-import type { ContentProvider, ContentItem, ContentMetadata } from './content-provider.js';
+import type { ContentProvider, ContentItem } from './content-provider.js';
 
 /**
  * Create Content Manager MCP Server with a content provider

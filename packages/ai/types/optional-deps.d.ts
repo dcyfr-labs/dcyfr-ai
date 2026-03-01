@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 declare module 'mem0ai/oss' {
   export class Memory {
     constructor(config: unknown);

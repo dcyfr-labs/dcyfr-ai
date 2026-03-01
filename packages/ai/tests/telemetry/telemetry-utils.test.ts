@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 /**
  * DCYFR Telemetry Utilities Tests
  * TLP:AMBER - Internal Use Only

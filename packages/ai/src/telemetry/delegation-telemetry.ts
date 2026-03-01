@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * DCYFR Delegation Telemetry System
  * TLP:AMBER - Internal Use Only
@@ -13,7 +14,7 @@
 import { EventEmitter } from 'events';
 import { randomUUID } from 'crypto';
 import type { DelegationContract } from '../types/delegation-contracts';
-import type { TaskExecutionContext, TaskExecutionResult } from '../runtime/agent-runtime';
+import type { TaskExecutionResult } from '../runtime/agent-runtime';
 
 /**
  * Delegation telemetry event types

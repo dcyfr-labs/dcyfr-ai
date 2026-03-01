@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * DCYFR Agent Runtime Telemetry Integration
  * TLP:AMBER - Internal Use Only
@@ -255,7 +256,7 @@ export class RuntimeTelemetryIntegration {
   /**
    * Detach telemetry from runtime
    */
-  async detach(runtime: AgentRuntime): Promise<void> {
+  async detach(_runtime: AgentRuntime): Promise<void> {
     if (!this.isAttached) return;
     
     // Close telemetry engine
@@ -466,7 +467,7 @@ export class RuntimeTelemetryIntegration {
         this.taskTracker.addCheckpoint(executionId, 'contract_accepted', 0);
       });
       
-      runtime.on('delegation:contract:rejected', (contract: DelegationContract, reason: string) => {
+      runtime.on('delegation:contract:rejected', (contract: DelegationContract, _reason: string) => {
         this.contractTracker.trackContractRejected(contract.contract_id);
       });
     }

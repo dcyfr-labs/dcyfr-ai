@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Tests for MCP delegation-monitor session mode tools
  * Phase 6.7 — delegation-execution-modes

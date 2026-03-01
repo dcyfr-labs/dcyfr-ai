@@ -13,7 +13,6 @@
 
 import type {
   DelegationContract,
-  VerificationResult,
 } from '../types/delegation-contracts';
 import type { TaskExecutionResult } from '../runtime/agent-runtime';
 import type {

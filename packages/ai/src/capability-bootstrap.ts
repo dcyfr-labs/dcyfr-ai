@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * DCYFR Agent Capability Bootstrap Toolkit
  * TLP:CLEAR

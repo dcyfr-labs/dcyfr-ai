@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Telemetry Schema Tests
  * Tests cost calculations, event aggregation, and metrics

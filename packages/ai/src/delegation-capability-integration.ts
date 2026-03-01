@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * DCYFR Delegation-Capability Integration Layer
  * TLP:CLEAR
@@ -19,7 +20,7 @@ import { DelegationChainTracker } from '../delegation/chain-tracker.js';
 import type { AgentSource, BootstrapResult, CapabilityDetectionConfig } from './capability-bootstrap.js';
 import { ExecutionMode } from '../types/agent-capabilities.js';
 import type { AgentCapabilityManifest, DelegationCapability, DelegationRecommendation } from './types/agent-capabilities.js';
-import type { DelegationContract, SuccessCriteria } from './types/delegation-contracts.js';
+import type { DelegationContract } from './types/delegation-contracts.js';
 
 /**
  * Integration configuration
@@ -153,7 +154,7 @@ export class DelegationCapabilityIntegration extends EventEmitter {
   /**
    * Onboard a new agent with automatic capability detection and registration
    */
-  async onboardAgent(source: AgentSource, agentId?: string): Promise<AgentOnboardingResult> {
+  async onboardAgent(source: AgentSource, _agentId?: string): Promise<AgentOnboardingResult> {
     try {
       // Step 1: Bootstrap capability detection
       const bootstrapResult = await this.bootstrap.bootstrap(source);
@@ -201,13 +202,6 @@ export class DelegationCapabilityIntegration extends EventEmitter {
     for (const match of matches) {
       const manifest = this.registry.getManifest(match.agent_id);
       if (!manifest) continue;
-
-      // Calculate workload factor based on active contracts
-      const activeContracts = this.contractManager.queryContracts({
-        delegatee_agent_id: match.agent_id,
-        status: ['active', 'pending'],
-      });
-      const workloadFactor = Math.min(1, activeContracts.length / 5); // Assume 5 is max capacity
 
       // Estimate completion time based on capability estimates
       const estimatedTime = match.estimated_completion_time_ms;

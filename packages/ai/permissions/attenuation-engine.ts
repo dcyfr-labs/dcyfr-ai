@@ -17,7 +17,6 @@ import type {
   PermissionScope,
   PermissionAction,
   PermissionConstraint,
-  PermissionTokenStatus,
 } from '../types/permission-tokens';
 
 /**

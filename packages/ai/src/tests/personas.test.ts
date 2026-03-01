@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /**
  * @fileoverview Unit tests for personas module: VoiceResolver, PersonaLoader,
  * BrandVoiceHook.

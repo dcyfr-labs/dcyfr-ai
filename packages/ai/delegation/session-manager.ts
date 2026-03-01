@@ -15,7 +15,7 @@
  */
 
 import { EventEmitter } from 'events';
-import { writeFileSync, appendFileSync, mkdirSync, existsSync } from 'fs';
+import { appendFileSync, mkdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import type { SessionState, ExecutionMode } from '../types/agent-capabilities.js';

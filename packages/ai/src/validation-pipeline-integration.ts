@@ -17,8 +17,7 @@ import { EnhancedCapabilityDetection } from './enhanced-capability-detection.js'
 import { MCPAutoConfiguration } from './mcp-auto-configuration.js';
 
 import type { AgentSource } from './capability-bootstrap.js';
-import type { AgentCapabilityManifest, DelegationCapability } from './types/agent-capabilities.js';
-import type { DelegationContract } from './types/delegation-contracts.js';
+import type { DelegationCapability } from './types/agent-capabilities.js';
 
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -700,7 +699,6 @@ This agent handles design token validation and security scanning.
 
       // Step 3: Verify MCP configuration updated
       const mcpStatus = await this.mcpAutoConfig.getServerStatus();
-      const designTokenServer = mcpStatus.find(server => server.name === 'dcyfr-designtokens');
 
       // Step 4: Check performance tracking
       const capabilityAnalysis = await this.capabilityDetection.getCapabilityAnalysis('e2e-test-agent');
@@ -785,7 +783,7 @@ This agent handles design token validation and security scanning.
         averageCapabilitySuccessRate: systemMetrics.averageSuccessRate,
         systemUptime: Date.now() - this.systemStartTime.getTime(),
       };
-    } catch (error) {
+    } catch (_error) {
       return {
         totalAgents: 0,
         activeContracts: 0,

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 /**
  * DCYFR Verification Output Formatter Tests
  * TLP:AMBER - Internal Use Only

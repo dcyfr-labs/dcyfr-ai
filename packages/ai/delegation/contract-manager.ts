@@ -47,7 +47,7 @@ import { DelegationHealthMonitor } from './monitoring.js';
 import { FeatureFlagMiddleware } from './middleware/feature-flag-middleware.js';
 import { ChainTrackerMiddleware } from './middleware/chain-tracker-middleware.js';
 import { ResourceLimiterMiddleware } from './middleware/resource-limiter-middleware.js';
-import { FeatureFlagManager, getFeatureFlagManager, DEFAULT_FEATURE_FLAGS } from './feature-flags.js';
+import { FeatureFlagManager, DEFAULT_FEATURE_FLAGS } from './feature-flags.js';
 
 /**
  * Contract creation request
@@ -118,7 +118,7 @@ export interface ContractUpdateOptions {
   activated_at?: string;
   completed_at?: string;
   verification_result?: VerificationResult;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 /**
@@ -192,7 +192,7 @@ export class DelegationContractManager extends EventEmitter {
   private debug: boolean;
   /** In-memory agent name cache (DB may not store names) */
   private agentNames: Map<string, string> = new Map();
-  private securityThreatEvents: Array<Record<string, any>> = [];
+  private securityThreatEvents: Array<Record<string, unknown>> = [];
   private securityValidationCount = 0;
   private securityThreatCount = 0;
   /** Optional registry for manifest-based mode selection. */
@@ -309,7 +309,7 @@ export class DelegationContractManager extends EventEmitter {
     this.watchdog.on('contract_timeout', (ev) => {
       this.emit('contract_timeout', ev);
       try {
-        void this.updateContract({ contract_id: ev.contract_id, status: 'timeout' as any });
+        void this.updateContract({ contract_id: ev.contract_id, status: 'timeout' as DelegationContractStatus });
       } catch { /* contract may have already completed/been removed */ }
     });
 
@@ -321,6 +321,7 @@ export class DelegationContractManager extends EventEmitter {
     // 7.2: Security violation penalty — penalise delegatee reputation on threat detection
     if (this.reputationEngine) {
       const reputationEngine = this.reputationEngine;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       this.on('security_threat_detected', (ev: Record<string, any>) => {
         const contract = ev.contract_id ? this.getContractById(ev.contract_id) : undefined;
         if (!contract?.delegatee?.agent_id) return;
@@ -378,6 +379,7 @@ export class DelegationContractManager extends EventEmitter {
   /** Normalize agents from legacy or current request shapes */
   private normalizeContractAgents(
     request: CreateDelegationContractRequest,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     legacyRequest: Record<string, any>,
   ): { delegator: DelegationAgent; delegatee: DelegationAgent } {
     const delegator = request.delegator || {
@@ -437,6 +439,7 @@ export class DelegationContractManager extends EventEmitter {
   /** Run security validation, emit threat event and throw if a threat is detected */
   private async validateContractSecurity(
     request: CreateDelegationContractRequest,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     legacyRequest: Record<string, any>,
     normalizedPermissionTokens: Array<{ token_id: string; scopes: string[]; delegatable?: boolean; max_delegation_depth?: number }> | undefined,
   ): Promise<void> {
@@ -521,7 +524,7 @@ export class DelegationContractManager extends EventEmitter {
 
     // ── SecurityMiddlewareChain ────────────────────────────────────────────
     const rawTlp = request.tlp_classification || legacyRequest?.tlp_classification;
-    const tlpLevel = rawTlp ? (rawTlp.replace('TLP:', '') as any) : undefined;
+    const tlpLevel = rawTlp ? rawTlp.replace('TLP:', '') : undefined;
     const context: SecurityContext = {
       operation: 'create',
       contract: {
@@ -530,6 +533,7 @@ export class DelegationContractManager extends EventEmitter {
         delegatee: request.delegatee,
         delegation_depth: 0,
         tlp_classification: tlpLevel,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         permission_tokens: normalizedPermissionTokens as any,
         parent_contract_id: request.parent_contract_id,
         // Expose these fields so ThreatValidatorMiddleware can run its full checks
@@ -538,9 +542,11 @@ export class DelegationContractManager extends EventEmitter {
         metadata: legacyRequest?.metadata,
       },
       // Provide auth fields so IdentityMiddleware can verify signatures
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       delegator_auth: request.delegator as any,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       delegatee_auth: request.delegatee as any,
-      task_content: (legacyRequest as any)?.task_content ??
+      task_content: legacyRequest.task_content ??
         (request.task_description ? { instruction: request.task_description } : undefined),
       metadata: legacyRequest?.metadata,
       timestamp_ms: Date.now(),
@@ -551,7 +557,7 @@ export class DelegationContractManager extends EventEmitter {
         identity_auth: !!(this.agentRegistry),
         content_security: true,
         reputation_tracking: !!(this.reputationEngine),
-        ...((legacyRequest as any)?.feature_flags ?? {}),
+        ...(legacyRequest.feature_flags ?? {}),
       },
     };
 
@@ -731,7 +737,7 @@ export class DelegationContractManager extends EventEmitter {
   private addStatusCondition(
     status: ContractQueryOptions['status'],
     conditions: string[],
-    params: any[]
+    params: unknown[]
   ): void {
     if (!status) return;
     if (Array.isArray(status)) {
@@ -747,7 +753,7 @@ export class DelegationContractManager extends EventEmitter {
   private appendQueryTail(
     query: string,
     options: ContractQueryOptions,
-    params: any[]
+    params: unknown[]
   ): string {
     if (options.sort_by) {
       query += ` ORDER BY ${options.sort_by} ${options.sort_order === 'asc' ? 'ASC' : 'DESC'}`;
@@ -762,9 +768,9 @@ export class DelegationContractManager extends EventEmitter {
   }
 
   /** Build WHERE clause and params from query options */
-  private buildQueryFromOptions(options: ContractQueryOptions): { query: string; params: any[] } {
+  private buildQueryFromOptions(options: ContractQueryOptions): { query: string; params: unknown[] } {
     const conditions: string[] = [];
-    const params: any[] = [];
+    const params: unknown[] = [];
 
     const delegatorId = options.delegator_agent_id ?? options.delegator_id;
     const delegateeId = options.delegatee_agent_id ?? options.delegatee_id;
@@ -793,9 +799,9 @@ export class DelegationContractManager extends EventEmitter {
   }
 
   /** Build SQL fields/params for an updateContract call */
-  private buildUpdateFields(updates: ContractUpdateOptions): { fields: string[]; params: any[] } {
+  private buildUpdateFields(updates: ContractUpdateOptions): { fields: string[]; params: unknown[] } {
     const fields: string[] = [];
-    const params: any[] = [];
+    const params: unknown[] = [];
 
     if (updates.status) {
       fields.push('status = ?');
@@ -978,7 +984,7 @@ export class DelegationContractManager extends EventEmitter {
   async updateContractStatus(
     contract_id: string,
     status: DelegationContractStatus,
-    options?: { metadata?: Record<string, any>; verification_result?: VerificationResult }
+    options?: { metadata?: Record<string, unknown>; verification_result?: VerificationResult }
   ): Promise<DelegationContract> {
     const updates: ContractUpdateOptions = { contract_id, status };
     
@@ -1044,7 +1050,7 @@ export class DelegationContractManager extends EventEmitter {
       .prepare('SELECT * FROM delegation_contracts WHERE contract_id = ?')
       .get(contract_id);
     
-    return row ? this.rowToContract(row) : null;
+    return row ? this.rowToContract(row as Parameters<typeof this.rowToContract>[0]) : null;
   }
 
   /**
@@ -1077,7 +1083,7 @@ export class DelegationContractManager extends EventEmitter {
       FROM delegation_contracts
     `;
     
-    const params: any[] = [];
+    const params: unknown[] = [];
     if (agent_id) {
       query += ' WHERE delegatee_agent_id = ?';
       params.push(agent_id);
@@ -1165,7 +1171,7 @@ export class DelegationContractManager extends EventEmitter {
   /**
    * Get recent security threats (legacy compatibility helper)
    */
-  getRecentSecurityThreats(limit = 10): Array<Record<string, any>> {
+  getRecentSecurityThreats(limit = 10): Array<Record<string, unknown>> {
     return this.securityThreatEvents.slice(-limit).reverse();
   }
 
@@ -1190,8 +1196,8 @@ export class DelegationContractManager extends EventEmitter {
   getSecurityStatus(): {
     tlp_enforcement_enabled: boolean;
     security_threat_validation_enabled: boolean;
-    contract_security_summary: Record<string, any>;
-    recent_security_events: Array<Record<string, any>>;
+    contract_security_summary: Record<string, unknown>;
+    recent_security_events: Array<Record<string, unknown>>;
     security_recommendations: string[];
   } {
     const stats = this.getSecurityThreatStatistics();
@@ -1250,6 +1256,7 @@ export class DelegationContractManager extends EventEmitter {
 
     // Tier 2: OpenSpec hint stored in metadata
     const openspecHint =
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (request as any).metadata?.openspec_execution_mode as ExecutionMode | undefined;
     if (openspecHint && Object.values(ExecutionMode).includes(openspecHint) && supportsMode(openspecHint)) {
       return this._applyQueueGuard(openspecHint);
@@ -1577,7 +1584,8 @@ export class DelegationContractManager extends EventEmitter {
   /**
    * Convert database row to DelegationContract
    */
-  private rowToContract(row: any): DelegationContract {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private rowToContract(row: Record<string, any>): DelegationContract {
     const metadata: Record<string, unknown> = row.metadata ? JSON.parse(row.metadata) : {};
 
     // Recover execution_mode / session_id stored in metadata (backward-compatible)

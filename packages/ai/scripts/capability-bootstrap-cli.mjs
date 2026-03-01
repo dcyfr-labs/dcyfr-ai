@@ -14,8 +14,8 @@
  * @date 2026-02-14
  */
 
-import { readFile, writeFile, readdir, mkdir } from 'fs/promises';
-import { join, basename } from 'path';
+import { writeFile, readdir, mkdir } from 'fs/promises';
+import { join } from 'path';
 import { existsSync } from 'fs';
 import {
   CapabilityBootstrap,
@@ -201,7 +201,6 @@ async function bootstrapBatch(
   directory: string,
   options: CLIOptions,
 ): Promise<void> {
-  const verbose = options.verbose || false;
   const dryRun = options.dryRun || false;
   
   console.log(`\n🚀 Batch bootstrapping agents from: ${directory}\n`);

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * MCP Auto-Configuration System
  * TLP:CLEAR
@@ -649,7 +650,7 @@ export class MCPAutoConfiguration extends EventEmitter {
         // Health check by checking if server has 'available' status
         const isHealthy = server.status === 'available';
         results.set(server.config.name, isHealthy);
-      } catch (error) {
+      } catch (_error) {
         results.set(server.config.name, false);
       }
     }

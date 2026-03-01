@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * PromptIntel MCP Server
  *
@@ -269,7 +270,7 @@ server.addTool({
       findings: Record<string, unknown>;
       metadata?: Record<string, unknown>;
     },
-    { log }: { log: any }
+    { log: _log }: { log: any }
   ) => {
     try {
       const { result, durationMs } = await measurePerformance(async () => {

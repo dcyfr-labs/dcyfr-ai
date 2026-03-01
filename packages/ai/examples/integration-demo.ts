@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * End-to-End Integration Demonstration
  * TLP:CLEAR
@@ -14,7 +15,6 @@
 
 import { EndToEndWorkflowOrchestrator, runDemoWorkflow } from '../src/end-to-end-workflow-orchestrator.js';
 import type { WorkflowDefinition } from '../src/end-to-end-workflow-orchestrator.js';
-import path from 'path';
 
 /**
  * Color utilities for better console output

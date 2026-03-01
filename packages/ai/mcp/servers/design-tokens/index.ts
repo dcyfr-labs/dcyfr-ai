@@ -195,7 +195,7 @@ export function createDesignTokenServer(provider: TokenProvider) {
 
         complianceCache.set(cacheKey, data);
         return data;
-      } catch (error) {
+      } catch (_error) {
         throw new Error(`Failed to read file: ${filePath}`);
       }
     }

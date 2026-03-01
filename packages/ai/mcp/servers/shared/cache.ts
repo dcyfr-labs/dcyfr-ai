@@ -3,7 +3,7 @@
  * Reduces load on Redis and file system for frequently accessed data
  */
 
-import type { CacheEntry, CacheOptions } from "./types";
+import type { CacheEntry } from "./types";
 
 export class SimpleCache<T> {
   private cache = new Map<string, CacheEntry<T>>();

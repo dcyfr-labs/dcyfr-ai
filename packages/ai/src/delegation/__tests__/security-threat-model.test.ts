@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /**
  * Tests for Security Threat Model Validation
  * TLP:CLEAR

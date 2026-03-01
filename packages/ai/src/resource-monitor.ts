@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * System Resource Monitor for DCYFR Integration Performance
  * TLP:CLEAR
@@ -11,7 +12,8 @@
  * @module dcyfr-ai/resource-monitor
  */
 
-import { EventEmitter } from 'events';
+import { EventEmitter } from 'node:events';
+import os from 'node:os';
 import { PerformanceProfiler } from './performance-profiler.js';
 
 /**
@@ -385,7 +387,6 @@ export class SystemResourceMonitor extends EventEmitter {
     if (typeof process !== 'undefined') {
       // Node.js environment
       try {
-        const os = require('os');
         cores = os.cpus().length;
         loadAverage = os.loadavg() as [number, number, number];
         
@@ -407,7 +408,7 @@ export class SystemResourceMonitor extends EventEmitter {
           const cpuUsageData = process.cpuUsage();
           processCpuTime = (cpuUsageData.user + cpuUsageData.system) / 1000; // Convert to milliseconds
         }
-      } catch (error) {
+      } catch (_error) {
         // Fallback for environments without os module
         cpuUtilization = 0.1; // Placeholder
       }

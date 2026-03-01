@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Tests for SessionManager
  * Phase 6.5 — delegation-execution-modes

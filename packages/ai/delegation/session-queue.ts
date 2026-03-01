@@ -10,7 +10,6 @@
  */
 
 import { EventEmitter } from 'events';
-import { ExecutionMode } from '../types/agent-capabilities.js';
 
 /** Maximum concurrent background sessions. */
 export const MAX_BACKGROUND_SESSIONS = 10;

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 /**
  * DCYFR Telemetry Dashboard CLI
@@ -324,23 +325,23 @@ export class TelemetryDashboard {
     const now = new Date();
     
     switch (period.toLowerCase()) {
-      case 'today':
+      case 'today': {
         const today = now.toISOString().split('T')[0];
         return `DATE(start_time) = '${today}'`;
-      
-      case 'yesterday':
+      }
+      case 'yesterday': {
         const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
         const yesterdayStr = yesterday.toISOString().split('T')[0];
         return `DATE(start_time) = '${yesterdayStr}'`;
-      
-      case 'week':
+      }
+      case 'week': {
         const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
         return `start_time >= '${weekAgo.toISOString()}'`;
-      
-      case 'month':
+      }
+      case 'month': {
         const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
         return `start_time >= '${monthAgo.toISOString()}'`;
-      
+      }
       default:
         throw new Error(`Unsupported period: ${period}. Use: today, yesterday, week, month`);
     }
@@ -678,7 +679,6 @@ async function main() {
 }
 
 // Run CLI if executed directly
-import { fileURLToPath } from 'url';
 if (import.meta.url === `file://${process.argv[1]}` || import.meta.url.endsWith(process.argv[1])) {
   main().catch((error) => {
     console.error('❌ Unexpected error:', error);

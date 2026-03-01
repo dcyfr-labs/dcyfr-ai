@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { ProviderRegistry } from '../core/provider-registry.js';
 import type { DCYFRMemory } from '../memory/types.js';
 import type { TelemetryEngine, TelemetrySessionManager } from '../core/telemetry-engine.js';
@@ -257,7 +258,7 @@ export class AgentRuntime {
     const startTime = Date.now();
     let sessionManager: TelemetrySessionManager | undefined;
     let sessionId: string | undefined;
-    let memoryWriteFailed = false;
+    const memoryWriteFailed = false;
 
     try {
       // Create hook context
@@ -819,7 +820,7 @@ export class AgentRuntime {
             input,
           },
         };
-      } catch (error) {
+      } catch (_error) {
         console.warn('[AgentRuntime] Failed to parse action input as JSON:', inputStr);
         return { thought, action: undefined };
       }
@@ -1107,7 +1108,7 @@ export class AgentRuntime {
   /**
    * Summarize message history to prevent prompt bloat
    */
-  private async summarizeMessages(state: RuntimeState, context: TaskContext): Promise<void> {
+  private async summarizeMessages(state: RuntimeState, _context: TaskContext): Promise<void> {
     // TODO: Implement summarization via LLM
     // Placeholder: truncate to last 2 iterations
     const keepCount = 4; // system + user + last 2 iterations

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * DCYFR Agent Runtime with Delegation Support
  * TLP:AMBER - Internal Use Only
@@ -15,9 +16,7 @@ import { EventEmitter } from 'events';
 import { randomUUID } from 'crypto';
 import type {
   DelegationContract,
-  DelegationContractStatus,
   VerificationPolicy,
-  SuccessCriteria,
   VerificationResult,
   DelegationAgent,
   PermissionToken,
@@ -35,7 +34,6 @@ import {
   RuntimeTelemetryIntegration,
   createDefaultTelemetryIntegration,
   type RuntimeTelemetryIntegrationConfig,
-  type DelegationTelemetryConfig,
 } from '../telemetry';
 import type {
   VerificationOutputFormat,
@@ -977,8 +975,7 @@ export class AgentRuntime extends EventEmitter {
     // Calculate confidence factors from task history
     const recentTasks = this.getRecentTasksForCapability(capability.capability_id);
     const successRate = this.calculateSuccessRate(recentTasks);
-    const avgExecutionTime = this.calculateAverageExecutionTime(recentTasks);
-    
+
     // Adjust confidence based on recent performance
     let adjustedConfidence = capability.confidence_level;
     
@@ -1491,7 +1488,7 @@ export class AgentRuntime extends EventEmitter {
     
     // Cancel all running tasks
     const taskEntries = Array.from(this.currentTasks.entries());
-    for (const [executionId, context] of taskEntries) {
+    for (const [, context] of taskEntries) {
       context.metadata.status = 'failed';
       this.emit('task:failed', {
         context,
