@@ -403,5 +403,27 @@ export type {
 } from './src/plugins/reviews/plugin-rating-aggregator.js';
 export { PLUGIN_REVIEWS_SCHEMA_SQL } from './src/plugins/reviews/types.js';
 
+// Plugin marketplace: Incident Response SLA exports (Phase 13)
+export { IncidentResponseManager, IncidentError } from './src/plugins/incidents/incident-response-manager.js';
+export type {
+  IncidentResponseManagerConfig,
+  Incident,
+  IncidentSeverity,
+  IncidentStatus,
+  CreateIncidentInput,
+  AcknowledgeIncidentInput,
+  ResolveIncidentInput,
+  ListIncidentsOptions,
+  IncidentPage,
+  SlaConfig,
+  EmailNotifier,
+  GithubClient,
+  AxiomLogger,
+  GithubIssuePayload,
+  GithubAdvisoryPayload,
+  AxiomAlertPayload,
+} from './src/plugins/incidents/incident-response-manager.js';
+export { DEFAULT_SLA, PLUGIN_INCIDENTS_SCHEMA_SQL } from './src/plugins/incidents/types.js';
+
 // Version
 export const VERSION = '1.0.0';
