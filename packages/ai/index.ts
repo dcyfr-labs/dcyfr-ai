@@ -387,5 +387,21 @@ export {
   createBrandVoiceHook,
 } from './src/personas';
 
+// Plugin marketplace: Rating & Review System exports (Phase 12)
+export { PluginRatingAggregator, ReviewError } from './src/plugins/reviews/plugin-rating-aggregator.js';
+export type {
+  PluginRatingAggregatorConfig,
+  StarRating,
+  ReviewStatus,
+  PluginReview,
+  CreateReviewInput,
+  FlagReviewInput,
+  PluginRatingStats,
+  ReviewPage,
+  ReviewQueryOptions,
+  RatingDistribution,
+} from './src/plugins/reviews/plugin-rating-aggregator.js';
+export { PLUGIN_REVIEWS_SCHEMA_SQL } from './src/plugins/reviews/types.js';
+
 // Version
 export const VERSION = '1.0.0';
