@@ -146,6 +146,34 @@ export interface DelegationAgent {
 }
 
 /**
+ * Security metadata attached to plugin delegation contracts.
+ * Provides trust scoring, scan results, sandbox requirements, and 
+ * certification details for plugin marketplace operations.
+ */
+export interface PluginSecurityMetadata {
+  /** Plugin identifier (e.g., 'dcyfr/secret-detector') */
+  plugin_id: string;
+  /** Plugin version being installed/managed */
+  plugin_version: string;
+  /** Composite trust score (0-100) */
+  trust_score: number;
+  /** Latest security scan result */
+  scan_result: 'pass' | 'fail' | 'warning' | 'pending';
+  /** Required sandbox runtime type */
+  sandbox_type: 'docker' | 'gvisor' | 'wasm' | 'none';
+  /** SHA-256 hash of the SBOM for integrity verification */
+  sbom_hash?: string;
+  /** Plugin certification tier (if certified) */
+  certification_tier?: 'bronze' | 'silver' | 'gold';
+  /** Plugin's TLP classification */
+  tlp_classification: 'CLEAR' | 'GREEN' | 'AMBER' | 'RED';
+  /** Date of last security audit */
+  last_audit_date?: string;
+  /** Permissions the plugin requires */
+  required_permissions?: string[];
+}
+
+/**
  * Delegation Contract
  * 
  * Formal contract between delegating agent and delegated agent,
@@ -249,6 +277,12 @@ export interface DelegationContract {
    * @since 1.1.0
    */
   handoff_history?: SessionHandoff[];
+
+  /** 
+   * Plugin security metadata for plugin_installation task types.
+   * Contains trust score, scan results, sandbox configuration, and certification.
+   */
+  plugin_security_metadata?: PluginSecurityMetadata;
 
   /** Additional contract metadata */
   metadata?: Record<string, unknown>;

@@ -25,7 +25,8 @@ export type TaskType =
   | "quick-fix"
   | "research"
   | "documentation"
-  | "testing";
+  | "testing"
+  | "plugin_installation";
 
 /**
  * Task execution outcomes
