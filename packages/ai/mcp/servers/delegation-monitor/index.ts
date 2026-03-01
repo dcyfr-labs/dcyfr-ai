@@ -66,17 +66,17 @@ export function validateWriteToken(token: string | undefined): void {
 // TODO: Inject real ContractManager and ReputationEngine from main module exports
 
 class StubContractManager {
-  private contracts: Map<string, any> = new Map();
+  private contracts: Map<string, Record<string, unknown>> = new Map();
   
-  queryContracts(query?: any): any[] {
+  queryContracts(_query?: unknown): Record<string, unknown>[] {
     return Array.from(this.contracts.values());
   }
   
-  getContract(id: string): any {
+  getContract(id: string): Record<string, unknown> {
     return this.contracts.get(id);
   }
   
-  updateContract(id: string, update: any): Promise<any> {
+  updateContract(id: string, update: Record<string, unknown>): Promise<Record<string, unknown>> {
     const contract = this.contracts.get(id);
     if (contract) {
       Object.assign(contract, update);
@@ -85,7 +85,7 @@ class StubContractManager {
     return Promise.resolve(contract);
   }
   
-  getStats(): any {
+  getStats(): Record<string, unknown> {
     return { total_contracts: this.contracts.size };
   }
 
@@ -93,7 +93,7 @@ class StubContractManager {
    * Query contracts filtered by execution mode (stored in metadata).
    * Phase 3.1: Returns contracts whose metadata.execution_mode matches.
    */
-  querySessionsByMode(mode: string): any[] {
+  querySessionsByMode(mode: string): Record<string, unknown>[] {
     return Array.from(this.contracts.values()).filter((c) => {
       try {
         const meta = typeof c.metadata === 'string' ? JSON.parse(c.metadata) : (c.metadata ?? {});
@@ -108,7 +108,7 @@ class StubContractManager {
    * Get handoff history entries for a given session ID.
    * Phase 3.6: Searches contracts for parent_contract_id chain.
    */
-  getSessionHandoffHistory(sessionId: string): any[] {
+  getSessionHandoffHistory(sessionId: string): Record<string, unknown>[] {
     // In the stub implementation, return an empty history.
     // Real implementation would trace the parent_contract_id chain.
     return Array.from(this.contracts.values())
@@ -142,7 +142,7 @@ class StubContractManager {
     fromContractId: string;
     toExecutionMode: string;
     handoffReason: string;
-  }): Promise<any> {
+  }): Promise<Record<string, unknown>> {
     const source = this.contracts.get(request.fromContractId);
     if (!source) {
       throw new Error(`Contract not found: ${request.fromContractId}`);
@@ -166,24 +166,18 @@ class StubContractManager {
 }
 
 class StubReputationEngine {
-  private profiles: Map<string, any> = new Map();
+  private profiles: Map<string, Record<string, unknown>> = new Map();
   
-  queryProfiles(query?: any): any[] {
+  queryProfiles(_query?: unknown): Record<string, unknown>[] {
     return Array.from(this.profiles.values());
   }
   
-  getProfile(agentId: string): any {
+  getProfile(agentId: string): Record<string, unknown> {
     return this.profiles.get(agentId);
   }
   
-  getStats(): any {
+  getStats(): Record<string, unknown> {
     return { total_profiles: this.profiles.size };
-  }
-}
-
-class StubTelemetryEngine {
-  async trackEvent(event: any): Promise<void> {
-    console.log('[Telemetry]', event);
   }
 }
 
@@ -202,7 +196,6 @@ const server = new FastMCP({
 // Initialize delegation infrastructure (using stubs until proper wiring)
 const contractManager = new StubContractManager();
 const reputationEngine = new StubReputationEngine();
-const telemetryEngine = new StubTelemetryEngine();
 
 // ============================================================================
 // Tool 1: Log Delegation Event
@@ -247,7 +240,7 @@ server.addTool({
       agentId?: string;
       metadata?: Record<string, unknown>;
     },
-    { log }: { log: any }
+    { log: _log }: { log: unknown }
   ) => {
     try {
       validateWriteToken(args.authToken);
@@ -317,7 +310,7 @@ server.addTool({
       dimension?: 'reliability' | 'speed' | 'quality' | 'security';
       limit?: number;
     },
-    { log }: { log: any }
+    { log: _log }: { log: unknown }
   ) => {
     try {
       const { result, durationMs } = await measurePerformance(async () => {
@@ -337,7 +330,7 @@ server.addTool({
           };
         } else {
           // Query with filters
-          const query: any = {
+          const query: Record<string, unknown> = {
             limit: args.limit,
             sort_by: 'overall_score' as const,
             sort_order: 'desc' as const,
@@ -364,7 +357,7 @@ server.addTool({
 
           return {
             total_results: profiles.length,
-            profiles: profiles.map((p: any) => ({
+            profiles: profiles.map((p: Record<string, unknown>) => ({
               agent_id: p.agent_id,
               overall_score: p.overall_score,
               dimensions: p.dimensions,
@@ -412,7 +405,7 @@ server.addTool({
       contractId: string;
       includeHistory?: boolean;
     },
-    { log }: { log: any }
+    { log: _log }: { log: unknown }
   ) => {
     try {
       const { result, durationMs } = await measurePerformance(async () => {
@@ -428,7 +421,7 @@ server.addTool({
         }
 
         // Build status response
-        const statusData: any = {
+        const statusData: Record<string, unknown> = {
           found: true,
           contract_id: contract.contract_id,
           task_id: contract.task_id,
@@ -521,7 +514,7 @@ server.addTool({
       requestedReviewer?: string;
       additionalContext?: Record<string, unknown>;
     },
-    { log }: { log: any }
+    { log: _log }: { log: unknown }
   ) => {
     try {
       validateWriteToken(args.authToken);
@@ -615,14 +608,14 @@ server.addTool({
     const startTime = performance.now();
     try {
       const { mode, limit } = args;
-      const sessions = (contractManager as any).querySessionsByMode(mode) as any[];
+      const sessions = contractManager.querySessionsByMode(mode) as Record<string, unknown>[];
       const limited = sessions.slice(0, limit);
 
       const result = {
         mode,
         total_found: sessions.length,
         returned: limited.length,
-        sessions: limited.map((c: any) => ({
+        sessions: limited.map((c: Record<string, unknown>) => ({
           contract_id: c.contract_id ?? c.id,
           session_id: (() => {
             try { return JSON.parse(c.metadata ?? '{}').session_id ?? null; } catch { return null; }
@@ -663,7 +656,7 @@ server.addTool({
     const startTime = performance.now();
     try {
       const { sessionId } = args;
-      const history = (contractManager as any).getSessionHandoffHistory(sessionId) as any[];
+      const history = contractManager.getSessionHandoffHistory(sessionId) as Record<string, unknown>[];
 
       const result = {
         sessionId,
@@ -712,7 +705,7 @@ server.addTool({
     try {
       validateWriteToken(args.authToken);
 
-      const newContract = await (contractManager as any).triggerSessionHandoff({
+      const newContract = await contractManager.triggerSessionHandoff({
         fromContractId: args.fromContractId,
         toExecutionMode: args.toExecutionMode,
         handoffReason: args.handoffReason,
@@ -764,7 +757,7 @@ server.addResource({
 
       const summary = {
         total_active: activeContracts.length,
-        contracts: activeContracts.map((c: any) => ({
+        contracts: activeContracts.map((c: Record<string, unknown>) => ({
           contract_id: c.contract_id,
           task_id: c.task_id,
           status: c.status,
@@ -803,7 +796,7 @@ server.addResource({
 
       const summary = {
         total_count: topPerformers.length,
-        profiles: topPerformers.map((p: any) => ({
+        profiles: topPerformers.map((p: Record<string, unknown>) => ({
           agent_id: p.agent_id,
           overall_score: p.overall_score,
           dimensions: p.dimensions,
@@ -832,10 +825,10 @@ server.addResource({
   async load() {
     try {
       const modes = ['interactive', 'background', 'async'] as const;
-      const grouped: Record<string, any[]> = {};
+      const grouped: Record<string, Record<string, unknown>[]> = {};
 
       for (const mode of modes) {
-        grouped[mode] = ((contractManager as any).querySessionsByMode(mode) as any[]).map((c: any) => ({
+        grouped[mode] = (contractManager.querySessionsByMode(mode) as Record<string, unknown>[]).map((c: Record<string, unknown>) => ({
           contract_id: c.contract_id ?? c.id,
           status: c.status,
           task_id: c.task_id,

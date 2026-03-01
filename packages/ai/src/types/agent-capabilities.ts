@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Agent Capability Manifest Interfaces
  * TLP:CLEAR

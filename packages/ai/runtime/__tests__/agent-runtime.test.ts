@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { AgentRuntime } from '../agent-runtime.js';
 import { z } from 'zod';

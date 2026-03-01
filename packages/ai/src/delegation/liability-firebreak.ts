@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Liability Firebreak Enforcement for DCYFR Delegation Framework
  * TLP:AMBER - Internal Use Only

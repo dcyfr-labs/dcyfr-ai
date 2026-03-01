@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * DCYFR Telemetry Utilities and Helpers
  * TLP:AMBER - Internal Use Only
@@ -11,8 +12,6 @@
 
 import type {
   DelegationTelemetryEvent,
-  DelegationChainCorrelation,
-  DelegationPerformanceMetrics,
   TelemetryQueryFilter,
 } from './delegation-telemetry';
 

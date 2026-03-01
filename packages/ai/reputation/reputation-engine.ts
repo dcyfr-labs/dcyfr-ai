@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Reputation Engine for Agent Performance Tracking
  * TLP:CLEAR

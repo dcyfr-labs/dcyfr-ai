@@ -24,8 +24,6 @@
 
 import type {
   MCPServerConfig,
-  MCPServerManifest,
-  MCPServerStatus,
   LoadedMCPServer,
   MCPRegistryConfig,
   MCPHealthCheckResult,
@@ -239,7 +237,7 @@ export class MCPRegistry {
             signal: AbortSignal.timeout(5000),
           });
           server.status = response.ok ? 'available' : 'unavailable';
-        } catch (error) {
+        } catch (_error) {
           server.status = 'unavailable';
           server.error = `Cannot reach ${server.config.url}`;
         }

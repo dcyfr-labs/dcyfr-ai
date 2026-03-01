@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Rate Limiter for API requests
  * Enforces request rate limits with queueing

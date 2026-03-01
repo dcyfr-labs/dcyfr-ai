@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /**
  * Liability Firebreak Enforcement Tests for DCYFR Delegation Framework
  * 

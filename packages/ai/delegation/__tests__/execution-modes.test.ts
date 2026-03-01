@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Tests for DelegationContractManager.selectExecutionMode() and handoffSession()
  * Phase 6.6 — delegation-execution-modes

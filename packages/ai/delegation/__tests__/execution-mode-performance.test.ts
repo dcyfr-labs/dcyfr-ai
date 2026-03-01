@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Performance Tests: Execution Mode Routing
  * TLP:AMBER - Internal Use Only

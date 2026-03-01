@@ -82,7 +82,7 @@ export interface BatchProcessorConfig {
 /**
  * Batch item with metadata
  */
-export interface BatchItem<T = any> {
+export interface BatchItem<T = unknown> {
   /**
    * Item identifier
    */
@@ -111,7 +111,7 @@ export interface BatchItem<T = any> {
   /**
    * Item metadata
    */
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   
   /**
    * Creation timestamp
@@ -127,7 +127,7 @@ export interface BatchItem<T = any> {
 /**
  * Batch processing result
  */
-export interface BatchResult<TInput = any, TOutput = any> {
+export interface BatchResult<TInput = unknown, TOutput = unknown> {
   /**
    * Batch identifier
    */
@@ -198,7 +198,7 @@ export interface BatchProcessor<TInput, TOutput> {
  * Intelligent batch processing system with concurrent execution,
  * priority queuing, caching, and comprehensive performance optimization.
  */
-export class HighPerformanceBatchProcessor<TInput = any, TOutput = any> extends EventEmitter {
+export class HighPerformanceBatchProcessor<TInput = unknown, TOutput = unknown> extends EventEmitter {
   private config: Required<BatchProcessorConfig>;
   private profiler?: PerformanceProfiler;
   private cacheManager?: IntelligentCacheManager;
@@ -254,7 +254,7 @@ export class HighPerformanceBatchProcessor<TInput = any, TOutput = any> extends 
       priority?: number;
       timeout?: number;
       dependencies?: string[];
-      metadata?: Record<string, any>;
+      metadata?: Record<string, unknown>;
     } = {}
   ): void {
     const item: BatchItem<TInput> = {
@@ -292,7 +292,7 @@ export class HighPerformanceBatchProcessor<TInput = any, TOutput = any> extends 
       priority?: number;
       timeout?: number;
       dependencies?: string[];
-      metadata?: Record<string, any>;
+      metadata?: Record<string, unknown>;
     }>
   ): void {
     for (const item of items) {
@@ -316,8 +316,6 @@ export class HighPerformanceBatchProcessor<TInput = any, TOutput = any> extends 
     
     try {
       // Check cache if enabled
-      let result: BatchResult<TInput, TOutput>;
-      
       if (this.config.enableCaching && this.cacheManager) {
         const cacheKey = this.generateBatchCacheKey(items);
         const cached = this.cacheManager.get<BatchResult<TInput, TOutput>>(cacheKey);
@@ -336,7 +334,7 @@ export class HighPerformanceBatchProcessor<TInput = any, TOutput = any> extends 
       // Process batch
       this.emit('batch_started', { batchId, itemCount: items.length });
       
-      result = await this.processor(items);
+      const result = await this.processor(items);
       result.batchId = batchId;
       
       // Cache result if enabled
@@ -694,16 +692,19 @@ export class HighPerformanceBatchProcessor<TInput = any, TOutput = any> extends 
 export function createCapabilityDetectionBatchProcessor(
   profiler?: PerformanceProfiler,
   cacheManager?: IntelligentCacheManager
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): HighPerformanceBatchProcessor<any, any> {
   return new HighPerformanceBatchProcessor(
     async (items) => {
       // Mock capability detection batch processing
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const successful: any[] = [];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const failed: any[] = [];
       
       for (const item of items) {
         try {
-          const result = await mockCapabilityDetection(item.data);
+          const result = await mockCapabilityDetection(item.data as Record<string, unknown>);
           successful.push({ item, result, processingTime: 100 });
         } catch (error) {
           failed.push({ item, error: (error as Error).message, processingTime: 50 });
@@ -743,16 +744,19 @@ export function createCapabilityDetectionBatchProcessor(
 export function createAgentOnboardingBatchProcessor(
   profiler?: PerformanceProfiler,
   cacheManager?: IntelligentCacheManager
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): HighPerformanceBatchProcessor<any, any> {
   return new HighPerformanceBatchProcessor(
     async (items) => {
       // Mock agent onboarding batch processing
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const successful: any[] = [];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const failed: any[] = [];
       
       for (const item of items) {
         try {
-          const result = await mockAgentOnboarding(item.data);
+          const result = await mockAgentOnboarding(item.data as Record<string, unknown>);
           successful.push({ item, result, processingTime: 500 });
         } catch (error) {
           failed.push({ item, error: (error as Error).message, processingTime: 200 });
@@ -789,7 +793,7 @@ export function createAgentOnboardingBatchProcessor(
 /**
  * Mock capability detection function
  */
-async function mockCapabilityDetection(agentData: any): Promise<any> {
+async function mockCapabilityDetection(agentData: Record<string, unknown>): Promise<Record<string, unknown>> {
   // Simulate processing delay
   await new Promise(resolve => setTimeout(resolve, 50));
   
@@ -803,7 +807,7 @@ async function mockCapabilityDetection(agentData: any): Promise<any> {
 /**
  * Mock agent onboarding function
  */
-async function mockAgentOnboarding(agentData: any): Promise<any> {
+async function mockAgentOnboarding(agentData: Record<string, unknown>): Promise<Record<string, unknown>> {
   // Simulate processing delay
   await new Promise(resolve => setTimeout(resolve, 200));
   

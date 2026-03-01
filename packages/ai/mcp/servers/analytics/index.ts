@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Analytics MCP Server
  * Provides AI assistants with direct access to Redis analytics data
@@ -33,7 +34,6 @@ import {
 } from '../shared/utils.js';
 import { analyticsCache } from '../shared/cache.js';
 import type {
-  TimeRange,
   PageViewData,
   TrendingContent,
   Milestone,

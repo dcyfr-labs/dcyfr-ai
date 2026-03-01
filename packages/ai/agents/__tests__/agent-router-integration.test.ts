@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { AgentRouter } from '../agent-router.js';
 import { AgentRegistry } from '../agent-registry.js';

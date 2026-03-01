@@ -12,7 +12,7 @@
  */
 
 import { EventEmitter } from 'events';
-import { CapabilityBootstrap, CapabilityDetector } from './capability-bootstrap.js';
+import { CapabilityBootstrap } from './capability-bootstrap.js';
 import { CapabilityRegistry } from './capability-registry.js';
 import { MCPAutoConfiguration } from './mcp-auto-configuration.js';
 
@@ -216,7 +216,7 @@ export class EnhancedCapabilityDetection extends EventEmitter {
    */
   async detectAndRegisterCapabilities(
     source: AgentSource,
-    agentId?: string
+    _agentId?: string
   ): Promise<{
     bootstrapResult: BootstrapResult;
     performanceBaseline: CapabilityPerformanceMetrics[];

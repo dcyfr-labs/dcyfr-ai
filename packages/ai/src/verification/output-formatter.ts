@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * DCYFR Contract Verification Output Formatter
  * TLP:AMBER - Internal Use Only
@@ -13,9 +14,7 @@
 
 import type {
   DelegationContract,
-  VerificationResult,
   SuccessCriteria,
-  VerificationPolicy,
 } from '../types/delegation-contracts';
 import type { TaskExecutionResult } from '../runtime/agent-runtime';
 
@@ -323,7 +322,7 @@ export abstract class BaseVerificationFormatter {
   
   protected selectPrimaryOutput(
     formats: VerificationOutputFormat[],
-    outputs: FormattedVerificationOutput[]
+    _outputs: FormattedVerificationOutput[]
   ): VerificationOutputFormat {
     // Prefer JSON for automated processing, markdown for human review
     if (formats.includes('json')) {

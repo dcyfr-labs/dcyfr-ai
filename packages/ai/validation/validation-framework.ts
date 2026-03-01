@@ -25,7 +25,7 @@
  */
 
 import { PluginLoader } from '../plugins/plugin-loader';
-import type { ValidationContext, ValidationResult, ValidationViolation } from '../types';
+import type { ValidationContext, ValidationViolation } from '../types';
 
 /**
  * Validation gate configuration

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * MCP server auth tests for delegation-monitor
  * TLP:CLEAR

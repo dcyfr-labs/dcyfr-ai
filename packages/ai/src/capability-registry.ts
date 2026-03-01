@@ -372,7 +372,7 @@ export class CapabilityRegistry extends EventEmitter implements ICapabilityRegis
     return reasons;
   }
 
-  private generateWarnings(capability: AgentCapability, manifest: AgentCapabilityManifest, query: CapabilityQuery): string[] {
+  private generateWarnings(capability: AgentCapability, manifest: AgentCapabilityManifest, _query: CapabilityQuery): string[] {
     const warnings: string[] = [];
 
     // High workload warning

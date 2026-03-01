@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * End-to-End Workflow Orchestrator
  * TLP:CLEAR
@@ -21,8 +22,7 @@ import { IntelligentCacheManager } from './intelligent-cache-manager.js';
 import { HighPerformanceBatchProcessor, createAgentOnboardingBatchProcessor, createCapabilityDetectionBatchProcessor } from './batch-processor.js';
 
 import type { AgentSource } from './capability-bootstrap.js';
-import type { AgentCapabilityManifest, DelegationCapability } from './types/agent-capabilities.js';
-import type { DelegationContract } from './types/delegation-contracts.js';
+import type { DelegationCapability } from './types/agent-capabilities.js';
 
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -697,7 +697,7 @@ export class EndToEndWorkflowOrchestrator extends EventEmitter {
     try {
       const systemMetrics = await this.capabilityDetection.getSystemMetrics();
       const delegationMetrics = await this.delegationIntegration.getSystemMetrics();
-      const mcpStatus = await this.mcpAutoConfig.getServerStatus();
+      await this.mcpAutoConfig.getServerStatus();
       const mcpHealthResults = await this.mcpAutoConfig.healthCheckServers();
 
       result.finalSystemHealth = {

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Upstash Redis client for MCP servers and main app
  * Supports multi-environment setup with automatic key namespacing
@@ -215,6 +216,7 @@ export const redis = new Proxy({} as Redis, {
       if (keyMethods.includes(prop as string)) {
         return function (key: string, ...args: any[]) {
           const prefixedKey = getRedisKeyPrefix() + key;
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
           return (value as Function).call(client, prefixedKey, ...args);
         };
       }

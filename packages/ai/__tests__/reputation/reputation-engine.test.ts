@@ -11,6 +11,7 @@
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { unlinkSync, existsSync } from 'fs';
+import Database from 'better-sqlite3';
 import { ReputationEngine } from '../../reputation/reputation-engine';
 import type { TaskOutcome } from '../../reputation/reputation-engine';
 
@@ -26,7 +27,6 @@ describe('ReputationEngine', () => {
     }
     
     // Initialize database with schema
-    const Database = require('better-sqlite3');
     const db = new Database(TEST_DB_PATH);
     
     db.exec(`

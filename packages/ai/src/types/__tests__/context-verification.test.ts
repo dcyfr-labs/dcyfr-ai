@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /**
  * Tests for Context Verification Types and Assessment
  * TLP:CLEAR

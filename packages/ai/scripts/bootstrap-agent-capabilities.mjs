@@ -122,7 +122,6 @@ function getToolBasedCapabilities(tools) {
  */
 function inferCapabilities(agent) {
   const capabilities = [];
-  const agentId = agent.name.toLowerCase().replace(/\s+/g, '-');
   
   // Category-based capabilities
   const categoryMappings = {
@@ -323,7 +322,7 @@ function generateManifest(agent) {
   const agentId = agent.name.toLowerCase().replace(/\s+/g, '-');
   const capabilities = inferCapabilities(agent);
   
-  const fullCapabilities = capabilities.map((cap, index) => ({
+  const fullCapabilities = capabilities.map((cap) => ({
     capability_id: `${agentId}_${cap.name.toLowerCase().replace(/\s+/g, '_')}`,
     capability_name: cap.name,
     description: cap.description,
@@ -380,7 +379,7 @@ async function main() {
   // Create output directory
   try {
     mkdirSync(OUTPUT_DIR, { recursive: true });
-  } catch (e) {
+  } catch {
     // Directory exists
   }
 

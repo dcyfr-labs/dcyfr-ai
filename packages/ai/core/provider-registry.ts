@@ -281,7 +281,6 @@ export class ProviderRegistry {
     console.warn(`🔄 Switching provider: ${this.currentProvider} → ${targetProvider}`);
 
     // Update current provider
-    const previousProvider = this.currentProvider;
     this.currentProvider = targetProvider;
 
     console.warn(`✅ Provider switched to ${targetProvider}`);
@@ -496,7 +495,7 @@ export class ProviderRegistry {
     const errors: Array<{ provider: ProviderType; error: string }> = [];
 
     // Check all supported providers
-    for (const [provider, config] of this.providerConfigs.entries()) {
+    for (const [provider] of this.providerConfigs.entries()) {
       const envConfig = envVars[provider];
       
       if (envConfig?.configured) {

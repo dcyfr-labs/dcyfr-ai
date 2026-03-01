@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * DCYFR Multi-Modal Verification Formatters
  * TLP:AMBER - Internal Use Only
@@ -14,12 +15,10 @@ import {
   BaseVerificationFormatter,
   type FormattedVerificationOutput,
   type VerificationOutputFormat,
-  type VerificationFormatterConfig,
   type IVerificationFormatter,
 } from './output-formatter';
 import type {
   DelegationContract,
-  VerificationResult,
 } from '../types/delegation-contracts';
 import type { TaskExecutionResult } from '../runtime/agent-runtime';
 
@@ -441,8 +440,8 @@ export class StandardVerificationFormatter extends BaseVerificationFormatter imp
   
   private getFormatMetadata(
     format: VerificationOutputFormat,
-    result: TaskExecutionResult,
-    contract: DelegationContract
+    _result: TaskExecutionResult,
+    _contract: DelegationContract
   ): Record<string, unknown> {
     const base = {
       format_type: format,
@@ -558,7 +557,7 @@ export class ContractComplianceFormatter extends BaseVerificationFormatter imple
   async formatOutput(
     result: TaskExecutionResult,
     contract: DelegationContract,
-    format: VerificationOutputFormat
+    _format: VerificationOutputFormat
   ): Promise<FormattedVerificationOutput> {
     // Always output in contract compliance format regardless of requested format
     const content = await this.generateComplianceReport(result, contract);

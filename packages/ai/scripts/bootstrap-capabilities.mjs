@@ -16,7 +16,6 @@ import {
   generateDcyfrCapabilityManifests,
   validateCapabilityManifest,
   defaultCapabilityRegistry,
-  type AgentCapabilityManifest,
 } from '../src/capability-manifest-generator.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -197,7 +196,6 @@ async function generateCapabilitySummary() {
   summary += '|-------|-------------|------------|----------------|\n';
 
   manifests.forEach(manifest => {
-    const capNames = manifest.capabilities.map(c => c.name).join(', ');
     const confidence = Math.round((manifest.overall_confidence || 0) * 100);
     const specs = (manifest.specializations || []).join(', ');
 

@@ -397,7 +397,7 @@ export class CryptographicProofVerifier implements Verifier {
   /**
    * Verify cryptographic signature (placeholder)
    */
-  private verifySignature(signature: string, output: unknown): boolean {
+  private verifySignature(signature: string, _output: unknown): boolean {
     // In production, this would perform actual signature verification
     // For now, we require non-empty signature
     return signature.length > 0;
@@ -406,7 +406,7 @@ export class CryptographicProofVerifier implements Verifier {
   /**
    * Verify cryptographic hash (placeholder)
    */
-  private verifyHash(hash: string, output: unknown): boolean {
+  private verifyHash(hash: string, _output: unknown): boolean {
     // In production, this would compute and compare hashes
     return hash.length >= 32; // Minimum hash length
   }
@@ -414,7 +414,7 @@ export class CryptographicProofVerifier implements Verifier {
   /**
    * Verify zero-knowledge proof (placeholder)
    */
-  private verifyZKProof(proof: unknown, context: VerificationContext): boolean {
+  private verifyZKProof(proof: unknown, _context: VerificationContext): boolean {
     // In production, this would verify actual ZK proofs
     return typeof proof === 'object' && proof !== null;
   }
@@ -435,7 +435,7 @@ export class HumanRequiredVerifier implements Verifier {
     this.humanReviewerId = humanReviewerId;
   }
   
-  async verify(context: VerificationContext): Promise<VerificationResult> {
+  async verify(_context: VerificationContext): Promise<VerificationResult> {
     // In production, this would:
     // 1. Queue the task for human review
     // 2. Send notifications to reviewers

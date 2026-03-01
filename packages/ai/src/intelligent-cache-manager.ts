@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Intelligent Cache Manager for DCYFR Integration System
  * TLP:CLEAR
@@ -816,7 +817,7 @@ export class IntelligentCacheManager extends EventEmitter {
    */
   private optimizeByAccessPattern(): void {
     // Extend TTL for frequently accessed items
-    for (const [key, entry] of this.cache.entries()) {
+    for (const [_key, entry] of this.cache.entries()) {
       if (entry.accessCount > 10) { // Frequently accessed
         const newTTL = this.config.defaultTTL * 2;
         entry.expiresAt = new Date(Date.now() + newTTL);

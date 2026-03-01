@@ -208,7 +208,7 @@ export function isValidUrl(url: string): boolean {
 
 export function isValidPath(path: string): boolean {
   // Basic validation: starts with /, contains no special chars except - and _
-  return /^\/[\w\-\/]*$/.test(path);
+  return /^\/[\w\-/]*$/.test(path);
 }
 
 // ============================================================================
@@ -291,22 +291,17 @@ async function streamDelegationToObservability(event: Record<string, unknown>): 
   const apiUrl = process.env.DCYFR_LABS_API_URL || 'http://localhost:3000';
   const endpoint = `${apiUrl}/api/delegation/events`;
 
-  try {
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(event),
-      // Timeout after 5 seconds to avoid blocking MCP operations
-      signal: AbortSignal.timeout(5000),
-    });
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(event),
+    // Timeout after 5 seconds to avoid blocking MCP operations
+    signal: AbortSignal.timeout(5000),
+  });
 
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-  } catch (error) {
-    // Re-throw for handling by caller
-    throw error;
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
   }
 }

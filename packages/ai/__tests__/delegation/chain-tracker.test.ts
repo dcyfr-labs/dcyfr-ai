@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /**
  * DCYFR Delegation Chain Tracker Tests
  * TLP:AMBER - Internal Use Only
@@ -11,6 +12,7 @@
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { unlinkSync, existsSync } from 'fs';
+import Database from 'better-sqlite3';
 import { DelegationContractManager } from '../../delegation/contract-manager';
 import { DelegationChainTracker } from '../../delegation/chain-tracker';
 import type { CreateDelegationContractRequest, DelegationAgent, DelegationContract } from '../../types/delegation-contracts';
@@ -32,7 +34,6 @@ describe('DelegationChainTracker', () => {
     }
     
     // Initialize database with schema
-    const Database = require('better-sqlite3');
     const db = new Database(TEST_DB_PATH);
     
     db.exec(`

@@ -34,15 +34,15 @@ import type {
   AgentRoutingResult,
   AgentExecutionContext,
   AgentExecutionResult,
-  LoadedAgent,
 } from './types';
 import type { TaskContext as AgentTaskContext } from '../types';
 import type { TaskContext as RuntimeTaskContext } from '../runtime/types';
 import { AgentRegistry } from './agent-registry';
 import { AgentRuntime } from '../runtime/agent-runtime.js';
-import type { ProviderRegistry } from '../core/provider-registry';
+import { ProviderRegistry } from '../core/provider-registry.js';
+import { getMemory } from '../memory/index.js';
 import type { DCYFRMemory } from '../memory/types';
-import type { TelemetryEngine } from '../core/telemetry-engine';
+import { TelemetryEngine } from '../core/telemetry-engine.js';
 
 /**
  * Default routing rules based on task patterns
@@ -216,7 +216,7 @@ export class AgentRouter {
   async delegate(
     fromAgent: Agent,
     toAgentName: string,
-    task: AgentTaskContext
+    _task: AgentTaskContext
   ): Promise<Agent> {
     if (!this.config.delegationEnabled) {
       throw new Error('Delegation is disabled');
@@ -312,7 +312,6 @@ export class AgentRouter {
     isFallback: boolean,
     primaryAgentName: string
   ): Promise<AgentExecutionResult> {
-    const startTime = Date.now();
     const result = await this.runAgentExecution(agent, context, isFallback, primaryAgentName);
     return result;
   }
@@ -473,7 +472,7 @@ export class AgentRouter {
   /**
    * Find fallback agents for a primary agent
    */
-  private findFallbacks(primaryAgent: Agent, task: AgentTaskContext): Agent[] {
+  private findFallbacks(primaryAgent: Agent, _task: AgentTaskContext): Agent[] {
     const fallbacks: Agent[] = [];
     const seen = new Set<string>([primaryAgent.manifest.name]);
 
@@ -510,7 +509,7 @@ export class AgentRouter {
    */
   private calculateConfidence(
     rule: AgentRoutingRule,
-    task: AgentTaskContext
+    _task: AgentTaskContext
   ): number {
     // Base confidence from priority (lower priority = higher confidence)
     const priorityConfidence = Math.max(0, 1 - rule.priority / 100);
@@ -538,10 +537,6 @@ export function getGlobalAgentRouter(
   if (!globalRouter) {
     // For now, create with placeholder dependencies
     // This should be updated to properly inject dependencies
-    const { getMemory } = require('../memory/index.js');
-    const { TelemetryEngine } = require('../core/telemetry-engine.js');
-    const { ProviderRegistry } = require('../core/provider-registry.js');
-    
     const providerRegistry = new ProviderRegistry({});
     const memory = getMemory();
     const telemetry = new TelemetryEngine();

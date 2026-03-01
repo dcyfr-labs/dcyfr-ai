@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 /**
  * Tests for BackgroundSessionQueue
  * Phase 6.2 — delegation-execution-modes

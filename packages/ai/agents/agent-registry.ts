@@ -26,8 +26,6 @@
 
 import {
   AgentLoader,
-  AgentLoadError,
-  getGlobalAgentLoader,
 } from './agent-loader';
 import type {
   Agent,

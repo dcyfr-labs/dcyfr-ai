@@ -7,7 +7,6 @@ import type {
   Memory,
   MemorySearchResult,
   MemoryContext,
-  AgentMemory,
 } from './types.js';
 import { getMemoryConfig } from './config.js';
 import { getMem0Client, resetMem0Client as resetClient } from './mem0-client.js';
@@ -29,6 +28,7 @@ const sleep = (ms: number): Promise<void> =>
  * DCYFRMemory implementation using mem0 OSS as the backend
  */
 export class DCYFRMemoryImpl implements DCYFRMemory {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private mem0ClientPromise: Promise<any> | null = null;
 
   /**
@@ -46,9 +46,11 @@ export class DCYFRMemoryImpl implements DCYFRMemory {
    * Retry semantic search briefly to smooth over vector index eventual consistency.
    */
   private async searchWithConsistencyRetries(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     client: any,
     query: string,
     options: Record<string, unknown>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ): Promise<any> {
     let result = await client.search(query, options);
 
@@ -110,8 +112,8 @@ export class DCYFRMemoryImpl implements DCYFRMemory {
         // Keep legacy behavior when add succeeded but no ID is returned.
         return '';
       }
-    } catch (error: any) {
-      throw new Error(`Failed to add user memory: ${error.message}`);
+    } catch (error) {
+      throw new Error(`Failed to add user memory: ${(error as Error).message}`);
     }
   }
 
@@ -131,6 +133,7 @@ export class DCYFRMemoryImpl implements DCYFRMemory {
         limit,
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return result.results.map((item: any) => ({
         id: item.id,
         content: item.memory,
@@ -142,8 +145,8 @@ export class DCYFRMemoryImpl implements DCYFRMemory {
         metadata: item.metadata,
         relevance: item.score || 1.0,
       }));
-    } catch (error: any) {
-      throw new Error(`Failed to search user memories: ${error.message}`);
+    } catch (error) {
+      throw new Error(`Failed to search user memories: ${(error as Error).message}`);
     }
   }
 
@@ -160,6 +163,7 @@ export class DCYFRMemoryImpl implements DCYFRMemory {
         filters: topic ? { topic } : undefined,
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return result.results.map((item: any) => ({
         id: item.id,
         content: item.memory,
@@ -170,8 +174,8 @@ export class DCYFRMemoryImpl implements DCYFRMemory {
         createdAt: item.createdAt ? new Date(item.createdAt) : new Date(),
         metadata: item.metadata,
       }));
-    } catch (error: any) {
-      throw new Error(`Failed to get user memories: ${error.message}`);
+    } catch (error) {
+      throw new Error(`Failed to get user memories: ${(error as Error).message}`);
     }
   }
 
@@ -182,8 +186,8 @@ export class DCYFRMemoryImpl implements DCYFRMemory {
     try {
       const client = await this.ensureInitialized();
       await client.deleteAll({ userId });
-    } catch (error: any) {
-      throw new Error(`Failed to delete user memories: ${error.message}`);
+    } catch (error) {
+      throw new Error(`Failed to delete user memories: ${(error as Error).message}`);
     }
   }
 
@@ -216,8 +220,8 @@ export class DCYFRMemoryImpl implements DCYFRMemory {
       });
 
       return result.results[0]?.id || '';
-    } catch (error: any) {
-      throw new Error(`Failed to add agent memory: ${error.message}`);
+    } catch (error) {
+      throw new Error(`Failed to add agent memory: ${(error as Error).message}`);
     }
   }
 
@@ -237,6 +241,7 @@ export class DCYFRMemoryImpl implements DCYFRMemory {
         limit,
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return result.results.map((item: any) => ({
         id: item.id,
         content: item.memory,
@@ -249,8 +254,8 @@ export class DCYFRMemoryImpl implements DCYFRMemory {
         createdAt: item.createdAt ? new Date(item.createdAt) : new Date(),
         metadata: item.metadata,
       }));
-    } catch (error: any) {
-      throw new Error(`Failed to search agent memories: ${error.message}`);
+    } catch (error) {
+      throw new Error(`Failed to search agent memories: ${(error as Error).message}`);
     }
   }
 
@@ -275,8 +280,8 @@ export class DCYFRMemoryImpl implements DCYFRMemory {
       }
 
       return result.results[0].metadata?.state || null;
-    } catch (error: any) {
-      throw new Error(`Failed to get agent state: ${error.message}`);
+    } catch (error) {
+      throw new Error(`Failed to get agent state: ${(error as Error).message}`);
     }
   }
 
@@ -307,8 +312,8 @@ export class DCYFRMemoryImpl implements DCYFRMemory {
       });
 
       return result.results[0]?.id || '';
-    } catch (error: any) {
-      throw new Error(`Failed to add session memory: ${error.message}`);
+    } catch (error) {
+      throw new Error(`Failed to add session memory: ${(error as Error).message}`);
     }
   }
 
@@ -327,6 +332,7 @@ export class DCYFRMemoryImpl implements DCYFRMemory {
       const now = new Date();
 
       // Filter out expired memories
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const validMemories = result.results.filter((item: any) => {
         const expiresAt = item.metadata?.expiresAt;
         if (!expiresAt) return true; // No expiration = keep
@@ -335,10 +341,11 @@ export class DCYFRMemoryImpl implements DCYFRMemory {
 
       // Concatenate all memory content
       return validMemories
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .map((item: any) => item.memory)
         .join('\n\n');
-    } catch (error: any) {
-      throw new Error(`Failed to get session context: ${error.message}`);
+    } catch (error) {
+      throw new Error(`Failed to get session context: ${(error as Error).message}`);
     }
   }
 
@@ -349,8 +356,8 @@ export class DCYFRMemoryImpl implements DCYFRMemory {
     try {
       const client = await this.ensureInitialized();
       await client.deleteAll({ runId: sessionId });
-    } catch (error: any) {
-      throw new Error(`Failed to delete session memories: ${error.message}`);
+    } catch (error) {
+      throw new Error(`Failed to delete session memories: ${(error as Error).message}`);
     }
   }
 }

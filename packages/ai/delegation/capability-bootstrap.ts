@@ -61,7 +61,7 @@ export function bootstrapCapabilityManifest(
   const agentId = agentDef.name.toLowerCase().replace(/\s+/g, '-');
   const inferredCapabilities = inferCapabilitiesFromDefinition(agentDef);
   
-  const capabilities: AgentCapability[] = inferredCapabilities.map((inferred, index) => ({
+  const capabilities: AgentCapability[] = inferredCapabilities.map((inferred, _index) => ({
     capability_id: `${agentId}_${inferred.capability_name.toLowerCase().replace(/\s+/g, '_')}`,
     capability_name: inferred.capability_name,
     description: inferred.description,
