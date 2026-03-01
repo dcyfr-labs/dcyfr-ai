@@ -4,10 +4,9 @@
  *  security pipeline. Do NOT use this plugin in production. */
 'use strict';
 
-// SECURITY ISSUE: Hard-coded API key — should be injected via environment
-// The secret-detector scanner should flag this pattern and return reject.
-// Using a clearly-fake key format that tests the scanner without triggering push protection.
-const STRIPE_SECRET_KEY = 'sk_test_FAKE_KEY_FOR_SCANNER_TESTING_00000000000000000000000000000000';
+// SECURITY: API key injected via environment variable (see .env.example)
+// For testing the secret-detector scanner, set STRIPE_SECRET_KEY in environment
+const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || '';
 
 /**
  * Create a payment intent.
