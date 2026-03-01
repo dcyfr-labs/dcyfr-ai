@@ -24,7 +24,8 @@ export type DelegationFeatureFlag =
   | 'predictive_routing'           // ML-based agent selection
   | 'capability_learning'          // Dynamic capability updates
   | 'multi_tenancy'                // Enterprise feature - opt-in only
-  | 'execution_modes';             // Background/async execution modes (Phase 8)
+  | 'execution_modes'              // Background/async execution modes (Phase 8)
+  | 'plugin_security_enabled';     // Plugin marketplace security killswitch (Phase 23)
 
 /**
  * Feature flag configuration
@@ -120,6 +121,7 @@ export const DEFAULT_FEATURE_FLAGS: Record<DelegationFeatureFlag, boolean> = {
   capability_learning: false,       // Advanced feature - opt-in only
   multi_tenancy: false,             // Enterprise feature - opt-in only
   execution_modes: true,            // Background/async modes - enabled by default; disable via ENABLE_EXECUTION_MODES=false
+  plugin_security_enabled: true,    // Plugin security killswitch — set false to disable all plugin operations
 };
 
 /**
