@@ -1,0 +1,28 @@
+{
+  "name": "@dcyfr-pilot/git-tools",
+  "version": "1.0.0",
+  "description": "Git workflow utilities — reads project files and runs git commands",
+  "main": "index.js",
+  "license": "MIT",
+  "dcyfr": {
+    "pluginVersion": "1",
+    "tlp": "CLEAR",
+    "permissions": {
+      "filesystem": {
+        "read": ["src/**", "docs/**", ".git/**"],
+        "write": [],
+        "delete": []
+      },
+      "execution": {
+        "allowShellCommands": true,
+        "allowedCommands": ["git"],
+        "maxProcesses": 3
+      }
+    },
+    "resources": {
+      "maxMemory": "128MB",
+      "maxCpu": 0.25,
+      "maxExecutionTime": "2m"
+    }
+  }
+}

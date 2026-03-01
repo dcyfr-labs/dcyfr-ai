@@ -21,17 +21,28 @@ providers:
   enabled: true
   primary: claude
   fallback:
+    - copilot
+    - github-models
     - groq
     - ollama
-    - copilot
   timeout: 30000
   retries: 3
   providers:
     claude:
       enabled: true
       # apiKey: ${ANTHROPIC_API_KEY}
-      model: claude-3-5-sonnet-20241022
+      model: claude-sonnet-4.5
       maxTokens: 8192
+    copilot:
+      enabled: true
+      baseUrl: http://localhost:8317/v1
+      model: claude-sonnet-4.5
+      # Uses GitHub Copilot via Msty Vibe CLI Proxy
+    github-models:
+      enabled: true
+      # apiKey: ${GITHUB_TOKEN}
+      model: gpt-4o
+      # Endpoint: https://models.github.ai/inference (no Claude)
     groq:
       enabled: true
       # apiKey: ${GROQ_API_KEY}
@@ -40,9 +51,6 @@ providers:
       enabled: true
       baseUrl: http://localhost:11434
       model: llama3.2
-    copilot:
-      enabled: true
-      # Uses GitHub Copilot authentication
 
 # Validation configuration
 validation:

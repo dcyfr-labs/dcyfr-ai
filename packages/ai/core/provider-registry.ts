@@ -128,8 +128,8 @@ export class ProviderRegistry {
       },
       {
         name: 'msty',
-        apiEndpoint: process.env.MSTY_LOCAL_AI_URL || 'http://localhost:8000',
-        healthCheckUrl: `${process.env.MSTY_LOCAL_AI_URL || 'http://localhost:8000'}/v1/models`,
+        apiEndpoint: process.env.MSTY_LOCAL_AI_URL || 'http://localhost:11964',
+        healthCheckUrl: `${process.env.MSTY_LOCAL_AI_URL || 'http://localhost:11964'}/v1/models`,
         maxRetries: 2,
         retryDelay: 500,
         timeout: 30000,
@@ -137,15 +137,17 @@ export class ProviderRegistry {
       },
       {
         name: 'copilot',
+        apiEndpoint: process.env.MSTY_VIBE_PROXY_URL || 'http://localhost:8317',
+        healthCheckUrl: `${process.env.MSTY_VIBE_PROXY_URL || 'http://localhost:8317'}/v1/models`,
         maxRetries: 2,
         retryDelay: 500,
-        timeout: 15000,
+        timeout: 30000,
         enabled: true,
       },
       {
         name: 'github-models',
-        apiEndpoint: 'https://models.inference.ai.azure.com',
-        healthCheckUrl: 'https://models.inference.ai.azure.com/models',
+        apiEndpoint: 'https://models.github.ai/inference',
+        healthCheckUrl: 'https://models.github.ai/inference/models',
         maxRetries: 3,
         retryDelay: 1000,
         timeout: 30000,
@@ -463,15 +465,16 @@ export class ProviderRegistry {
         configured: !!process.env.GROQ_API_KEY
       },
       msty: {
-        endpoint: process.env.MSTY_LOCAL_AI_URL,
+        endpoint: process.env.MSTY_LOCAL_AI_URL || 'http://localhost:11964',
         configured: !!process.env.MSTY_LOCAL_AI_URL
       },
       copilot: {
-        configured: true // GitHub Copilot uses VS Code integration
+        endpoint: process.env.MSTY_VIBE_PROXY_URL || 'http://localhost:8317',
+        configured: true // Copilot via Msty Vibe CLI Proxy (subscription-based)
       },
       'github-models': {
         apiKey: process.env.GITHUB_TOKEN,
-        endpoint: 'https://models.inference.ai.azure.com',
+        endpoint: 'https://models.github.ai/inference',
         configured: !!process.env.GITHUB_TOKEN
       }
     };
@@ -589,32 +592,37 @@ export class ProviderRegistry {
         ]
       },
       msty: {
-        description: 'Msty local AI server',
+        description: 'Msty Local AI server (Ollama-compatible models)',
         environmentVariables: ['MSTY_LOCAL_AI_URL'],
         instructions: [
           '1. Install Msty from https://msty.app/',
-          '2. Start the local AI server',
-          '3. Set environment variable: export MSTY_LOCAL_AI_URL=http://localhost:8000'
+          '2. Start the Local AI server (default port: 11964)',
+          '3. Set environment variable: export MSTY_LOCAL_AI_URL=http://localhost:11964',
+          '4. Use for local Ollama-compatible models'
         ]
       },
       copilot: {
-        description: 'GitHub Copilot (VS Code integration)',
-        environmentVariables: [],
+        description: 'GitHub Copilot via Msty Vibe CLI Proxy (Claude Sonnet 4.5/4.6, Opus 4.5/4.6, Haiku 4.5)',
+        environmentVariables: ['MSTY_VIBE_PROXY_URL'],
         instructions: [
-          '1. Install GitHub Copilot extension in VS Code',
-          '2. Sign in with your GitHub account',
-          '3. Ensure you have an active Copilot subscription',
-          'No environment variables required'
+          '1. Install Msty from https://msty.app/',
+          '2. Enable Vibe CLI Proxy in Msty settings',
+          '3. Sign in with your GitHub Copilot account in Msty',
+          '4. Default endpoint: http://localhost:8317',
+          '5. Optional: export MSTY_VIBE_PROXY_URL=http://localhost:8317',
+          '6. Available models: claude-sonnet-4.5, claude-opus-4.5, claude-haiku-4.5',
+          '7. FREE with GitHub Copilot subscription (no per-token cost)'
         ]
       },
       'github-models': {
-        description: 'GitHub Models (Free with GitHub Pro/Teams)',
+        description: 'GitHub Models API (GPT-4o, Llama, Mistral — no Claude)',
         environmentVariables: ['GITHUB_TOKEN'],
         instructions: [
           '1. Use your existing GITHUB_TOKEN (already configured)',
-          '2. Provides free access to GPT-4o, Claude, and other models',
-          '3. Endpoint: https://models.inference.ai.azure.com',
-          '4. No additional subscription required with GitHub Pro/Teams'
+          '2. Provides free access to GPT-4o, Llama, Mistral models',
+          '3. Endpoint: https://models.github.ai/inference',
+          '4. No additional subscription required with GitHub Pro/Teams',
+          '5. Note: Claude models are NOT available — use copilot provider instead'
         ]
       }
     };

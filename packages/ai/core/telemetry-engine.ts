@@ -166,9 +166,9 @@ export class TelemetrySessionManager {
 
   private getCostPerMillionTokens(agent: AgentType): number {
     const costs: Record<AgentType, number> = {
-      claude: 15, // $15 per 1M tokens (Sonnet 3.5)
+      claude: 15, // $15 per 1M tokens (Sonnet 4.5)
       'github-models': 0, // Free with GitHub Pro/Teams
-      copilot: 0.1, // Included in subscription
+      copilot: 0, // Subscription-based via Msty Vibe CLI Proxy, no per-token cost
       groq: 0, // Free tier
       ollama: 0, // Local
     };

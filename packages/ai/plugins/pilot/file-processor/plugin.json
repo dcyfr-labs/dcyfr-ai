@@ -1,0 +1,23 @@
+{
+  "name": "@dcyfr-pilot/file-processor",
+  "version": "0.8.0",
+  "description": "Reads source files and produces analysis reports in dist/",
+  "main": "index.js",
+  "license": "MIT",
+  "dcyfr": {
+    "pluginVersion": "1",
+    "tlp": "CLEAR",
+    "permissions": {
+      "filesystem": {
+        "read": ["src/**", "tests/**", "package.json"],
+        "write": ["dist/reports/**"],
+        "delete": []
+      }
+    },
+    "resources": {
+      "maxMemory": "512MB",
+      "maxCpu": 0.5,
+      "maxExecutionTime": "5m"
+    }
+  }
+}

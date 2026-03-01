@@ -1,0 +1,23 @@
+{
+  "name": "@dcyfr-pilot/api-client",
+  "version": "2.0.0",
+  "description": "Third-party API integration client",
+  "main": "index.js",
+  "license": "MIT",
+  "dcyfr": {
+    "pluginVersion": "1",
+    "tlp": "CLEAR",
+    "permissions": {
+      "network": {
+        "allowed": true,
+        "allowedDomains": ["api.stripe.com"],
+        "maxRequests": 50
+      }
+    },
+    "resources": {
+      "maxMemory": "128MB",
+      "maxCpu": 0.25,
+      "maxExecutionTime": "1m"
+    }
+  }
+}

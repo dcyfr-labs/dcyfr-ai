@@ -12,14 +12,23 @@
   "providers": {
     "enabled": true,
     "primary": "claude",
-    "fallback": ["groq", "ollama", "copilot"],
+    "fallback": ["copilot", "github-models", "groq", "ollama"],
     "timeout": 30000,
     "retries": 3,
     "providers": {
       "claude": {
         "enabled": true,
-        "model": "claude-3-5-sonnet-20241022",
+        "model": "claude-sonnet-4.5",
         "maxTokens": 8192
+      },
+      "copilot": {
+        "enabled": true,
+        "baseUrl": "http://localhost:8317/v1",
+        "model": "claude-sonnet-4.5"
+      },
+      "github-models": {
+        "enabled": true,
+        "model": "gpt-4o"
       },
       "groq": {
         "enabled": true,
@@ -29,9 +38,6 @@
         "enabled": true,
         "baseUrl": "http://localhost:11434",
         "model": "llama3.2"
-      },
-      "copilot": {
-        "enabled": true
       }
     }
   },

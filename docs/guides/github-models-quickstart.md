@@ -1,17 +1,18 @@
 # GitHub Models Quick Start Guide
 
-**Free access to GPT-4o, Claude 3.5 Sonnet, and more with your GitHub token**
+**Free access to GPT-4o, Llama, and Mistral with your GitHub token**
 
 ---
 
 ## Overview
 
-GitHub Models provides free API access to premium AI models for GitHub Pro/Teams subscribers. Since you already have `GITHUB_TOKEN` configured for Copilot, you can immediately start using:
+GitHub Models provides free API access to premium AI models for GitHub Pro/Teams subscribers. Since you already have `GITHUB_TOKEN` configured, you can immediately start using:
 
 - **GPT-4o** and GPT-4o-mini (OpenAI)
-- **Claude 3.5 Sonnet** (Anthropic)  
 - **Llama 3.1** (Meta)
 - **Mistral** and other models
+
+> **Looking for Claude models?** Claude is **not available** via GitHub Models API. Use the `copilot` provider with Msty Vibe CLI Proxy instead — see [PROVIDER_INTEGRATIONS.md](../PROVIDER_INTEGRATIONS.md).
 
 **Cost:** $0 with your existing GitHub Pro/Teams subscription
 
@@ -32,7 +33,7 @@ echo $GITHUB_TOKEN
 
 ```bash
 export LLM_PROVIDER=github-models
-export LLM_MODEL=gpt-4o  # or claude-3-5-sonnet-20241022
+export LLM_MODEL=gpt-4o  # or llama-3.1-70b-instruct
 ```
 
 **Option B: Programmatic Configuration**
@@ -79,19 +80,18 @@ LLM_MODEL=gpt-4o
 # GPT-4o-mini (Fast, efficient)
 LLM_MODEL=gpt-4o-mini
 
-# Claude 3.5 Sonnet (Great for code)
-LLM_MODEL=claude-3-5-sonnet-20241022
-
 # Llama 3.1 70B (Open source)
 LLM_MODEL=llama-3.1-70b-instruct
 ```
+
+> **Note**: For Claude models (Sonnet/Opus/Haiku), use the `copilot` provider instead.
 
 ### Full Model List
 
 Check available models:
 ```bash
 curl -H "Authorization: Bearer $GITHUB_TOKEN" \
-  https://models.inference.ai.azure.com/models
+  https://models.github.ai/inference/models
 ```
 
 ---
@@ -140,7 +140,7 @@ import { AgentRuntime } from '@dcyfr/ai/runtime';
 const reviewer = new AgentRuntime({
   name: 'code-reviewer',
   provider: 'github-models',
-  model: 'claude-3-5-sonnet-20241022',  // Great for code
+  model: 'gpt-4o',  // Best general-purpose model on GitHub Models
 });
 
 const review = await reviewer.execute({
@@ -153,7 +153,7 @@ const review = await reviewer.execute({
 ### Example 2: Multi-Model Comparison
 
 ```typescript
-const models = ['gpt-4o', 'claude-3-5-sonnet-20241022', 'llama-3.1-70b-instruct'];
+const models = ['gpt-4o', 'gpt-4o-mini', 'llama-3.1-70b-instruct'];
 
 const results = await Promise.all(
   models.map(model => 
@@ -221,7 +221,7 @@ fallbackChain: ['github-models', 'openai', 'ollama']
 ```bash
 # List available models
 curl -H "Authorization: Bearer $GITHUB_TOKEN" \
-  https://models.inference.ai.azure.com/models | jq '.data[].id'
+  https://models.github.ai/inference/models | jq '.data[].id'
 
 # Use a different model
 export LLM_MODEL=gpt-4o-mini

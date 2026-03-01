@@ -1,0 +1,28 @@
+{
+  "name": "@dcyfr-pilot/workspace-analytics",
+  "version": "1.1.0",
+  "description": "Generates internal workspace analytics — reads build artifacts and telemetry",
+  "main": "index.js",
+  "license": "UNLICENSED",
+  "dcyfr": {
+    "pluginVersion": "1",
+    "tlp": "AMBER",
+    "permissions": {
+      "filesystem": {
+        "read": ["dist/**", "coverage/**", "logs/**", ".dcyfr/**"],
+        "write": [".dcyfr/reports/**"],
+        "delete": []
+      },
+      "data": {
+        "allowEnvironmentVars": true,
+        "allowedVars": ["NODE_ENV", "DCYFR_*", "CI"],
+        "allowSecretAccess": false
+      }
+    },
+    "resources": {
+      "maxMemory": "384MB",
+      "maxCpu": 0.5,
+      "maxExecutionTime": "5m"
+    }
+  }
+}
