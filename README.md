@@ -702,6 +702,8 @@ See [examples/](./examples/) directory:
 - [GVISOR_SETUP.md](./docs/guides/GVISOR_SETUP.md) - gVisor runtime sandboxing for untrusted plugins
 - [BEHAVIORAL_ANOMALY_DETECTION.md](./docs/guides/BEHAVIORAL_ANOMALY_DETECTION.md) - Behavioral anomaly detection system
 - [CERTIFICATION_PROGRAM.md](./docs/guides/CERTIFICATION_PROGRAM.md) - Plugin Certification Program (Bronze/Silver/Gold tiers)
+- [WASM_PLUGIN_STARTER.md](./docs/guides/WASM_PLUGIN_STARTER.md) - WebAssembly plugin starter template
+- [WASM_MIGRATION_GUIDE.md](./docs/guides/WASM_MIGRATION_GUIDE.md) - Migrate Docker plugins to WASM
 
 ## Contributing
 
