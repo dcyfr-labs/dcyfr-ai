@@ -44,6 +44,27 @@ import {
   VerificationIntegration,
   type ParsedVerificationResult,
 } from '../verification/parser-integration';
+import type {
+  ContextCompactor,
+  AgentContext,
+  ContextUtilization,
+} from '../compaction/index.js';
+import type { MCPToolBridge } from '../mcp/mcp-tool-bridge.js';
+import type { SkillRegistry } from '../skills/skill-registry.js';
+
+/**
+ * Before-execute hook with priority
+ */
+export interface BeforeExecuteHook {
+  /** Hook priority (lower numbers execute first) */
+  priority: number;
+  
+  /** Hook function that may modify context */
+  hook: (context: AgentContext) => Promise<AgentContext> | AgentContext;
+  
+  /** Optional hook name for debugging */
+  name?: string;
+}
 
 /**
  * Task execution context with delegation information
@@ -283,6 +304,18 @@ export class AgentRuntime extends EventEmitter {
   private telemetryIntegration?: RuntimeTelemetryIntegration;
   private verificationIntegration?: VerificationIntegration;
   
+  /** Registered before-execute hooks, sorted by priority */
+  private beforeExecuteHooks: BeforeExecuteHook[] = [];
+  
+  /** Optional context compactor for automatic context management */
+  private contextCompactor?: ContextCompactor;
+  
+  /** Optional MCP tool bridge for MCP server tool access */
+  private mcpToolBridge?: MCPToolBridge;
+  
+  /** Optional skill registry for dynamic skill injection */
+  private skillRegistry?: SkillRegistry;
+  
   constructor(config: AgentRuntimeConfig) {
     super();
     this.config = {
@@ -323,6 +356,166 @@ export class AgentRuntime extends EventEmitter {
       current_workload: this.currentTasks.size,
       max_concurrent_tasks: this.config.max_concurrent_tasks || 5,
     };
+  }
+  
+  /* ------------------------------------------------------------------ */
+  /*  Context Compaction / Hook Support                                  */
+  /* ------------------------------------------------------------------ */
+  
+  /**
+   * Set the context compactor for automatic context management.
+   * The compactor will be called before each LLM execution.
+   */
+  setContextCompactor(compactor: ContextCompactor): void {
+    this.contextCompactor = compactor;
+    
+    // Register the compactor as a before-execute hook
+    this.registerBeforeExecuteHook({
+      priority: 50, // After security (0), before user hooks (100)
+      name: 'context-compactor',
+      hook: (ctx) => compactor.executeAsHook(ctx),
+    });
+    
+    if (this.config.debug) {
+      console.log('[AgentRuntime] Context compactor registered');
+    }
+  }
+  
+  /**
+   * Register a before-execute hook with priority.
+   * Hooks execute in priority order (lower numbers first).
+   * 
+   * Standard priority levels:
+   * - 0-25: Security/validation hooks
+   * - 50: Context compaction
+   * - 100+: User-defined hooks
+   */
+  registerBeforeExecuteHook(hook: BeforeExecuteHook): void {
+    this.beforeExecuteHooks.push(hook);
+    // Sort by priority (ascending)
+    this.beforeExecuteHooks.sort((a, b) => a.priority - b.priority);
+    
+    if (this.config.debug) {
+      console.log(`[AgentRuntime] Hook registered: ${hook.name || 'unnamed'} at priority ${hook.priority}`);
+    }
+  }
+  
+  /**
+   * Execute all registered before-execute hooks on a context.
+   * Returns the (potentially modified) context.
+   */
+  async executeBeforeExecuteHooks(context: AgentContext): Promise<AgentContext> {
+    let currentContext = context;
+    
+    for (const { hook, name, priority } of this.beforeExecuteHooks) {
+      try {
+        currentContext = await hook(currentContext);
+        
+        if (this.config.debug) {
+          console.log(`[AgentRuntime] Hook executed: ${name || 'unnamed'} (priority ${priority})`);
+        }
+      } catch (error) {
+        // Log but continue — hooks should not break execution
+        console.error(`[AgentRuntime] Hook failed: ${name || 'unnamed'}`, error);
+      }
+    }
+    
+    return currentContext;
+  }
+  
+  /**
+   * Get context utilization breakdown.
+   * Requires a context compactor to be set.
+   * 
+   * @param context - The agent context to analyze
+   * @returns Context utilization breakdown or null if no compactor is set
+   */
+  getContextUtilization(context: AgentContext): ContextUtilization | null {
+    if (!this.contextCompactor) {
+      if (this.config.debug) {
+        console.warn('[AgentRuntime] getContextUtilization called but no context compactor is set');
+      }
+      return null;
+    }
+    
+    return this.contextCompactor.calculateUtilization(context);
+  }
+  
+  /* ------------------------------------------------------------------ */
+  /*  MCP Tool Bridge                                                    */
+  /* ------------------------------------------------------------------ */
+  
+  /**
+   * Set the MCP tool bridge for accessing tools from MCP servers.
+   * Tools discovered via the bridge will be available alongside native tools.
+   */
+  setMCPToolBridge(bridge: MCPToolBridge): void {
+    this.mcpToolBridge = bridge;
+    
+    if (this.config.debug) {
+      console.log(`[AgentRuntime] MCP tool bridge registered (${bridge.size} tools)`);
+    }
+  }
+  
+  /**
+   * Get the MCP tool bridge, if configured.
+   */
+  getMCPToolBridge(): MCPToolBridge | undefined {
+    return this.mcpToolBridge;
+  }
+  
+  /**
+   * Get all available tools (native + MCP bridged).
+   */
+  getAvailableTools(): Array<{
+    name: string;
+    description: string;
+    source: 'native' | 'mcp';
+    serverName?: string;
+  }> {
+    const tools: Array<{
+      name: string;
+      description: string; 
+      source: 'native' | 'mcp';
+      serverName?: string;
+    }> = [];
+    
+    // Add MCP bridged tools
+    if (this.mcpToolBridge) {
+      for (const bt of this.mcpToolBridge.getTools()) {
+        tools.push({
+          name: bt.name,
+          description: bt.description,
+          source: 'mcp',
+          serverName: bt.serverName,
+        });
+      }
+    }
+    
+    return tools;
+  }
+  
+  /* ------------------------------------------------------------------ */
+  /*  Skill Registry                                                     */
+  /* ------------------------------------------------------------------ */
+  
+  /**
+   * Set the skill registry for dynamic skill injection.
+   * Skills will be automatically injected into system prompts based on context.
+   */
+  setSkillRegistry(registry: SkillRegistry): void {
+    this.skillRegistry = registry;
+    
+    if (this.config.debug) {
+      console.log(`[AgentRuntime] Skill registry registered (${registry.size} skills)`);
+    }
+  }
+  
+  /**
+   * Get the skill registry, if configured.
+   */
+  getSkillRegistry(): SkillRegistry | undefined {
+    return this.skillRegistry;
   }
   
   /**

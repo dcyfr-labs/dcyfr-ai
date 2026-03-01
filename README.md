@@ -492,6 +492,64 @@ This example demonstrates:
 
 ---
 
+## Autonomous Agent Runtime
+
+Build agents that operate independently with persistent memory, scheduled execution, platform messaging, and dynamic skill injection.
+
+### Subpath Imports
+
+```typescript
+import { FileMemoryAdapter, SQLiteIndex, flushWorkingMemory } from '@dcyfr/ai/memory';
+import { ContextCompactor, MemoryCompaction } from '@dcyfr/ai/compaction';
+import { SkillRegistry } from '@dcyfr/ai/skills';
+import { MCPToolBridge } from '@dcyfr/ai/mcp';
+import { SessionManager } from '@dcyfr/ai/session';
+import { AgentScheduler } from '@dcyfr/ai/scheduler';
+import { MessageGateway, TelegramAdapter, CLIAdapter } from '@dcyfr/ai/gateway';
+```
+
+### Key Capabilities
+
+| Module | Description |
+|--------|-------------|
+| **File Memory** | Markdown-based persistent memory with SHA-256 dedup and optional SQLite FTS5 hybrid search |
+| **Context Compaction** | LLM-powered pre-flush summarization to prevent context overflow |
+| **Skill Injection** | BM25-powered matching of `.md` skill files to inject relevant knowledge |
+| **MCP Tool Bridge** | Bridges MCP server tool discovery → AgentRuntime tools |
+| **Session Management** | Trust-level tool policies (full/sandboxed/readonly), session lifecycle |
+| **Agent Scheduler** | Built-in cron parser, webhooks, event subscriptions, quiet hours |
+| **Messaging Gateway** | Telegram/CLI/HTTP adapters, input sanitization, rate limiting |
+| **Memory Compaction** | Cross-backend dedup, monthly conversation summarization, stale fact archival |
+| **Working Memory** | Persist `Map<string, unknown>` as human-readable Markdown |
+
+### Quick Example
+
+```typescript
+import { MessageGateway, TelegramAdapter } from '@dcyfr/ai/gateway';
+import { SessionManager } from '@dcyfr/ai/session';
+import { AgentScheduler } from '@dcyfr/ai/scheduler';
+
+// Create a messaging gateway with platform adapters
+const gateway = new MessageGateway({
+  adapters: [new TelegramAdapter({ sendFn: telegramBot.sendMessage })],
+  trustRules: [
+    { name: 'admin', userIds: ['admin-id'], trustLevel: 'full', priority: 10 },
+  ],
+});
+
+// Schedule daily tasks
+const scheduler = new AgentScheduler({
+  executor: async (task) => runAgent(task),
+});
+scheduler.schedule('0 9 * * *', { name: 'morning-report' });
+scheduler.start();
+```
+
+> **Full guide:** See [docs/guides/autonomous-agent-guide.md](docs/guides/autonomous-agent-guide.md)  
+> **Complete example:** See [examples/autonomous-agent.ts](examples/autonomous-agent.ts)
+
+---
+
 ## Architecture
 
 The DCYFR AI framework follows a layered architecture with clear separation of concerns:
