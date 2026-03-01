@@ -1,0 +1,23 @@
+{
+  "name": "@dcyfr-pilot/web-fetcher",
+  "version": "1.2.0",
+  "description": "Fetches external API data for AI context enrichment",
+  "main": "index.js",
+  "license": "MIT",
+  "dcyfr": {
+    "pluginVersion": "1",
+    "tlp": "CLEAR",
+    "permissions": {
+      "network": {
+        "allowed": true,
+        "allowedDomains": ["api.github.com", "api.openai.com", "*.dcyfr.ai"],
+        "maxRequests": 200
+      }
+    },
+    "resources": {
+      "maxMemory": "256MB",
+      "maxCpu": 0.5,
+      "maxExecutionTime": "3m"
+    }
+  }
+}

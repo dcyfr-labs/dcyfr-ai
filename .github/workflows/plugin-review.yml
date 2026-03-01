@@ -1,0 +1,439 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# Plugin Security Review Workflow
+#
+# Triggered on any PR that adds or modifies files under packages/ai/plugins/.
+# Runs the full security pipeline (scanPlugin + external tools), publishes the
+# SBOM, posts a PR comment with the trust score and findings, and fails the
+# workflow if the overall recommendation is `reject`.
+#
+# Required repository secrets:
+#   R2_ACCOUNT_ID        — Cloudflare account ID (for SBOM bucket)
+#   R2_ACCESS_KEY_ID     — R2 Access Key ID
+#   R2_SECRET_ACCESS_KEY — R2 Secret Access Key
+#   R2_BUCKET_NAME       — R2 bucket name (e.g. dcyfr-sboms)
+#
+# Optional secrets (skip steps when absent):
+#   SONAR_TOKEN          — SonarCloud scan token
+#
+# Required repository variables (Settings → Secrets and variables → Variables):
+#   R2_ENDPOINT          — Cloudflare R2 endpoint
+#                          e.g. https://<account-id>.r2.cloudflarestorage.com
+# ──────────────────────────────────────────────────────────────────────────────
+
+name: Plugin Security Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'packages/ai/plugins/**'
+
+permissions: {}
+
+env:
+  NODE_VERSION: '24.13.0'
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 1. Security scan
+# ──────────────────────────────────────────────────────────────────────────────
+jobs:
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write   # post PR comment
+      statuses: write        # set commit status
+    timeout-minutes: 10
+
+    outputs:
+      recommendation: ${{ steps.scanner.outputs.recommendation }}
+      trust-score:    ${{ steps.scanner.outputs.trust_score }}
+      plugin-id:      ${{ steps.detect-plugin.outputs.plugin_id }}
+      report-path:    ${{ steps.scanner.outputs.report_path }}
+      sbom-path:      ${{ steps.sbom.outputs.sbom_path }}
+
+    steps:
+      # ── Checkout ──────────────────────────────────────────────────────────
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # ── Node.js setup ─────────────────────────────────────────────────────
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: '**/package.json'
+
+      - name: Install dependencies
+        run: npm install --ignore-scripts
+
+      - name: Build
+        run: npm run build
+
+      # ── Detect which plugin(s) changed ────────────────────────────────────
+      - name: Detect changed plugin
+        id: detect-plugin
+        run: |
+          # Find plugins changed in this PR (first level under plugins/)
+          CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD \
+            | grep '^packages/ai/plugins/' \
+            | sed 's|packages/ai/plugins/||' \
+            | cut -d'/' -f1 \
+            | sort -u \
+            | grep -v '^pilot$' \
+            | head -1)
+
+          if [ -z "$CHANGED" ]; then
+            echo "No plugin changes detected. Skipping scan."
+            echo "plugin_id=" >> "$GITHUB_OUTPUT"
+          else
+            echo "plugin_id=$CHANGED" >> "$GITHUB_OUTPUT"
+            echo "Detected plugin: $CHANGED"
+          fi
+
+      # ── Install external scanning tools ───────────────────────────────────
+      - name: Install Syft (SBOM)
+        if: steps.detect-plugin.outputs.plugin_id != ''
+        uses: anchore/sbom-action/download-syft@v0
+
+      - name: Install Grype (Vulnerability scanner)
+        if: steps.detect-plugin.outputs.plugin_id != ''
+        uses: anchore/scan-action/download-grype@v4
+
+      - name: Install Gitleaks
+        if: steps.detect-plugin.outputs.plugin_id != ''
+        run: |
+          GITLEAKS_VERSION="8.30.0"
+          curl -sSfL \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+            | tar -xz -C /usr/local/bin gitleaks
+          gitleaks version
+
+      - name: Install ClamAV
+        if: steps.detect-plugin.outputs.plugin_id != ''
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq clamav
+          # Update signatures (best-effort; network may be restricted)
+          sudo freshclam --quiet || true
+
+      - name: Install cosign
+        if: steps.detect-plugin.outputs.plugin_id != ''
+        uses: sigstore/cosign-installer@v3
+
+      # ── Generate SBOM with Syft ────────────────────────────────────────────
+      - name: Generate SBOM
+        id: sbom
+        if: steps.detect-plugin.outputs.plugin_id != ''
+        env:
+          PLUGIN_ID: ${{ steps.detect-plugin.outputs.plugin_id }}
+        run: |
+          PLUGIN_PATH="packages/ai/plugins/${PLUGIN_ID}"
+          SBOM_FILE="${PLUGIN_ID}-sbom.cyclonedx.json"
+
+          syft "${PLUGIN_PATH}" \
+            -o cyclonedx-json="${SBOM_FILE}" \
+            --quiet
+
+          echo "sbom_path=${SBOM_FILE}" >> "$GITHUB_OUTPUT"
+          echo "Generated SBOM: ${SBOM_FILE}"
+
+      # ── Run Node.js security scanner ──────────────────────────────────────
+      - name: Run security scanner
+        id: scanner
+        if: steps.detect-plugin.outputs.plugin_id != ''
+        env:
+          PLUGIN_ID: ${{ steps.detect-plugin.outputs.plugin_id }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          PLUGIN_PATH="packages/ai/plugins/${PLUGIN_ID}"
+          REPORT_FILE="${PLUGIN_ID}-security-report.json"
+
+          node --input-type=module << 'EOF'
+          import { scanPlugin } from './packages/ai/dist/plugins/security/plugin-security-scanner.js';
+          import { writeFileSync } from 'node:fs';
+          import { resolve } from 'node:path';
+
+          const pluginId   = process.env.PLUGIN_ID;
+          const pluginPath = resolve(`packages/ai/plugins/${pluginId}`);
+          const reportFile = `${pluginId}-security-report.json`;
+
+          let report;
+          try {
+            report = await scanPlugin(
+              { pluginId, version: 'pr-head', pluginPath },
+              // Community/maintenance data unavailable for new submissions
+            );
+          } catch (err) {
+            console.error('Scanner error:', err.message);
+            process.exit(1);
+          }
+
+          writeFileSync(reportFile, JSON.stringify(report, null, 2));
+
+          // Set GitHub outputs
+          const setOutput = (k, v) =>
+            process.stdout.write(`::set-output name=${k}::${v}\n`);
+
+          setOutput('recommendation', report.overallRecommendation);
+          setOutput('trust_score', String(report.trustScore.overall));
+          setOutput('report_path', reportFile);
+
+          console.log(`Recommendation : ${report.overallRecommendation}`);
+          console.log(`Trust score    : ${report.trustScore.overall}/100`);
+          console.log(`Scan duration  : ${report.durationMs}ms`);
+          EOF
+
+      # ── Upload report artifact ─────────────────────────────────────────────
+      - name: Upload security report
+        if: steps.detect-plugin.outputs.plugin_id != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-report-${{ steps.detect-plugin.outputs.plugin_id }}
+          path: ${{ steps.scanner.outputs.report_path }}
+          retention-days: 90
+
+      - name: Upload SBOM artifact
+        if: steps.detect-plugin.outputs.plugin_id != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-${{ steps.detect-plugin.outputs.plugin_id }}
+          path: ${{ steps.sbom.outputs.sbom_path }}
+          retention-days: 90
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # 2. Post PR comment with scan summary and trust score
+  # ────────────────────────────────────────────────────────────────────────────
+  pr-comment:
+    name: PR Comment
+    needs: security-scan
+    runs-on: ubuntu-latest
+    if: always() && needs.security-scan.outputs.plugin-id != ''
+    permissions:
+      pull-requests: write
+    timeout-minutes: 5
+
+    steps:
+      - name: Download security report
+        uses: actions/download-artifact@v4
+        with:
+          name: security-report-${{ needs.security-scan.outputs.plugin-id }}
+        continue-on-error: true   # artifact may be absent if scan was skipped
+
+      - name: Post scan summary comment
+        uses: actions/github-script@v7
+        env:
+          PLUGIN_ID:      ${{ needs.security-scan.outputs.plugin-id }}
+          RECOMMENDATION: ${{ needs.security-scan.outputs.recommendation }}
+          TRUST_SCORE:    ${{ needs.security-scan.outputs.trust-score }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const pluginId      = process.env.PLUGIN_ID      || '(unknown)';
+            const recommendation = process.env.RECOMMENDATION || '(unknown)';
+            const trustScore    = process.env.TRUST_SCORE    || '—';
+
+            // Emoji and badge per recommendation level
+            const badges = {
+              approve:               '✅ **APPROVED**',
+              'approve-with-warnings': '⚠️ **APPROVED WITH WARNINGS**',
+              'require-review':       '🔍 **REQUIRES SECURITY REVIEW**',
+              reject:                '❌ **REJECTED**',
+            };
+
+            const badge = badges[recommendation] ?? `ℹ️ ${recommendation}`;
+
+            // Parse full report if available
+            let reportDetail = '';
+            try {
+              const fs = require('fs');
+              const reportFile = `${pluginId}-security-report.json`;
+              const report = JSON.parse(fs.readFileSync(reportFile, 'utf8'));
+
+              const { secrets, license, vulnerabilities, trustScore: ts } = report;
+
+              const secretsLine = secrets.found
+                ? `⚠️ **${secrets.locations.length} secret(s) detected** (${secrets.locations.map(l => l.ruleId).join(', ')})`
+                : '✅ No secrets detected';
+
+              const licenseLine = license.compliant
+                ? `✅ License compliant (${license.detected.join(', ')})`
+                : `⚠️ License issues: incompatible=[${license.incompatible.join(', ')}] unknown=[${license.unknown.join(', ')}]`;
+
+              const vulnLine = vulnerabilities.success
+                ? `✅ ${vulnerabilities.critical + vulnerabilities.high} critical/high CVEs`
+                : '⏭️ Vulnerability scan skipped (tool unavailable)';
+
+              reportDetail = `\n\n### Findings\n\n| Check | Result |\n|--|--|\n| Secrets | ${secretsLine} |\n| License | ${licenseLine} |\n| Vulnerabilities | ${vulnLine} |\n\n**Trust score dimensions:**\n- Security: ${ts.dimensions.security}/100\n- Community: ${ts.dimensions.community}/100\n- Maintenance: ${ts.dimensions.maintenance}/100\n- Transparency: ${ts.dimensions.transparency}/100`;
+
+              if (ts.rationale) {
+                reportDetail += `\n\n> ${ts.rationale}`;
+              }
+            } catch {
+              // Report artifact absent — show summary-only comment
+            }
+
+            // Remediation guidance for rejected/review-required
+            let remediationSection = '';
+            if (recommendation === 'reject') {
+              remediationSection = `\n\n### How to remediate\n\n1. **Remove all hardcoded secrets** — use \`process.env\` or the DCYFR secrets manager instead\n2. Re-run gitleaks locally: \`gitleaks detect --source . --no-git\`\n3. Push a new commit — this workflow will re-run automatically\n\nFor guidance see [Plugin Security Policy](../blob/main/docs/security/PLUGIN_SECURITY_POLICY.md) and [Plugin Development Guide](../blob/main/docs/guides/PLUGIN_DEVELOPMENT_GUIDE.md).`;
+            } else if (recommendation === 'require-review') {
+              remediationSection = `\n\n### Next steps\n\nThis plugin requires manual review by the @dcyfr/security-team before it can be merged. A team member will review within 2 business days.`;
+            }
+
+            const body = `## 🔐 Plugin Security Scan — \`${pluginId}\`\n\n${badge}\n\n| Field | Value |\n|--|--|\n| Plugin | \`${pluginId}\` |\n| Trust score | **${trustScore}/100** |\n| Recommendation | \`${recommendation}\` |${reportDetail}${remediationSection}\n\n---\n<sub>Generated by [plugin-review.yml](../.github/workflows/plugin-review.yml) · ${new Date().toISOString()}</sub>`;
+
+            // Find existing bot comment to update instead of duplicate
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo:  context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const botComment = comments.find(c =>
+              c.user.type === 'Bot' &&
+              c.body.includes('Plugin Security Scan')
+            );
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner:      context.repo.owner,
+                repo:       context.repo.repo,
+                comment_id: botComment.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner:        context.repo.owner,
+                repo:         context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # 3. Publish SBOM to Cloudflare R2
+  # ────────────────────────────────────────────────────────────────────────────
+  sbom-publish:
+    name: Publish SBOM
+    needs: security-scan
+    runs-on: ubuntu-latest
+    # Only publish when scan passes (not reject). R2 is skipped gracefully if
+    # credentials are absent (handled in the upload step with continue-on-error).
+    if: |
+      needs.security-scan.outputs.plugin-id != '' &&
+      needs.security-scan.outputs.recommendation != 'reject'
+    permissions:
+      contents: read
+    timeout-minutes: 5
+
+    steps:
+      - name: Download SBOM artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: sbom-${{ needs.security-scan.outputs.plugin-id }}
+
+      - name: Skip if R2 credentials absent
+        id: r2-check
+        run: |
+          if [ -z "${{ secrets.R2_ACCESS_KEY_ID }}" ]; then
+            echo "R2_CONFIGURED=false" >> "$GITHUB_ENV"
+            echo "::warning::R2_ACCESS_KEY_ID not set — SBOM publish skipped"
+          else
+            echo "R2_CONFIGURED=true" >> "$GITHUB_ENV"
+          fi
+
+      - name: Configure AWS CLI for Cloudflare R2
+        if: env.R2_CONFIGURED == 'true'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id:     ${{ secrets.R2_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          aws-region:            auto
+
+      - name: Upload SBOM to R2
+        if: env.R2_CONFIGURED == 'true'
+        env:
+          PLUGIN_ID:   ${{ needs.security-scan.outputs.plugin-id }}
+          BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
+          PR_NUMBER:   ${{ github.event.pull_request.number }}
+          SHA:         ${{ github.event.pull_request.head.sha }}
+        run: |
+          SBOM_FILE="${PLUGIN_ID}-sbom.cyclonedx.json"
+          S3_KEY="plugins/${PLUGIN_ID}/pr-${PR_NUMBER}/${SHA}/${SBOM_FILE}"
+
+          aws s3 cp "${SBOM_FILE}" "s3://${BUCKET_NAME}/${S3_KEY}" \
+            --content-type "application/vnd.cyclonedx+json" \
+            --metadata "plugin-id=${PLUGIN_ID},pr-number=${PR_NUMBER},sha=${SHA}"
+
+          echo "Published SBOM: s3://${BUCKET_NAME}/${S3_KEY}"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # 4. Security team review gate
+  # Blocks merge on `require-review` until the security team approves.
+  # On `reject`, the gate always fails — the plugin must be fixed.
+  # ────────────────────────────────────────────────────────────────────────────
+  review-gate:
+    name: Security Gate
+    needs: security-scan
+    runs-on: ubuntu-latest
+    if: always() && needs.security-scan.outputs.plugin-id != ''
+    permissions:
+      pull-requests: read
+      statuses: write
+    timeout-minutes: 5
+
+    steps:
+      - name: Enforce security gate
+        uses: actions/github-script@v7
+        env:
+          RECOMMENDATION: ${{ needs.security-scan.outputs.recommendation }}
+          TRUST_SCORE:    ${{ needs.security-scan.outputs.trust-score }}
+          PLUGIN_ID:      ${{ needs.security-scan.outputs.plugin-id }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const recommendation = process.env.RECOMMENDATION;
+            const trustScore     = Number(process.env.TRUST_SCORE || 0);
+            const pluginId       = process.env.PLUGIN_ID;
+
+            // Hard fail — plugin must fix and re-submit
+            if (recommendation === 'reject') {
+              core.setFailed(
+                `Plugin \`${pluginId}\` was REJECTED (trust score ${trustScore}/100). ` +
+                'Remove all hardcoded secrets and resolve blocking findings before resubmitting.'
+              );
+              return;
+            }
+
+            // Requires human review — check for security-approved label
+            if (recommendation === 'require-review') {
+              const { data: pr } = await github.rest.pulls.get({
+                owner:        context.repo.owner,
+                repo:         context.repo.repo,
+                pull_number:  context.issue.number,
+              });
+
+              const hasApprovalLabel = pr.labels.some(
+                (l) => l.name === 'security-approved'
+              );
+
+              if (!hasApprovalLabel) {
+                core.setFailed(
+                  `Plugin \`${pluginId}\` requires manual security review (trust score ${trustScore}/100). ` +
+                  'A member of @dcyfr/security-team must apply the `security-approved` label before this PR can be merged.'
+                );
+                return;
+              }
+
+              console.log('security-approved label present — gate passed.');
+            }
+
+            // approve or approve-with-warnings — pass
+            console.log(
+              `Security gate passed: ${recommendation} (trust score ${trustScore}/100)`
+            );

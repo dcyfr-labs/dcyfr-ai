@@ -146,7 +146,7 @@ export const TelemetryConfigSchema = z.object({
 export const ProviderConfigSchema = z.object({
   enabled: z.boolean().default(true),
   primary: z.string().default('claude'),
-  fallback: z.array(z.string()).default(['github-models', 'groq', 'msty', 'ollama', 'copilot']),
+  fallback: z.array(z.string()).default(['copilot', 'github-models', 'groq', 'msty', 'ollama']),
   timeout: z.number().positive().default(30000),
   retries: z.number().min(0).default(3),
   providers: z.record(z.string(), z.object({
@@ -159,7 +159,7 @@ export const ProviderConfigSchema = z.object({
 }).default({
   enabled: true,
   primary: 'claude',
-  fallback: ['github-models', 'groq', 'msty', 'ollama', 'copilot'],
+  fallback: ['copilot', 'github-models', 'groq', 'msty', 'ollama'],
   timeout: 30000,
   retries: 3,
   providers: {},
@@ -448,7 +448,7 @@ export const DEFAULT_CONFIG: FrameworkConfig = {
   providers: {
     enabled: true,
     primary: 'claude',
-    fallback: ['github-models', 'groq', 'msty', 'ollama', 'copilot'],
+    fallback: ['copilot', 'github-models', 'groq', 'msty', 'ollama'],
     timeout: 30000,
     retries: 3,
     providers: {},
