@@ -17,6 +17,32 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 
+// WebAssembly type declarations for Node.js environments without DOM lib
+/* eslint-disable @typescript-eslint/no-namespace, @typescript-eslint/no-extraneous-class */
+declare namespace WebAssembly {
+  type BufferSrc = ArrayBufferLike | ArrayBufferView;
+
+  class Module {
+    constructor(bytes: BufferSrc);
+  }
+  class Instance {
+    constructor(
+      module: Module,
+      importObject?: Record<string, Record<string, unknown>>
+    );
+    readonly exports: Record<string, unknown>;
+  }
+  class Memory {
+    constructor(descriptor: { initial: number; maximum?: number; shared?: boolean });
+    readonly buffer: ArrayBuffer;
+  }
+  function compile(bytes: BufferSrc): Promise<Module>;
+  function instantiate(
+    module: Module,
+    importObject?: Record<string, Record<string, unknown>>
+  ): Promise<Instance>;
+}
+
 import { WASI } from 'node:wasi';
 import { readFile } from 'node:fs/promises';
 import { performance } from 'node:perf_hooks';
