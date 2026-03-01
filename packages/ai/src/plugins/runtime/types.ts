@@ -150,3 +150,36 @@ export interface GVisorProbeResult {
   available: boolean;
   error?: string;
 }
+// ---------------------------------------------------------------------------
+// WebAssembly runtime
+// ---------------------------------------------------------------------------
+
+/** Result of a WebAssembly availability probe. */
+export interface WasmProbeResult {
+  available: boolean;
+  /** Node.js version with WASI support info */
+  version?: string;
+  /** Human-readable error if WASM/WASI is unavailable */
+  error?: string;
+}
+
+/**
+ * WebAssembly-specific sandbox configuration
+ * Extends base SandboxConfig with WASM linear memory and preopen settings
+ */
+export interface WasmSandboxConfig {
+  /** Path to the compiled .wasm file */
+  wasmPath: string;
+  /** Initial linear memory pages (64KB per page). Default: 256 (16MB) */
+  initialMemoryPages?: number;
+  /** Maximum linear memory pages (64KB per page). Default: 1024 (64MB) */
+  maxMemoryPages?: number;
+  /** Filesystem directories to preopen (grant read/write access) */
+  preopens?: Record<string, string>;
+  /** Arguments passed to the WASM module's main function */
+  args?: string[];
+  /** Environment variables injected into WASI */
+  env?: Record<string, string>;
+  /** Resource limits (memory/CPU/time) */
+  resourceLimits?: Partial<SandboxResourceLimits>;
+}
