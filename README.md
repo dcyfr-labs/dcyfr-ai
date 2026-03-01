@@ -698,6 +698,11 @@ See [examples/](./examples/) directory:
 - [Release Management](./docs/RELEASE_MANAGEMENT.md) - Publishing and versioning
 - [Quick Release Guide](./docs/RELEASE_QUICK_START.md) - TL;DR for releases
 
+### Plugin Marketplace Security
+- [GVISOR_SETUP.md](./docs/guides/GVISOR_SETUP.md) - gVisor runtime sandboxing for untrusted plugins
+- [BEHAVIORAL_ANOMALY_DETECTION.md](./docs/guides/BEHAVIORAL_ANOMALY_DETECTION.md) - Behavioral anomaly detection system
+- [CERTIFICATION_PROGRAM.md](./docs/guides/CERTIFICATION_PROGRAM.md) - Plugin Certification Program (Bronze/Silver/Gold tiers)
+
 ## Contributing
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for contribution guidelines.
