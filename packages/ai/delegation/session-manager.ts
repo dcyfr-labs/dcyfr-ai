@@ -19,6 +19,7 @@ import { appendFileSync, mkdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import type { SessionState, ExecutionMode } from '../types/agent-capabilities.js';
+import type { DelegationContract } from '../types/delegation-contracts.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -45,6 +46,13 @@ export interface ManagedSession {
   archivedAt?: string;
   /** Optional block reason when status is 'blocked'. */
   blockReason?: string;
+
+  /**
+   * Handoff context from a prior completed contract, if this session was
+   * created as part of a dependency chain.
+   * @since 3.0.0
+   */
+  handoffContext?: DelegationContract['handoff_context'];
 }
 
 /** Options passed to `SessionManager` constructor. */
@@ -101,12 +109,21 @@ export class SessionManager extends EventEmitter {
 
   /**
    * Register a new session (initial status: 'unread', lifecycle: 'active').
+   *
+   * @param sessionId      Unique session identifier.
+   * @param contractId     Associated delegation contract ID.
+   * @param executionMode  Execution mode (interactive / background / async).
+   * @param initialState   Initial `SessionState` snapshot.
+   * @param handoffContext Optional context carried forward from a prior
+   *                       completed contract (v3.0.0+). When provided, the
+   *                       session starts with prior context already populated.
    */
   register(
     sessionId: string,
     contractId: string,
     executionMode: ExecutionMode,
     initialState: SessionState,
+    handoffContext?: DelegationContract['handoff_context'],
   ): ManagedSession {
     const now = new Date().toISOString();
     const session: ManagedSession = {
@@ -118,6 +135,7 @@ export class SessionManager extends EventEmitter {
       state: { ...initialState },
       createdAt: now,
       updatedAt: now,
+      ...(handoffContext !== undefined && { handoffContext }),
     };
     this.sessions.set(sessionId, session);
     this.emit('session:created', session);
