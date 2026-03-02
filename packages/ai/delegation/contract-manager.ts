@@ -1397,7 +1397,10 @@ export class DelegationContractManager extends EventEmitter {
       lastActivity: new Date().toISOString(),
       ...(worktreePath !== undefined && { worktreePath }),
     };
-    this.sessionManager.register(sessionId, contractId, ExecutionMode.BACKGROUND, sessionState);
+    // v3.0.0: Pass handoff_context from contract to session
+    const contract = this.getContractById(contractId);
+    const handoffContext = contract?.handoff_context;
+    this.sessionManager.register(sessionId, contractId, ExecutionMode.BACKGROUND, sessionState, handoffContext);
     this.emit('session.created', { sessionId, contractId, mode: ExecutionMode.BACKGROUND, worktreePath });
   }
 
@@ -1435,7 +1438,10 @@ export class DelegationContractManager extends EventEmitter {
       conversationMessages: [],
       lastActivity: new Date().toISOString(),
     };
-    this.sessionManager.register(sessionId, contractId, ExecutionMode.ASYNC, sessionState);
+    // v3.0.0: Pass handoff_context from contract to session
+    const contract = this.getContractById(contractId);
+    const handoffContext = contract?.handoff_context;
+    this.sessionManager.register(sessionId, contractId, ExecutionMode.ASYNC, sessionState, handoffContext);
     this.emit('session.created', { sessionId, contractId, mode: ExecutionMode.ASYNC, branchName });
   }
 
