@@ -530,7 +530,9 @@ export class MemoryCompaction {
       const fileDate = parseFileDate(filename);
       if (!fileDate || fileDate >= cutoffDate) continue;
 
-      const monthKey = `${fileDate.getFullYear()}-${String(fileDate.getMonth() + 1).padStart(2, '0')}`;
+      // Use UTC methods — parseFileDate parses "YYYY-MM-DD" as UTC midnight,
+      // so we must use getUTCFullYear/getUTCMonth to stay consistent across timezones.
+      const monthKey = `${fileDate.getUTCFullYear()}-${String(fileDate.getUTCMonth() + 1).padStart(2, '0')}`;
       const filePath = join(conversationsDir, filename);
       const content = readFileSync(filePath, 'utf-8');
 
