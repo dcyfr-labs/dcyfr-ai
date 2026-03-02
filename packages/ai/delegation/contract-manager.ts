@@ -84,6 +84,26 @@ export interface CreateDelegationContractRequest {
    * @since 1.1.0
    */
   session_id?: string;
+
+  /**
+   * Handoff context from a prior completed contract to carry into this one.
+   * Stored in contract metadata under `handoff_context` key.
+   * @since 3.0.0
+   */
+  handoff_context?: {
+    source_contract_id: string;
+    timestamp: string;
+    conversation_snapshot?: unknown[];
+    artifact_snapshot?: unknown[];
+    context_summary?: string;
+  };
+
+  /**
+   * When true, the executing agent must obtain explicit user confirmation
+   * before executing the primary action.
+   * @since 3.0.0
+   */
+  requires_confirmation?: boolean;
 }
 
 /**
@@ -681,6 +701,13 @@ export class DelegationContractManager extends EventEmitter {
     };
     if (sessionId) {
       initialMetadata['session_id'] = sessionId;
+    }
+    // v3.0.0: persist handoff_context and requires_confirmation in metadata
+    if (request.handoff_context !== undefined) {
+      initialMetadata['handoff_context'] = request.handoff_context;
+    }
+    if (request.requires_confirmation !== undefined) {
+      initialMetadata['requires_confirmation'] = request.requires_confirmation;
     }
 
     stmt.run(
@@ -1592,6 +1619,9 @@ export class DelegationContractManager extends EventEmitter {
     const executionMode = (metadata['execution_mode'] as ExecutionMode | undefined)
       ?? ExecutionMode.INTERACTIVE;
     const sessionId = metadata['session_id'] as string | undefined;
+    // v3.0.0: recover handoff_context and requires_confirmation
+    const handoffContext = metadata['handoff_context'] as DelegationContract['handoff_context'] | undefined;
+    const requiresConfirmation = metadata['requires_confirmation'] as boolean | undefined;
 
     return {
       contract_id: row.contract_id,
@@ -1620,6 +1650,8 @@ export class DelegationContractManager extends EventEmitter {
       tlp_classification: row.tlp_classification ?? 'CLEAR',
       execution_mode: executionMode,
       session_id: sessionId,
+      ...(handoffContext !== undefined && { handoff_context: handoffContext }),
+      ...(requiresConfirmation !== undefined && { requires_confirmation: requiresConfirmation }),
       metadata,
     };
   }

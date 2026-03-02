@@ -400,6 +400,40 @@ export interface DelegationContract {
   
   /** Failure timestamp (when status becomes failed) */
   failed_at?: string;
+
+  /**
+   * Context snapshot carried forward from a prior completed contract.
+   * Enables seamless chaining without re-establishing context from scratch.
+   * Populated automatically by SessionManager when `dependencies` are set.
+   * @since 3.0.0
+   */
+  handoff_context?: {
+    /** Contract ID of the most recently completed dependency */
+    source_contract_id: string;
+    /** ISO 8601 timestamp of context capture */
+    timestamp: string;
+    /** Merged conversation history from dependency contracts */
+    conversation_snapshot?: unknown[];
+    /** Merged artifacts produced by dependency contracts */
+    artifact_snapshot?: unknown[];
+    /** Human-readable summary of prior session state */
+    context_summary?: string;
+  };
+
+  /**
+   * When true, the executing agent must obtain explicit user confirmation
+   * before executing this contract's primary action. Intended for destructive
+   * or irreversible tasks.
+   * @since 3.0.0
+   */
+  requires_confirmation?: boolean;
+
+  /**
+   * Contract schema version. Used for forward-compatible parsing and migration.
+   * Omitted on contracts created before v3.0.0 (treat as '2.0').
+   * @since 3.0.0
+   */
+  schema_version?: '2.0' | '3.0';
 }
 
 /**

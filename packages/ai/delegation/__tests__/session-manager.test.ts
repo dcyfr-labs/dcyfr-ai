@@ -182,4 +182,108 @@ describe('SessionManager', () => {
       expect(paused.map((s) => s.sessionId)).toContain('s1');
     });
   });
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Session Handoff Protocol (v3.0.0)
+  // ──────────────────────────────────────────────────────────────────────────
+  describe('register() — handoff context (v3.0.0)', () => {
+    const HANDOFF_CONTEXT = {
+      source_contract_id: 'contract-prior-001',
+      timestamp: '2026-03-01T00:00:00.000Z',
+      context_summary: 'Prior session completed successfully. Auth0 SDK selected.',
+      conversation_snapshot: [{ role: 'user', content: 'Research OAuth options' }],
+      artifact_snapshot: [{ type: 'decision_matrix', data: { auth0: 95, custom: 45 } }],
+    } as const;
+
+    it('stores handoffContext on session when provided', () => {
+      const session = manager.register(
+        's-handoff-1',
+        'c-handoff-1',
+        ExecutionMode.BACKGROUND,
+        makeState(),
+        HANDOFF_CONTEXT,
+      );
+      expect(session.handoffContext).toBeDefined();
+      expect(session.handoffContext?.source_contract_id).toBe('contract-prior-001');
+      expect(session.handoffContext?.context_summary).toBe(
+        'Prior session completed successfully. Auth0 SDK selected.',
+      );
+    });
+
+    it('stores conversation_snapshot and artifact_snapshot', () => {
+      const session = manager.register(
+        's-handoff-2',
+        'c-handoff-2',
+        ExecutionMode.ASYNC,
+        makeState(),
+        HANDOFF_CONTEXT,
+      );
+      expect(session.handoffContext?.conversation_snapshot).toHaveLength(1);
+      expect(session.handoffContext?.artifact_snapshot).toHaveLength(1);
+    });
+
+    it('emits session:created with handoffContext populated', () => {
+      const events: any[] = [];
+      manager.on('session:created', (e) => events.push(e));
+      manager.register('s-handoff-3', 'c-handoff-3', ExecutionMode.BACKGROUND, makeState(), HANDOFF_CONTEXT);
+      expect(events[0].handoffContext).toBeDefined();
+      expect(events[0].handoffContext.source_contract_id).toBe('contract-prior-001');
+    });
+
+    it('handoffContext is undefined when not provided (standalone contract)', () => {
+      const session = manager.register(
+        's-standalone',
+        'c-standalone',
+        ExecutionMode.INTERACTIVE,
+        makeState(),
+        // No handoffContext argument
+      );
+      expect(session.handoffContext).toBeUndefined();
+    });
+
+    it('handoffContext is undefined when explicitly passed undefined', () => {
+      const session = manager.register(
+        's-standalone-2',
+        'c-standalone-2',
+        ExecutionMode.INTERACTIVE,
+        makeState(),
+        undefined,
+      );
+      expect(session.handoffContext).toBeUndefined();
+    });
+
+    it('handoffContext with only required fields (no optional snapshots)', () => {
+      const minimalHandoff = {
+        source_contract_id: 'minimal-prior',
+        timestamp: '2026-03-01T01:00:00.000Z',
+      };
+      const session = manager.register(
+        's-minimal',
+        'c-minimal',
+        ExecutionMode.BACKGROUND,
+        makeState(),
+        minimalHandoff,
+      );
+      expect(session.handoffContext?.source_contract_id).toBe('minimal-prior');
+      expect(session.handoffContext?.conversation_snapshot).toBeUndefined();
+      expect(session.handoffContext?.artifact_snapshot).toBeUndefined();
+      expect(session.handoffContext?.context_summary).toBeUndefined();
+    });
+
+    it('two sessions with different handoff sources stay isolated', () => {
+      const sessionA = manager.register('s-a', 'c-a', ExecutionMode.BACKGROUND, makeState(), {
+        source_contract_id: 'contract-a',
+        timestamp: new Date().toISOString(),
+      });
+      const sessionB = manager.register('s-b', 'c-b', ExecutionMode.BACKGROUND, makeState(), {
+        source_contract_id: 'contract-b',
+        timestamp: new Date().toISOString(),
+      });
+      expect(sessionA.handoffContext?.source_contract_id).toBe('contract-a');
+      expect(sessionB.handoffContext?.source_contract_id).toBe('contract-b');
+      // Verify no cross-contamination
+      expect(manager.get('s-a')?.handoffContext?.source_contract_id).toBe('contract-a');
+      expect(manager.get('s-b')?.handoffContext?.source_contract_id).toBe('contract-b');
+    });
+  });
 });
