@@ -161,10 +161,7 @@
     },
     "msty-sidecar": {
       "type": "http",
-      "url": "${MSTY_SIDECAR_URL}",
-      "headers": {
-        "Authorization": "Bearer ${MSTY_SIDECAR_TOKEN}"
-      }
+      "url": "${MSTY_SIDECAR_URL}"
     }
   }
 }
