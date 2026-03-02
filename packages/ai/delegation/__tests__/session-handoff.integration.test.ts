@@ -398,4 +398,104 @@ describe('Session Handoff — Integration', () => {
       ).resolves.toBeDefined();
     });
   });
+
+  // ── 9. HANDOFF CONTEXT INTEGRATION (v3.0.0) ───────────────────────────────
+  
+  describe('Handoff Context Integration (v3.0.0)', () => {
+    it('passes handoff_context from contract to session on BACKGROUND execution', async () => {
+      const HANDOFF_CONTEXT = {
+        source_contract_id: 'contract-prior-001',
+        timestamp: '2026-03-01T00:00:00.000Z',
+        context_summary: 'Research complete. Auth0 selected.',
+        conversation_snapshot: [{ role: 'user', content: 'Research OAuth providers' }],
+        artifact_snapshot: [{ type: 'decision_matrix', data: { auth0: 95 } }],
+      };
+
+      const contract = await cm.createContract(
+        makeRequest(ExecutionMode.BACKGROUND, { handoff_context: HANDOFF_CONTEXT }),
+      );
+
+      // Trigger session registration via beforeBackgroundExecution
+      const sessionId = `bg-handoff-${contract.contract_id}`;
+      await cm.beforeBackgroundExecution(contract.contract_id, sessionId);
+
+      // Verify session has handoff_context
+      const session = cm.getSessionManager().get(sessionId);
+      expect(session).toBeDefined();
+      expect(session?.handoffContext).toBeDefined();
+      expect(session?.handoffContext?.source_contract_id).toBe('contract-prior-001');
+      expect(session?.handoffContext?.context_summary).toBe('Research complete. Auth0 selected.');
+    });
+
+    it('passes handoff_context from contract to session on ASYNC execution', async () => {
+      const HANDOFF_CONTEXT = {
+        source_contract_id: 'contract-impl-002',
+        timestamp: '2026-03-02T00:00:00.000Z',
+        context_summary: 'Implementation complete. Tests passing.',
+        conversation_snapshot: [{ role: 'assistant', content: 'Auth0 integration complete' }],
+        artifact_snapshot: [{ type: 'commit', sha: 'abc123' }],
+      };
+
+      const contract = await cm.createContract(
+        makeRequest(ExecutionMode.ASYNC, { handoff_context: HANDOFF_CONTEXT }),
+      );
+
+      // Trigger session registration via beforeAsyncExecution
+      const sessionId = `async-handoff-${contract.contract_id}`;
+      cm.beforeAsyncExecution(contract.contract_id, sessionId, 'feature-auth');
+
+      // Verify session has handoff_context
+      const session = cm.getSessionManager().get(sessionId);
+      expect(session).toBeDefined();
+      expect(session?.handoffContext).toBeDefined();
+      expect(session?.handoffContext?.source_contract_id).toBe('contract-impl-002');
+      expect(session?.handoffContext?.context_summary).toBe('Implementation complete. Tests passing.');
+      expect(session?.handoffContext?.artifact_snapshot).toHaveLength(1);
+    });
+
+    it('session has undefined handoff_context when contract does not provide it', async () => {
+      const contract = await cm.createContract(makeRequest(ExecutionMode.BACKGROUND));
+
+      const sessionId = `bg-no-handoff-${contract.contract_id}`;
+      await cm.beforeBackgroundExecution(contract.contract_id, sessionId);
+
+      const session = cm.getSessionManager().get(sessionId);
+      expect(session).toBeDefined();
+      expect(session?.handoffContext).toBeUndefined();
+    });
+
+    it('preserves conversation_snapshot and artifact_snapshot through session', async () => {
+      const HANDOFF_CONTEXT = {
+        source_contract_id: 'contract-test-003',
+        timestamp: '2026-03-02T10:00:00.000Z',
+        context_summary: 'Multi-artifact test',
+        conversation_snapshot: [
+          { role: 'user', content: 'Build feature A' },
+          { role: 'assistant', content: 'Feature A complete' },
+          { role: 'user', content: 'Now build feature B' },
+        ],
+        artifact_snapshot: [
+          { type: 'commit', sha: 'commit-a', files: ['featureA.ts'] },
+          { type: 'commit', sha: 'commit-b', files: ['featureB.ts'] },
+          { type: 'test_report', passed: 42, failed: 0 },
+        ],
+      };
+
+      const contract = await cm.createContract(
+        makeRequest(ExecutionMode.BACKGROUND, { handoff_context: HANDOFF_CONTEXT }),
+      );
+
+      const sessionId = `bg-artifacts-${contract.contract_id}`;
+      await cm.beforeBackgroundExecution(contract.contract_id, sessionId);
+
+      const session = cm.getSessionManager().get(sessionId);
+      expect(session?.handoffContext?.conversation_snapshot).toHaveLength(3);
+      expect(session?.handoffContext?.artifact_snapshot).toHaveLength(3);
+      expect(session?.handoffContext?.artifact_snapshot?.[2]).toEqual({
+        type: 'test_report',
+        passed: 42,
+        failed: 0,
+      });
+    });
+  });
 });
