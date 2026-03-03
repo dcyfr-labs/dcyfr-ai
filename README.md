@@ -2,7 +2,7 @@
 
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/dcyfr/dcyfr-ai)
 
-> Portable AI agent framework with plugin architecture for multi-provider integration, telemetry tracking, and quality validation.
+> Portable AI agent harness with plugin architecture for multi-provider integration, telemetry tracking, and quality validation.
 
 [![npm](https://img.shields.io/npm/v/@dcyfr/ai?style=flat-square&logo=npm&logoColor=white)](https://www.npmjs.com/package/@dcyfr/ai)
 [![Downloads](https://img.shields.io/npm/dm/@dcyfr/ai?style=flat-square&logo=npm&logoColor=white)](https://www.npmjs.com/package/@dcyfr/ai)
@@ -10,7 +10,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-Strict-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Bundle Size](https://img.shields.io/badge/Bundle%20Size-~200KB%20gzipped-28a745?style=flat-square&logo=webpack)](https://bundlephobia.com/package/@dcyfr/ai)
 
-Portable AI agent framework with plugin architecture for managing multiple AI providers, tracking telemetry, and ensuring quality compliance.
+Portable AI agent harness with plugin architecture for managing multiple AI providers, tracking telemetry, and ensuring quality compliance.
 
 ## 🔍 @dcyfr/ai vs. Alternatives
 
@@ -82,7 +82,7 @@ Portable AI agent framework with plugin architecture for managing multiple AI pr
 - 🎯 **Msty Vibe Integration** - Unified multi-model routing with local OpenAI-compatible endpoint
 - ⚙️ **Configuration System** - YAML/JSON config with three-layer merge
 - 📊 **Comprehensive Telemetry** - Track usage, costs, quality metrics, performance
-- ✅ **Validation Framework** - Quality gates with parallel/serial execution
+- ✅ **Validation Harness** - Quality gates with parallel/serial execution
 - 💾 **Pluggable Storage** - Memory, file-based, or custom adapters
 - ⚡ **Type-Safe** - Full TypeScript support with Zod validation
 - 📦 **Lightweight** - ~200KB gzipped bundle size
@@ -192,7 +192,7 @@ const response = await runtime.chat({ messages: [{ role: 'user', content: 'Hello
 
 ### Migrating from Vercel AI SDK
 
-**Why migrate:** Quality gates, telemetry, multi-provider validation framework
+**Why migrate:** Quality gates, telemetry, multi-provider validation harness
 
 ```typescript
 // Vercel AI SDK (before)
@@ -223,7 +223,7 @@ const report = await validator.validate({ /* config */ });
 
 **Key Differences:**
 - Configuration system (YAML/JSON files)
-- Validation framework with quality gates
+- Validation harness with quality gates
 - Comprehensive telemetry tracking
 - Plugin system for custom validators
 - Zero-config startup option
@@ -552,7 +552,7 @@ scheduler.start();
 
 ## Architecture
 
-The DCYFR AI framework follows a layered architecture with clear separation of concerns:
+The DCYFR AI harness follows a layered architecture with clear separation of concerns:
 
 ```mermaid
 graph TB
@@ -822,7 +822,7 @@ A: Yes, it's published as a public package on npm. Install with `npm install @dc
 
 **Q: Can I use @dcyfr/ai with JavaScript (no TypeScript)?**
 
-A: Yes, but TypeScript is strongly recommended for better type safety and IDE support. The framework provides full TypeScript support with Zod validation for runtime type checking. If using JavaScript, you'll miss compile-time type checking but runtime validation still works.
+A: Yes, but TypeScript is strongly recommended for better type safety and IDE support. The harness provides full TypeScript support with Zod validation for runtime type checking. If using JavaScript, you'll miss compile-time type checking but runtime validation still works.
 
 **Q: How do I create a custom validation plugin?**
 
@@ -844,11 +844,11 @@ See [docs/plugins.md](./docs/plugins.md) and [examples/plugin-system.ts](./examp
 
 **Q: What's the difference between @dcyfr/ai and @dcyfr/agents?**
 
-A: `@dcyfr/ai` is the **public framework** (plugin architecture, config management, telemetry engine, validation framework). `@dcyfr/agents` is a **private package** with DCYFR-specific validation agents (design tokens, barrel exports, PageLayout enforcement). Think of @dcyfr/ai as the engine, @dcyfr/agents as pre-built plugins.
+A: `@dcyfr/ai` is the **public harness** (plugin architecture, config management, telemetry engine, validation harness). `@dcyfr/agents` is a **private package** with DCYFR-specific validation agents (design tokens, barrel exports, PageLayout enforcement). Think of @dcyfr/ai as the engine, @dcyfr/agents as pre-built plugins.
 
 **Q: Can I use this with other AI providers (non-Claude)?**
 
-A: Yes! The framework supports multi-provider integration including Claude, GitHub Copilot, Groq, Ollama, OpenAI, Anthropic. Configure providers in `.dcyfr.yaml`:
+A: Yes! The harness supports multi-provider integration including Claude, GitHub Copilot, Groq, Ollama, OpenAI, Anthropic. Configure providers in `.dcyfr.yaml`:
 ```yaml
 providers:
   - name: openai
@@ -868,7 +868,7 @@ const telemetry = new TelemetryEngine({
 ```
 Telemetry tracks: API calls, token usage, costs, latency, quality scores.
 
-**Q: Is this framework production-ready?**
+**Q: Is this harness production-ready?**
 
 A: Yes! @dcyfr/ai is used in production at dcyfr-labs and other projects. It has comprehensive test coverage, semantic versioning, automated releases via Changesets, and follows best practices for package publishing.
 
