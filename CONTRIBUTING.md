@@ -88,12 +88,12 @@ npm run lint
 
 ```
 dcyfr-ai/
-├── packages/ai/          # Core framework code
+├── packages/ai/          # Core harness code
 │   ├── config/          # Configuration system
 │   ├── telemetry/       # Telemetry engine
 │   ├── providers/       # Provider registry
 │   ├── plugins/         # Plugin loader
-│   ├── validation/      # Validation framework
+│   ├── validation/      # Validation harness
 │   └── __tests__/       # Tests
 ├── bin/                 # CLI tools
 ├── docs/                # Documentation
