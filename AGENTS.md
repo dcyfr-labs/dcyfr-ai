@@ -1,6 +1,6 @@
 # AGENTS.md - @dcyfr/ai
 
-**Portable AI Agent Framework**
+**Portable AI Agent Harness**
 
 Version: 1.0.3  
 Type: Public npm package  
@@ -10,7 +10,7 @@ License: MIT
 
 ## 🎯 Project Overview
 
-`@dcyfr/ai` is a **portable, plugin-based AI agent framework** designed for:
+`@dcyfr/ai` is a **portable, plugin-based AI agent harness** designed for:
 - Building AI-powered CLI tools
 - Creating interactive TUI (Terminal UI) applications
 - Implementing multi-agent workflows
