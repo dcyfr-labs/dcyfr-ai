@@ -6,6 +6,12 @@
 **Last Updated:** 2026-02-26  
 **Version:** 1.0.0
 
+> **See Also — Agent-Level Injection Security:**  
+> The workspace `AGENTS.md` contains the mandatory prompt injection security policy for all
+> AI agents (detection patterns, web content safety rules, concrete examples with mitigations).  
+> → [AGENTS.md § Prompt Injection Security](../../AGENTS.md#-mandatory-prompt-injection-security)  
+> *(Cross-reference added: 2026-03-01 — applicable to all agent clients)*
+
 ---
 
 ## Overview
