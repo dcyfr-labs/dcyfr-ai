@@ -72,11 +72,11 @@ class StubContractManager {
     return Array.from(this.contracts.values());
   }
   
-  getContract(id: string): Record<string, unknown> {
+  getContract(id: string): Record<string, unknown> | undefined {
     return this.contracts.get(id);
   }
   
-  updateContract(id: string, update: Record<string, unknown>): Promise<Record<string, unknown>> {
+  updateContract(id: string, update: Record<string, unknown>): Promise<Record<string, unknown> | undefined> {
     const contract = this.contracts.get(id);
     if (contract) {
       Object.assign(contract, update);
@@ -152,7 +152,13 @@ class StubContractManager {
       contract_id: `${request.fromContractId}-handoff-${Date.now()}`,
       parent_contract_id: request.fromContractId,
       metadata: JSON.stringify({
-        ...((() => { try { return JSON.parse(source.metadata ?? '{}'); } catch { return {}; } })()),
+        ...((() => { 
+          try { 
+            return JSON.parse((source.metadata ?? '{}') as string); 
+          } catch { 
+            return {}; 
+          } 
+        })()),
         execution_mode: request.toExecutionMode,
         handoff_reason: request.handoffReason,
         handed_off_at: new Date().toISOString(),
@@ -172,7 +178,7 @@ class StubReputationEngine {
     return Array.from(this.profiles.values());
   }
   
-  getProfile(agentId: string): Record<string, unknown> {
+  getProfile(agentId: string): Record<string, unknown> | undefined {
     return this.profiles.get(agentId);
   }
   
@@ -317,16 +323,19 @@ server.addTool({
         if (args.agentId) {
           // Query specific agent
           const profile = reputationEngine.getProfile(args.agentId);
+          if (!profile) {
+            return { error: 'Profile not found' };
+          }
           return {
-            agent_id: profile.agent_id,
-            overall_score: profile.overall_score,
-            dimensions: profile.dimensions,
-            tasks_completed: profile.tasks_completed,
-            consecutive_successes: profile.consecutive_successes,
-            consecutive_failures: profile.consecutive_failures,
-            confidence: profile.confidence,
-            specializations: profile.specializations || [],
-            last_updated: profile.last_updated,
+            agent_id: (profile as any).agent_id,
+            overall_score: (profile as any).overall_score,
+            dimensions: (profile as any).dimensions,
+            tasks_completed: (profile as any).tasks_completed,
+            consecutive_successes: (profile as any).consecutive_successes,
+            consecutive_failures: (profile as any).consecutive_failures,
+            confidence: (profile as any).confidence,
+            specializations: (profile as any).specializations || [],
+            last_updated: (profile as any).last_updated,
           };
         } else {
           // Query with filters
@@ -435,18 +444,19 @@ server.addTool({
         };
 
         // Add completion data if available
-        if (contract.completion) {
+        if ((contract as any).completion) {
+          const completion = (contract as any).completion as any;
           statusData.completion = {
-            completed_at: contract.completion.completed_at,
-            success: contract.completion.success,
-            execution_time_ms: contract.completion.metrics?.execution_time_ms,
-            verification_passed: contract.completion.verification?.verified,
-            verification_method: contract.completion.verification?.verification_method,
-            quality_score: contract.completion.verification?.quality_score,
+            completed_at: completion.completed_at,
+            success: completion.success,
+            execution_time_ms: completion.metrics?.execution_time_ms,
+            verification_passed: completion.verification?.verified,
+            verification_method: completion.verification?.verification_method,
+            quality_score: completion.verification?.quality_score,
           };
 
-          if (contract.completion.error) {
-            statusData.completion.error = contract.completion.error;
+          if (completion.error) {
+            (statusData.completion as any).error = completion.error;
           }
         }
 
@@ -459,10 +469,10 @@ server.addTool({
         }
 
         // Calculate time remaining if active
-        if (contract.status === 'active' && contract.timeout_ms) {
-          const elapsed = Date.now() - new Date(contract.created_at).getTime();
-          statusData.time_remaining_ms = Math.max(0, contract.timeout_ms - elapsed);
-          statusData.progress_percent = Math.min(100, (elapsed / contract.timeout_ms) * 100);
+        if ((contract as any).status === 'active' && (contract as any).timeout_ms) {
+          const elapsed = Date.now() - new Date((contract as any).created_at).getTime();
+          statusData.time_remaining_ms = Math.max(0, ((contract as any).timeout_ms as number) - elapsed);
+          statusData.progress_percent = Math.min(100, (elapsed / ((contract as any).timeout_ms as number)) * 100);
         }
 
         return statusData;
@@ -551,7 +561,7 @@ server.addTool({
         // Update contract metadata with escalation
         await contractManager.updateContract(args.contractId, {
           metadata: {
-            ...contract.metadata,
+            ...(typeof (contract as any).metadata === 'object' ? (contract as any).metadata : {}),
             escalation_id,
             escalated_at: new Date().toISOString(),
             escalation_reason: args.reason,
@@ -618,11 +628,11 @@ server.addTool({
         sessions: limited.map((c: Record<string, unknown>) => ({
           contract_id: c.contract_id ?? c.id,
           session_id: (() => {
-            try { return JSON.parse(c.metadata ?? '{}').session_id ?? null; } catch { return null; }
+            try { return JSON.parse((c.metadata as string) ?? '{}').session_id ?? null; } catch { return null; }
           })(),
           status: c.status,
           task_id: c.task_id,
-          delegatee: c.delegatee_agent_id ?? c.delegatee?.agent_id,
+          delegatee: c.delegatee_agent_id ?? (c.delegatee as any)?.agent_id,
           created_at: c.created_at,
         })),
         generated_at: new Date().toISOString(),
@@ -761,7 +771,7 @@ server.addResource({
           contract_id: c.contract_id,
           task_id: c.task_id,
           status: c.status,
-          delegatee: c.delegatee?.agent_id || c.delegatee_agent_id,
+          delegatee: (c.delegatee as any)?.agent_id || c.delegatee_agent_id,
           verification_policy: c.verification_policy,
           created_at: c.created_at,
           tlp: c.tlp_classification,
@@ -828,11 +838,11 @@ server.addResource({
       const grouped: Record<string, Record<string, unknown>[]> = {};
 
       for (const mode of modes) {
-        grouped[mode] = (contractManager.querySessionsByMode(mode) as Record<string, unknown>[]).map((c: Record<string, unknown>) => ({
+        grouped[mode] = contractManager.querySessionsByMode(mode).map((c: Record<string, unknown>) => ({
           contract_id: c.contract_id ?? c.id,
           status: c.status,
           task_id: c.task_id,
-          delegatee: c.delegatee_agent_id ?? c.delegatee?.agent_id,
+          delegatee: c.delegatee_agent_id ?? (c.delegatee as any)?.agent_id,
           created_at: c.created_at,
         }));
       }

@@ -39,7 +39,7 @@ import type { TaskContext as AgentTaskContext } from '../types';
 import type { TaskContext as RuntimeTaskContext } from '../runtime/types';
 import { AgentRegistry } from './agent-registry';
 import { AgentRuntime } from '../runtime/agent-runtime.js';
-import { ProviderRegistry } from '../core/provider-registry.js';
+import { ProviderRegistry, type ProviderRegistryConfig } from '../core/provider-registry.js';
 import { getMemory } from '../memory/index.js';
 import type { DCYFRMemory } from '../memory/types';
 import { TelemetryEngine } from '../core/telemetry-engine.js';
@@ -537,7 +537,7 @@ export function getGlobalAgentRouter(
   if (!globalRouter) {
     // For now, create with placeholder dependencies
     // This should be updated to properly inject dependencies
-    const providerRegistry = new ProviderRegistry({});
+    const providerRegistry = new ProviderRegistry({} as ProviderRegistryConfig);
     const memory = getMemory();
     const telemetry = new TelemetryEngine();
     
