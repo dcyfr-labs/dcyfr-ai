@@ -16,7 +16,7 @@
  * @date 2026-02-14
  */
 
-import type { DelegationContract } from '../types/delegation-contracts.js';
+import type { DelegationContract, TLPLevel } from '../types/delegation-contracts.js';
 
 /**
  * Security threat detection result
