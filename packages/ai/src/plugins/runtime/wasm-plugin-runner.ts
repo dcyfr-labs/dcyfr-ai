@@ -140,6 +140,17 @@ function parseDurationMs(value: string): number {
   }
 }
 
+function isWasiArgumentCompatibilityError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+
+  const message = err.message.toLowerCase();
+  return (
+    'code' in err &&
+    (err as { code?: unknown }).code === 'ERR_INVALID_ARG_TYPE' &&
+    (message.includes('memory') || message.includes('instance'))
+  );
+}
+
 // ---------------------------------------------------------------------------
 // WebAssembly Plugin Runner
 // ---------------------------------------------------------------------------
@@ -282,18 +293,50 @@ export class WasmPluginRunner {
       // Execute the WASM module with timeout
       const executionPromise = new Promise<number>((resolve, reject) => {
         try {
-          // Start the WASI instance (calls _start export)
-          // wasi.start() throws WASIExitError on non-zero exit
-          exitCode = wasi.start(instance);
+          // Prefer WASI command execution path (supports proc_exit and
+          // full command-module semantics).
+          const result = wasi.start(instance);
+          exitCode = typeof result === 'number' ? result : 0;
           resolve(exitCode);
         } catch (err: unknown) {
-          // Check if this is a WASI exit error
-          if (err && typeof err === 'object' && 'code' in err) {
-            // WASI exit with non-zero code
+          // Handle WASI exit errors only when numeric exit code is present.
+          if (
+            err &&
+            typeof err === 'object' &&
+            'code' in err &&
+            typeof (err as { code?: unknown }).code === 'number'
+          ) {
             exitCode = (err as { code: number }).code;
             resolve(exitCode);
+          } else if (isWasiArgumentCompatibilityError(err)) {
+            // Some Node.js versions throw when wasi.start() is used with
+            // modules that don't expose linear memory. Fallback to direct
+            // _start invocation for those compatibility cases.
+            try {
+              const startExport = instance.exports._start;
+              if (typeof startExport !== 'function') {
+                reject(new Error('WASM module does not export a callable _start function'));
+                return;
+              }
+
+              const fallbackResult = (startExport as () => unknown)();
+              exitCode = typeof fallbackResult === 'number' ? fallbackResult : 0;
+              resolve(exitCode);
+            } catch (fallbackErr: unknown) {
+              if (
+                fallbackErr &&
+                typeof fallbackErr === 'object' &&
+                'code' in fallbackErr &&
+                typeof (fallbackErr as { code?: unknown }).code === 'number'
+              ) {
+                exitCode = (fallbackErr as { code: number }).code;
+                resolve(exitCode);
+              } else {
+                reject(fallbackErr);
+              }
+            }
           } else {
-            // Real error (not a clean exit)
+            // Real runtime error (not a clean WASI exit)
             reject(err);
           }
         }
@@ -351,7 +394,7 @@ export class WasmPluginRunner {
           acc[container] = host;
         }
         return acc;
-      }, {} as Record<string, string>),
+      }, {} as Record<string, string>) ?? {},
       args: config.command, // Use command array as WASM args
       // WASM-specific settings
       initialMemoryPages: undefined, // Will use maxMemory from resourceLimits
