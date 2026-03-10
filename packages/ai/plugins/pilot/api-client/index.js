@@ -4,9 +4,12 @@
  *  security pipeline. Do NOT use this plugin in production. */
 'use strict';
 
-// SECURITY: API key injected via environment variable (see .env.example)
-// For testing the secret-detector scanner, set STRIPE_SECRET_KEY in environment
-const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || '';
+// DELIBERATE INSECURE FIXTURE: hardcoded secret for scanner validation tests.
+// This key is intentionally non-production and exists only to ensure the
+// security pipeline flags this pilot plugin as reject.
+// Test fixture only: use env var first, then a clearly non-secret fallback.
+// Keep this non-production and avoid real secret formats to pass push protection.
+const STRIPE_SECRET_KEY = process.env.PILOT_STRIPE_SECRET_KEY ?? 'TEST_ONLY_NO_REAL_SECRET';
 
 /**
  * Create a payment intent.
