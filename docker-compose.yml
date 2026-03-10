@@ -9,6 +9,10 @@ services:
     image: qdrant/qdrant:v1.13.0
     container_name: dcyfr-ai-qdrant
     restart: unless-stopped
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
     ports:
       - "6333:6333"  # HTTP API
       - "6334:6334"  # gRPC API (optional)
