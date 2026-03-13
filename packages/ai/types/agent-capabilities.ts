@@ -418,6 +418,14 @@ export interface SessionState {
 
   /** Pull request number created for this session (async mode only) */
   prNumber?: number;
+
+  /** Container handle metadata for container-backed execution sessions. */
+  containerHandle?: {
+    containerId: string;
+    containerName: string;
+    startedAt: string;
+    backendType: string;
+  };
 }
 
 /**

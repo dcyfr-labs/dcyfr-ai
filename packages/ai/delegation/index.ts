@@ -51,3 +51,21 @@ export { ChainTrackerMiddleware } from './middleware/chain-tracker-middleware.js
 export type { ChainContractProvider } from './middleware/chain-tracker-middleware.js';
 export { ResourceLimiterMiddleware } from './middleware/resource-limiter-middleware.js';
 export type { ContractResources, ResourceThresholds } from './middleware/resource-limiter-middleware.js';
+
+// ── Phase 4.0.0: Autonomous agent container types ─────────────────────────
+export {
+  LocalDockerBackend,
+  DEFAULT_CONTAINER_RESOURCE_LIMITS,
+  ContainerProvisionError,
+  ContainerConcurrencyLimitError,
+  type LocalDockerBackendOptions,
+  type ContainerResourceLimits,
+  type AgentContainerConfig,
+  type ContainerHandle,
+  type ContainerLogEntry,
+  type ContainerExecutionResult,
+  type BackendHealthResult,
+  type TeardownResult,
+  type ContainerExecutionBackend,
+  type ContainerBackendType,
+} from '../src/container/index.js';

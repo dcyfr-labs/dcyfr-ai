@@ -434,6 +434,37 @@ export interface DelegationContract {
    * @since 3.0.0
    */
   schema_version?: '2.0' | '3.0';
+
+  /**
+   * Where the agent executes this contract.
+   *
+   * - `'session'`   — runs in the current agent session (default, unchanged behaviour).
+   * - `'worktree'`  — runs in a git worktree on the host (existing behaviour).
+   * - `'container'` — runs in an isolated Docker/K8s container via the
+   *                   ContainerExecutionBackend. Requires `containerHandle` once
+   *                   the container is provisioned.
+   *
+   * Omitting this field is equivalent to `'session'` for backward compatibility.
+   *
+   * @since 4.0.0 (autonomous-agent-containers)
+   */
+  executionEnvironment?: 'session' | 'worktree' | 'container';
+
+  /**
+   * Opaque handle returned by ContainerExecutionBackend.provision().
+   * Populated by AgentContainerDispatcher after a container is started.
+   * Only set when executionEnvironment === 'container'.
+   *
+   * Stored as a JSON blob in the contract metadata under `container_handle`.
+   *
+   * @since 4.0.0 (autonomous-agent-containers)
+   */
+  containerHandle?: {
+    containerId: string;
+    containerName: string;
+    startedAt: string; // ISO 8601 — serialized from Date
+    backendType: string;
+  };
 }
 
 /**
