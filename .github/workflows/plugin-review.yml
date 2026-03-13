@@ -219,7 +219,7 @@ jobs:
 
     steps:
       - name: Download security report
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: security-report-${{ needs.security-scan.outputs.plugin-id }}
         continue-on-error: true   # artifact may be absent if scan was skipped
@@ -333,7 +333,7 @@ jobs:
 
     steps:
       - name: Download SBOM artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: sbom-${{ needs.security-scan.outputs.plugin-id }}
 
