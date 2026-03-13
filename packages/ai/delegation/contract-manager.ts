@@ -977,6 +977,42 @@ export class DelegationContractManager extends EventEmitter {
       } else if (updates.status === 'failed') {
         this.circuitBreaker.recordFailure(contract.delegatee.agent_id);
       }
+
+      // 1.4.6: Container outcome -> reputation update (success/failure)
+      if (
+        this.reputationEngine
+        && (updates.status === 'completed' || updates.status === 'failed')
+      ) {
+        const mergedMetadata = {
+          ...(existing.metadata ?? {}),
+          ...(updates.metadata ?? {}),
+        };
+        const isContainerExecution =
+          mergedMetadata.execution_environment === 'container'
+          || Boolean(mergedMetadata.container_handle);
+
+        if (isContainerExecution) {
+          const completionTimeMsRaw = mergedMetadata.container_execution_time_ms;
+          const completionTimeMs =
+            typeof completionTimeMsRaw === 'number' && Number.isFinite(completionTimeMsRaw)
+              ? completionTimeMsRaw
+              : 0;
+
+          void this.reputationEngine.updateReputation({
+            contract_id: contract.contract_id,
+            agent_id: contract.delegatee.agent_id,
+            agent_name: contract.delegatee.agent_name,
+            task_id: contract.task_id,
+            success: updates.status === 'completed',
+            completion_time_ms: completionTimeMs,
+            metadata: {
+              execution_environment: 'container',
+              timed_out: mergedMetadata.timed_out,
+              container_exit_code: mergedMetadata.container_exit_code,
+            },
+          });
+        }
+      }
     }
     
     if (this.debug) {
@@ -1095,6 +1131,85 @@ export class DelegationContractManager extends EventEmitter {
       delegatee_agent_id: agent_id,
       status: ['pending', 'active'],
     });
+  }
+
+  // ── Container execution helpers (Phase 4.0.0 — autonomous-agent-containers) ──
+
+  /**
+   * Attach a container handle to a contract and transition it to 'active'.
+   *
+   * Called by AgentContainerDispatcher after ContainerExecutionBackend.provision()
+   * returns. Stores the handle in contract metadata so any agent or monitoring
+   * tool can retrieve it via getContainerStatus().
+   *
+   * @param contractId  - The delegation contract to update.
+   * @param handle      - Serialisable reference to the provisioned container.
+   * @since 4.0.0 (autonomous-agent-containers)
+   */
+  dispatchToContainer(
+    contractId: string,
+    handle: {
+      containerId: string;
+      containerName: string;
+      startedAt: string;
+      backendType: string;
+    },
+  ): void {
+    const existing = this.getContractById(contractId);
+    const sessionId = existing?.session_id
+      ?? (existing?.metadata?.session_id as string | undefined);
+
+    this.updateContract({
+      contract_id: contractId,
+      status: 'active',
+      activated_at: new Date().toISOString(),
+      metadata: {
+        container_handle: handle,
+        execution_environment: 'container',
+      },
+    });
+
+    if (sessionId) {
+      try {
+        this.sessionManager.updateState(sessionId, { containerHandle: handle });
+      } catch {
+        // Session may not exist yet; contract metadata remains source of truth.
+      }
+    }
+
+    this.emit('container_dispatched', { contractId, handle });
+  }
+
+  /**
+   * Return the container handle stored on a contract, or null if the
+   * contract is not a container-execution contract.
+   *
+   * @param contractId - ID of the delegation contract.
+   * @since 4.0.0 (autonomous-agent-containers)
+   */
+  getContainerStatus(contractId: string): {
+    containerId: string;
+    containerName: string;
+    startedAt: string;
+    backendType: string;
+    contractStatus: string;
+  } | null {
+    const contract = this.getContractById(contractId);
+    if (!contract) return null;
+
+    const handle = contract.metadata?.container_handle as
+      | { containerId: string; containerName: string; startedAt: string; backendType: string }
+      | undefined;
+
+    if (!handle) return null;
+
+    return {
+      containerId: handle.containerId,
+      containerName: handle.containerName,
+      startedAt: handle.startedAt,
+      backendType: handle.backendType,
+      contractStatus: contract.status,
+    };
   }
 
   /**

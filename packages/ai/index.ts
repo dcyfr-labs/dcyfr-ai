@@ -425,5 +425,23 @@ export type {
 } from './src/plugins/incidents/incident-response-manager.js';
 export { DEFAULT_SLA, PLUGIN_INCIDENTS_SCHEMA_SQL } from './src/plugins/incidents/types.js';
 
+// ── Autonomous agent container execution (Phase 4.0.0) ───────────────────────
+export {
+  LocalDockerBackend,
+  DEFAULT_CONTAINER_RESOURCE_LIMITS,
+  ContainerProvisionError,
+  ContainerConcurrencyLimitError,
+  type LocalDockerBackendOptions,
+  type ContainerResourceLimits,
+  type AgentContainerConfig,
+  type ContainerHandle,
+  type ContainerLogEntry,
+  type ContainerExecutionResult,
+  type BackendHealthResult,
+  type TeardownResult,
+  type ContainerExecutionBackend,
+  type ContainerBackendType,
+} from './src/container/index.js';
+
 // Version
 export const VERSION = '1.0.0';
