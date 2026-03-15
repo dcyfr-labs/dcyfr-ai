@@ -191,7 +191,7 @@ jobs:
       # ── Upload report artifact ─────────────────────────────────────────────
       - name: Upload security report
         if: steps.detect-plugin.outputs.plugin_id != ''
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: security-report-${{ steps.detect-plugin.outputs.plugin_id }}
           path: ${{ steps.scanner.outputs.report_path }}
@@ -199,7 +199,7 @@ jobs:
 
       - name: Upload SBOM artifact
         if: steps.detect-plugin.outputs.plugin_id != ''
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: sbom-${{ steps.detect-plugin.outputs.plugin_id }}
           path: ${{ steps.sbom.outputs.sbom_path }}
