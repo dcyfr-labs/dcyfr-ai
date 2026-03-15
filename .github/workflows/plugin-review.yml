@@ -102,7 +102,7 @@ jobs:
 
       - name: Install Grype (Vulnerability scanner)
         if: steps.detect-plugin.outputs.plugin_id != ''
-        uses: anchore/scan-action/download-grype@v4
+        uses: anchore/scan-action/download-grype@v7
 
       - name: Install Gitleaks
         if: steps.detect-plugin.outputs.plugin_id != ''
