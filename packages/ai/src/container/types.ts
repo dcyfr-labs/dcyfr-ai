@@ -124,7 +124,7 @@ export const AgentContainerConfigSchema = z
     contractId: z.string().min(1),
     taskScriptB64: z.string().min(1).optional(),
     taskPatchB64: z.string().min(1).optional(),
-    env: z.record(z.string()).optional(),
+    env: z.record(z.string(), z.string()).optional(),
     resourceLimits: ContainerResourceLimitsSchema.partial().optional(),
     githubToken: z.string().min(1),
     dryRun: z.boolean().optional(),
