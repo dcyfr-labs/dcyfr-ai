@@ -140,8 +140,10 @@
   "overrides": {
     "tar": "^7.5.7",
     "axios": "^1.8.2",
-    "mem0ai > @anthropic-ai/sdk": "^0.74.0",
-    "express-rate-limit": ">=8.2.2"
+    "express-rate-limit": ">=8.2.2",
+    "mem0ai": {
+      "@anthropic-ai/sdk": "^0.74.0"
+    }
   },
   "engines": {
     "node": ">=20.0.0"
