@@ -1,5 +1,86 @@
 # Changelog
 
+## 3.0.0
+
+### Major Changes
+
+- [`4dd858f`](https://github.com/dcyfr/dcyfr-ai/commit/4dd858f9da64be2b1700332606046908b8f9748b) Thanks [@dcyfr](https://github.com/dcyfr)! - feat!: Session handoff chain protocol, requires-confirmation workflow, user context files API (v3.0)
+
+  ### Breaking Changes
+
+  **DelegationContract** now requires `handoff_context?: HandoffContext` in the type definition.
+  Existing contracts without this field remain valid (optional), but downstream TypeScript consumers
+  using strict type checking may see new optional property warnings.
+
+  **SessionHandoffChain** replaces single-session handoff with a chain protocol supporting
+  multi-hop handoffs with full context preservation across agent sessions.
+
+  ### New Features
+
+  #### Session Handoff Chain (`@dcyfr/ai/session`)
+
+  - `SessionHandoffChain` class: chain multiple session handoffs without losing conversation history
+  - `HandoffContext` type: structured context snapshot passed between sessions
+  - `createHandoffChain(sessions)`: factory for creating handoff chains from session arrays
+  - Full integration test coverage (14 tests, `session-handoff-chain.integration.test.ts`)
+
+  #### Requires-Confirmation Workflow (`@dcyfr/ai/delegation`)
+
+  - `requiresConfirmation: boolean` flag on `DelegationContract`
+  - `ConfirmationWorkflow` class: structured pause-and-log confirmation protocol
+  - `pendingConfirmation` contract status for tasks awaiting human approval
+  - Confirmation timestamp logging for audit trails
+
+  #### User Context Files API (`@dcyfr/ai/context`)
+
+  - `UserContextFiles` class: progressive disclosure loader for workspace user context files
+  - `loadContextFile(name)`: lazy-load individual context files (about-me, brand-voice, etc.)
+  - `getAvailableContextFiles()`: list available context files without loading content
+  - Template validation against `nexus/context/user/templates/`
+
+  ### Summary
+
+  These additions implement the cowork-inspired improvements inspired by validated practices
+  from human-AI collaboration research (January–February 2026 cowork sessions). The session
+  handoff chain prevents context loss during long-running multi-agent workflows. The confirmation
+  workflow enforces human oversight for destructive or high-stakes operations. User context files
+  enable personalized agent behavior without hardcoding user preferences.
+
+  All new APIs are fully tested. No existing APIs removed.
+
+### Minor Changes
+
+- [`096f9d4`](https://github.com/dcyfr/dcyfr-ai/commit/096f9d4e6a2f519d1389f0579b90c758b7dfbd1d) Thanks [@dcyfr](https://github.com/dcyfr)! - feat: Autonomous Agent Runtime — persistent memory, messaging, sessions, skills, scheduling
+
+  New subpath exports bring autonomous agent capabilities to @dcyfr/ai:
+
+  **@dcyfr/ai/memory** — File-first persistent memory with Markdown files, SHA-256 dedup,
+  optional SQLite FTS5 hybrid search (BM25 + vector RRF), and working memory persistence.
+
+  **@dcyfr/ai/compaction** — LLM-powered context compaction (pre-flush summarization),
+  plus memory compaction (cross-backend dedup, monthly conversation summarization,
+  stale fact archival).
+
+  **@dcyfr/ai/skills** — Dynamic skill injection with BM25 search over .md skill files,
+  YAML frontmatter parsing, and trust-level filtering.
+
+  **@dcyfr/ai/mcp** — MCP Tool Bridge that discovers tools from MCP servers and converts
+  them to AgentRuntime-compatible tool definitions with retry and timeout support.
+
+  **@dcyfr/ai/session** — Session manager with trust-level tool policies (full/sandboxed/
+  readonly), overlay memory, idle session tracking, and configurable middleware.
+
+  **@dcyfr/ai/scheduler** — Agent scheduler with built-in cron parser, webhook endpoints,
+  event subscriptions, quiet hours, and concurrent execution limits.
+
+  **@dcyfr/ai/gateway** — Platform-agnostic messaging gateway with Telegram, CLI, and HTTP
+  adapters, input sanitization, rate limiting, and trust-based access control.
+
+  All modules are tree-shakeable, fully tested (420+ new tests), and backward compatible
+  with existing AgentRuntime usage.
+
+- [`af15831`](https://github.com/dcyfr/dcyfr-ai/commit/af158311943bf658b791de40fb6de7161d4fb2e5) Thanks [@dcyfr](https://github.com/dcyfr)! - Repositioned @dcyfr/ai as 'AI agent harness' (infrastructure layer) rather than 'framework' (application structure) for accurate market positioning. Updated package.json, README, AGENTS.md, CONTRIBUTING.md with consistent terminology.
+
 ## 2.1.3
 
 ### Patch Changes
