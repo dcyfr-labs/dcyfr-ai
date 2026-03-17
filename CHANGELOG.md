@@ -1,5 +1,15 @@
 # Changelog
 
+## 3.0.1
+
+### Patch Changes
+
+- [`b3c3d56`](https://github.com/dcyfr/dcyfr-ai/commit/b3c3d5699812327ddaa42ecb71c2a99324f10fc3) Thanks [@dcyfr](https://github.com/dcyfr)! - Bump runtime SDK dependencies to latest major versions:
+  - groq-sdk 0.3.0 → 1.1.1 (used via OpenAI-compatible API, no callsite changes)
+  - cloudflare 4.5.0 → 5.2.0 (Cloudflare v5 binding types)
+  - better-sqlite3 11.10.0 → 12.6.2 (reputation engine; no BigInt columns, no .safeIntegers() needed)
+  - Fix z.record() key type in container/types.ts for Zod 4 compatibility
+
 ## 3.0.0
 
 ### Major Changes
