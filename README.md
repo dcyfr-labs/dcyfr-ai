@@ -4,39 +4,39 @@
 
 > Portable AI agent harness with plugin architecture for multi-provider integration, telemetry tracking, and quality validation.
 
-[![npm](https://img.shields.io/npm/v/@dcyfr/ai?style=flat-square&logo=npm&logoColor=white)](https://www.npmjs.com/package/@dcyfr/ai)
-[![Downloads](https://img.shields.io/npm/dm/@dcyfr/ai?style=flat-square&logo=npm&logoColor=white)](https://www.npmjs.com/package/@dcyfr/ai)
+[![npm](https://img.shields.io/npm/v/@dcyfr/ai?logo=npm&logoColor=white)](https://www.npmjs.com/package/@dcyfr/ai)
+[![Downloads](https://img.shields.io/npm/dm/@dcyfr/ai?logo=npm&logoColor=white)](https://www.npmjs.com/package/@dcyfr/ai)
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](https://opensource.org/licenses/MIT)
-[![TypeScript](https://img.shields.io/badge/TypeScript-Strict-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Bundle Size](https://img.shields.io/badge/Bundle%20Size-~200KB%20gzipped-28a745?style=flat-square&logo=webpack)](https://bundlephobia.com/package/@dcyfr/ai)
+[![TypeScript](https://img.shields.io/badge/TypeScript-Strict-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Bundle Size](https://img.shields.io/bundlephobia/minzip/@dcyfr/ai?label=Bundle%20Size&logo=webpack)](https://bundlephobia.com/package/@dcyfr/ai)
 
 Portable AI agent harness with plugin architecture for managing multiple AI providers, tracking telemetry, and ensuring quality compliance.
 
 ## 🔍 @dcyfr/ai vs. Alternatives
 
-| Feature            | @dcyfr/ai           | LangChain    | Vercel AI SDK | AutoGPT      |
-| ------------------ | ------------------- | ------------ | ------------- | ------------ |
-| Multi-Provider     | ✅                  | ✅           | ✅            | ❌           |
-| Plugin System      | ✅ Custom           | ✅ Complex   | ❌            | ❌           |
-| Telemetry          | ✅ Built-in         | ❌           | ❌            | ❌           |
-| Zero Config        | ✅                  | ❌           | ✅            | ❌           |
-| Bundle Size        | ~200KB gzipped      | ~2.3MB       | ~450KB        | N/A          |
-| TypeScript         | ✅ Strict           | Partial      | ✅            | ❌           |
-| Quality Gates      | ✅                  | ❌           | ❌            | ❌           |
-| Config System      | YAML/JSON/package   | Code-only    | Code-only     | JSON         |
-| Learning Curve     | Low                 | High         | Low           | High         |
+| Feature        | @dcyfr/ai                      | LangChain  | Vercel AI SDK | AutoGPT |
+| -------------- | ------------------------------ | ---------- | ------------- | ------- |
+| Multi-Provider | ✅                             | ✅         | ✅            | ❌      |
+| Plugin System  | ✅ Custom                      | ✅ Complex | ❌            | ❌      |
+| Telemetry      | ✅ Built-in                    | ❌         | ❌            | ❌      |
+| Zero Config    | ✅                             | ❌         | ✅            | ❌      |
+| Bundle Size    | Live Bundlephobia minzip badge | ~2.3MB     | ~450KB        | N/A     |
+| TypeScript     | ✅ Strict                      | Partial    | ✅            | ❌      |
+| Quality Gates  | ✅                             | ❌         | ❌            | ❌      |
+| Config System  | YAML/JSON/package              | Code-only  | Code-only     | JSON    |
+| Learning Curve | Low                            | High       | Low           | High    |
 
 ---
 
 ## 📊 npm Statistics
 
-[![npm](https://img.shields.io/npm/v/@dcyfr/ai?style=flat-square&logo=npm&logoColor=white)](https://www.npmjs.com/package/@dcyfr/ai)
-[![Downloads](https://img.shields.io/npm/dm/@dcyfr/ai?style=flat-square&logo=npm&logoColor=white)](https://www.npmjs.com/package/@dcyfr/ai)
-[![Bundle Size](https://img.shields.io/bundlephobia/minzip/@dcyfr/ai?style=flat-square&logo=webpack)](https://bundlephobia.com/package/@dcyfr/ai)
+[![npm](https://img.shields.io/npm/v/@dcyfr/ai?logo=npm&logoColor=white)](https://www.npmjs.com/package/@dcyfr/ai)
+[![Downloads](https://img.shields.io/npm/dm/@dcyfr/ai?logo=npm&logoColor=white)](https://www.npmjs.com/package/@dcyfr/ai)
+[![Bundle Size](https://img.shields.io/bundlephobia/minzip/@dcyfr/ai?logo=webpack)](https://bundlephobia.com/package/@dcyfr/ai)
 
 - **Weekly Downloads:** Check [npm stats](https://www.npmjs.com/package/@dcyfr/ai)
-- **Dependencies:** 12 production dependencies (zero bloat)
-- **Bundle Size:** ~200KB gzipped with tree shaking
+- **Dependencies:** 28 production dependencies
+- **Bundle Size:** Live Bundlephobia minzip badge (see above)
 - **TypeScript:** Full type definitions included
 - **ESM Support:** ✅ Full ESM modules with tree shaking
 
@@ -85,7 +85,7 @@ Portable AI agent harness with plugin architecture for managing multiple AI prov
 - ✅ **Validation Harness** - Quality gates with parallel/serial execution
 - 💾 **Pluggable Storage** - Memory, file-based, or custom adapters
 - ⚡ **Type-Safe** - Full TypeScript support with Zod validation
-- 📦 **Lightweight** - ~200KB gzipped bundle size
+- 📦 **Bundle Profile** - Live Bundlephobia minzip badge
 - 🛠️ **CLI Tools** - Config validation and initialization
 
 ## Installation
@@ -105,7 +105,7 @@ npx @dcyfr/ai config:init
 This creates a `.dcyfr.yaml` configuration file:
 
 ```yaml
-version: '1.0.0'
+version: "1.0.0"
 projectName: my-app
 
 agents:
@@ -124,7 +124,7 @@ agents:
 ### 2. Load and Use Configuration
 
 ```typescript
-import { loadConfig, ValidationFramework } from '@dcyfr/ai';
+import { loadConfig, ValidationFramework } from "@dcyfr/ai";
 
 // Load configuration (auto-detects .dcyfr.yaml, .dcyfr.json, package.json)
 const config = await loadConfig();
@@ -142,7 +142,7 @@ const report = await framework.validate({
   config: config.agents,
 });
 
-console.log(`Validation: ${report.valid ? 'PASS' : 'FAIL'}`);
+console.log(`Validation: ${report.valid ? "PASS" : "FAIL"}`);
 ```
 
 ### 3. Validate Configuration
@@ -161,7 +161,7 @@ npx @dcyfr/ai config:validate --verbose
 
 ### Migrating from LangChain
 
-**Why migrate:** 10x smaller bundle (~200KB vs 2.3MB), built-in telemetry, simpler API
+**Why migrate:** Smaller bundle footprint than LangChain (see live Bundlephobia badge), built-in telemetry, simpler API
 
 ```typescript
 // LangChain (before)
@@ -172,21 +172,24 @@ const model = new ChatOpenAI({ temperature: 0.9 });
 const response = await model.call([new HumanMessage("Hello")]);
 
 // @dcyfr/ai (after)
-import { AgentRuntime } from '@dcyfr/ai';
+import { AgentRuntime } from "@dcyfr/ai";
 
 const runtime = new AgentRuntime({
-  provider: 'openai',
-  model: 'gpt-4',
-  temperature: 0.9
+  provider: "openai",
+  model: "gpt-4",
+  temperature: 0.9,
 });
 
-const response = await runtime.chat({ messages: [{ role: 'user', content: 'Hello' }] });
+const response = await runtime.chat({
+  messages: [{ role: "user", content: "Hello" }],
+});
 ```
 
 **Key Differences:**
+
 - Simpler configuration (YAML/JSON vs code-only)
 - Built-in telemetry tracking (no additional setup)
-- Smaller bundle size (200KB vs 2.3MB)
+- Smaller bundle size than LangChain (see live Bundlephobia badge)
 - Type-safe validation with Zod
 - Quality gates included out of the box
 
@@ -196,32 +199,35 @@ const response = await runtime.chat({ messages: [{ role: 'user', content: 'Hello
 
 ```typescript
 // Vercel AI SDK (before)
-import { openai } from '@ai-sdk/openai';
-import { generateText } from 'ai';
+import { openai } from "@ai-sdk/openai";
+import { generateText } from "ai";
 
 const { text } = await generateText({
-  model: openai('gpt-4-turbo'),
-  prompt: 'Hello'
+  model: openai("gpt-4-turbo"),
+  prompt: "Hello",
 });
 
 // @dcyfr/ai (after)
-import { AgentRuntime, ValidationFramework } from '@dcyfr/ai';
+import { AgentRuntime, ValidationFramework } from "@dcyfr/ai";
 
 const runtime = new AgentRuntime({
-  provider: 'openai',
-  model: 'gpt-4-turbo'
+  provider: "openai",
+  model: "gpt-4-turbo",
 });
 
 const response = await runtime.chat({
-  messages: [{ role: 'user', content: 'Hello' }]
+  messages: [{ role: "user", content: "Hello" }],
 });
 
 // Bonus: Built-in validation
 const validator = new ValidationFramework();
-const report = await validator.validate({ /* config */ });
+const report = await validator.validate({
+  /* config */
+});
 ```
 
 **Key Differences:**
+
 - Configuration system (YAML/JSON files)
 - Validation harness with quality gates
 - Comprehensive telemetry tracking
@@ -251,23 +257,23 @@ export ANTHROPIC_API_KEY=your_anthropic_key
 ### 1. Basic AgentRuntime Setup
 
 ```typescript
-import { 
-  AgentRuntime, 
-  ProviderRegistry, 
-  TelemetryEngine, 
-  DCYFRMemory 
-} from '@dcyfr/ai';
+import {
+  AgentRuntime,
+  ProviderRegistry,
+  TelemetryEngine,
+  DCYFRMemory,
+} from "@dcyfr/ai";
 
 // Initialize components
 const providerRegistry = new ProviderRegistry();
-const telemetryEngine = new TelemetryEngine({ storage: 'sqlite' });
-const memory = new DCYFRMemory({ storage: 'memory' });
+const telemetryEngine = new TelemetryEngine({ storage: "sqlite" });
+const memory = new DCYFRMemory({ storage: "memory" });
 
 // Create runtime
 const runtime = new AgentRuntime({
   providerRegistry,
   memory,
-  telemetry: telemetryEngine
+  telemetry: telemetryEngine,
 });
 
 // Verify setup
@@ -278,13 +284,13 @@ console.log(`Runtime ready: ${runtime.isReady()}`);
 
 ```typescript
 // Simple task execution
-const result = await runtime.executeTask('Explain quantum computing briefly');
+const result = await runtime.executeTask("Explain quantum computing briefly");
 
 if (result.success) {
-  console.log('Output:', result.output);
-  console.log('Memory used:', result.memoryRetrievalUsed);
+  console.log("Output:", result.output);
+  console.log("Memory used:", result.memoryRetrievalUsed);
 } else {
-  console.error('Error:', result.error);
+  console.error("Error:", result.error);
 }
 ```
 
@@ -292,16 +298,19 @@ if (result.success) {
 
 ```typescript
 // Task with memory context
-const result = await runtime.executeTask('Continue the quantum computing explanation', {
-  timeout: 30000,
-  memoryConfig: {
-    maxResults: 10,    // Maximum context entries
-    minScore: 0.7      // Relevance threshold (0.0-1.0)
-  }
-});
+const result = await runtime.executeTask(
+  "Continue the quantum computing explanation",
+  {
+    timeout: 30000,
+    memoryConfig: {
+      maxResults: 10, // Maximum context entries
+      minScore: 0.7, // Relevance threshold (0.0-1.0)
+    },
+  },
+);
 
 // Memory is automatically retrieved, injected, and persisted
-console.log('Previous context used:', result.memoryRetrievalUsed);
+console.log("Previous context used:", result.memoryRetrievalUsed);
 ```
 
 ### 4. Working Memory for Multi-Step Tasks
@@ -311,45 +320,45 @@ console.log('Previous context used:', result.memoryRetrievalUsed);
 const workingMemory = runtime.getWorkingMemory();
 
 // Step 1: Research overview
-workingMemory.set('research-topic', 'AI ethics');
+workingMemory.set("research-topic", "AI ethics");
 const overviewResult = await runtime.executeTask(
-  'Provide overview of AI ethics and key considerations'
+  "Provide overview of AI ethics and key considerations",
 );
 
-// Step 2: Deep dive (with context from step 1)  
-workingMemory.set('overview-complete', overviewResult.output);
+// Step 2: Deep dive (with context from step 1)
+workingMemory.set("overview-complete", overviewResult.output);
 const deepDiveResult = await runtime.executeTask(
-  'Analyze specific ethical challenges in AI deployment'
+  "Analyze specific ethical challenges in AI deployment",
 );
 
-console.log('Working memory keys:', Array.from(workingMemory.keys()));
+console.log("Working memory keys:", Array.from(workingMemory.keys()));
 ```
 
 ### 5. Hook System for Extensions
 
 ```typescript
 // Add before-execution hook
-runtime.addHook('beforeExecute', async (task: string) => {
+runtime.addHook("beforeExecute", async (task: string) => {
   console.log(`🚀 Starting task: ${task}`);
-  
+
   // Custom validation
-  if (task.includes('sensitive')) {
-    return { approved: false, reason: 'Sensitive content detected' };
+  if (task.includes("sensitive")) {
+    return { approved: false, reason: "Sensitive content detected" };
   }
-  
+
   return { approved: true };
 });
 
 // Add after-execution hook
-runtime.addHook('afterExecute', async (task, result, success) => {
-  console.log(`✅ Task completed: ${success ? 'SUCCESS' : 'FAILED'}`);
-  
+runtime.addHook("afterExecute", async (task, result, success) => {
+  console.log(`✅ Task completed: ${success ? "SUCCESS" : "FAILED"}`);
+
   // Custom telemetry
   if (success) {
     await customAnalytics.track({
       task: task.substring(0, 50),
       duration: result.duration,
-      memoryUsed: result.memoryRetrievalUsed
+      memoryUsed: result.memoryRetrievalUsed,
     });
   }
 });
@@ -362,16 +371,16 @@ runtime.addHook('afterExecute', async (task, result, success) => {
 const runtime = new AgentRuntime({
   providerRegistry: new ProviderRegistry(),
   memory,
-  telemetry
+  telemetry,
 });
 
 // Providers automatically fallback: OpenAI → Anthropic → Ollama
-const result = await runtime.executeTask('Analyze market trends');
+const result = await runtime.executeTask("Analyze market trends");
 
 // Check which provider was used
 const events = await telemetryEngine.getEvents();
-const lastExecution = events.filter(e => e.type === 'start').pop();
-console.log('Provider used:', lastExecution?.provider);
+const lastExecution = events.filter((e) => e.type === "start").pop();
+console.log("Provider used:", lastExecution?.provider);
 ```
 
 ### 7. Telemetry Monitoring & Analysis
@@ -385,10 +394,12 @@ const events = await telemetry.getEvents();
 console.log(`Total events: ${events.length}`);
 
 // Filter memory events
-const memoryEvents = events.filter(e => e.type === 'memory_retrieval');
-const hitRate = memoryEvents.length > 0 
-  ? memoryEvents.filter(e => e.memoriesRelevant > 0).length / memoryEvents.length
-  : 0;
+const memoryEvents = events.filter((e) => e.type === "memory_retrieval");
+const hitRate =
+  memoryEvents.length > 0
+    ? memoryEvents.filter((e) => e.memoriesRelevant > 0).length /
+      memoryEvents.length
+    : 0;
 console.log(`Memory hit rate: ${(hitRate * 100).toFixed(1)}%`);
 ```
 
@@ -417,18 +428,21 @@ npx @dcyfr/ai telemetry --export usage_data.csv
 ### 9. Provider Setup
 
 **OpenAI:**
+
 ```bash
 export OPENAI_API_KEY=sk-your-key-here
 # Supports: gpt-4, gpt-4o, gpt-3.5-turbo
 ```
 
 **Anthropic:**
+
 ```bash
-export ANTHROPIC_API_KEY=sk-ant-your-key-here  
+export ANTHROPIC_API_KEY=sk-ant-your-key-here
 # Supports: claude-3-5-sonnet, claude-3-haiku, claude-3-opus
 ```
 
 **Ollama (Local):**
+
 ```bash
 # Install Ollama
 curl -fsSL https://ollama.ai/install.sh | sh
@@ -444,31 +458,33 @@ export OLLAMA_HOST=localhost:11434
 ### 10. Configuration Examples
 
 **Development:**
+
 ```typescript
 const devConfig = {
   providerRegistry: new ProviderRegistry(),
-  memory: new DCYFRMemory({ 
-    storage: 'memory',
-    maxEntries: 100 
+  memory: new DCYFRMemory({
+    storage: "memory",
+    maxEntries: 100,
   }),
-  telemetry: new TelemetryEngine({ 
-    storage: 'memory' // No persistence for dev
-  })
+  telemetry: new TelemetryEngine({
+    storage: "memory", // No persistence for dev
+  }),
 };
 ```
 
 **Production:**
-```typescript  
+
+```typescript
 const prodConfig = {
   providerRegistry: new ProviderRegistry(),
-  memory: new DCYFRMemory({ 
-    storage: 'file',
-    filePath: './data/memory.json'
+  memory: new DCYFRMemory({
+    storage: "file",
+    filePath: "./data/memory.json",
   }),
-  telemetry: new TelemetryEngine({ 
-    storage: 'sqlite',
-    dbPath: './data/telemetry.db'
-  })
+  telemetry: new TelemetryEngine({
+    storage: "sqlite",
+    dbPath: "./data/telemetry.db",
+  }),
 };
 ```
 
@@ -482,10 +498,11 @@ npm run demo -- --topic "quantum computing applications"
 ```
 
 This example demonstrates:
+
 - 5-step autonomous research pipeline
 - Memory context integration
 - Working memory coordination
-- Hook system extensions  
+- Hook system extensions
 - Telemetry monitoring
 - Provider fallback handling
 - Configuration management
@@ -499,41 +516,45 @@ Build agents that operate independently with persistent memory, scheduled execut
 ### Subpath Imports
 
 ```typescript
-import { FileMemoryAdapter, SQLiteIndex, flushWorkingMemory } from '@dcyfr/ai/memory';
-import { ContextCompactor, MemoryCompaction } from '@dcyfr/ai/compaction';
-import { SkillRegistry } from '@dcyfr/ai/skills';
-import { MCPToolBridge } from '@dcyfr/ai/mcp';
-import { SessionManager } from '@dcyfr/ai/session';
-import { AgentScheduler } from '@dcyfr/ai/scheduler';
-import { MessageGateway, TelegramAdapter, CLIAdapter } from '@dcyfr/ai/gateway';
+import {
+  FileMemoryAdapter,
+  SQLiteIndex,
+  flushWorkingMemory,
+} from "@dcyfr/ai/memory";
+import { ContextCompactor, MemoryCompaction } from "@dcyfr/ai/compaction";
+import { SkillRegistry } from "@dcyfr/ai/skills";
+import { MCPToolBridge } from "@dcyfr/ai/mcp";
+import { SessionManager } from "@dcyfr/ai/session";
+import { AgentScheduler } from "@dcyfr/ai/scheduler";
+import { MessageGateway, TelegramAdapter, CLIAdapter } from "@dcyfr/ai/gateway";
 ```
 
 ### Key Capabilities
 
-| Module | Description |
-|--------|-------------|
-| **File Memory** | Markdown-based persistent memory with SHA-256 dedup and optional SQLite FTS5 hybrid search |
-| **Context Compaction** | LLM-powered pre-flush summarization to prevent context overflow |
-| **Skill Injection** | BM25-powered matching of `.md` skill files to inject relevant knowledge |
-| **MCP Tool Bridge** | Bridges MCP server tool discovery → AgentRuntime tools |
-| **Session Management** | Trust-level tool policies (full/sandboxed/readonly), session lifecycle |
-| **Agent Scheduler** | Built-in cron parser, webhooks, event subscriptions, quiet hours |
-| **Messaging Gateway** | Telegram/CLI/HTTP adapters, input sanitization, rate limiting |
-| **Memory Compaction** | Cross-backend dedup, monthly conversation summarization, stale fact archival |
-| **Working Memory** | Persist `Map<string, unknown>` as human-readable Markdown |
+| Module                 | Description                                                                                |
+| ---------------------- | ------------------------------------------------------------------------------------------ |
+| **File Memory**        | Markdown-based persistent memory with SHA-256 dedup and optional SQLite FTS5 hybrid search |
+| **Context Compaction** | LLM-powered pre-flush summarization to prevent context overflow                            |
+| **Skill Injection**    | BM25-powered matching of `.md` skill files to inject relevant knowledge                    |
+| **MCP Tool Bridge**    | Bridges MCP server tool discovery → AgentRuntime tools                                     |
+| **Session Management** | Trust-level tool policies (full/sandboxed/readonly), session lifecycle                     |
+| **Agent Scheduler**    | Built-in cron parser, webhooks, event subscriptions, quiet hours                           |
+| **Messaging Gateway**  | Telegram/CLI/HTTP adapters, input sanitization, rate limiting                              |
+| **Memory Compaction**  | Cross-backend dedup, monthly conversation summarization, stale fact archival               |
+| **Working Memory**     | Persist `Map<string, unknown>` as human-readable Markdown                                  |
 
 ### Quick Example
 
 ```typescript
-import { MessageGateway, TelegramAdapter } from '@dcyfr/ai/gateway';
-import { SessionManager } from '@dcyfr/ai/session';
-import { AgentScheduler } from '@dcyfr/ai/scheduler';
+import { MessageGateway, TelegramAdapter } from "@dcyfr/ai/gateway";
+import { SessionManager } from "@dcyfr/ai/session";
+import { AgentScheduler } from "@dcyfr/ai/scheduler";
 
 // Create a messaging gateway with platform adapters
 const gateway = new MessageGateway({
   adapters: [new TelegramAdapter({ sendFn: telegramBot.sendMessage })],
   trustRules: [
-    { name: 'admin', userIds: ['admin-id'], trustLevel: 'full', priority: 10 },
+    { name: "admin", userIds: ["admin-id"], trustLevel: "full", priority: 10 },
   ],
 });
 
@@ -541,7 +562,7 @@ const gateway = new MessageGateway({
 const scheduler = new AgentScheduler({
   executor: async (task) => runAgent(task),
 });
-scheduler.schedule('0 9 * * *', { name: 'morning-report' });
+scheduler.schedule("0 9 * * *", { name: "morning-report" });
 scheduler.start();
 ```
 
@@ -591,6 +612,7 @@ graph TB
 ### File Formats
 
 Supports multiple configuration formats (auto-detected):
+
 - `.dcyfr.yaml` / `.dcyfr.yml` - YAML format (recommended)
 - `.dcyfr.json` / `dcyfr.config.json` - JSON format
 - `package.json` - Under `dcyfr` key
@@ -622,7 +644,7 @@ DCYFR comes with specialized validation agents:
 
 - **Design Token Validator** - Enforces design system compliance
 - **Barrel Export Checker** - Ensures import conventions
-- **PageLayout Enforcer** - Validates layout usage patterns  
+- **PageLayout Enforcer** - Validates layout usage patterns
 - **Test Data Guardian** - Prevents production data in tests
 
 See `@dcyfr/agents` for specialized DCYFR agents.
@@ -630,13 +652,13 @@ See `@dcyfr/agents` for specialized DCYFR agents.
 ### Custom Plugins
 
 ```typescript
-import { PluginLoader } from '@dcyfr/ai';
+import { PluginLoader } from "@dcyfr/ai";
 
 const customPlugin = {
   manifest: {
-    name: 'my-validator',
-    version: '1.0.0',
-    description: 'Custom validation logic',
+    name: "my-validator",
+    version: "1.0.0",
+    description: "Custom validation logic",
   },
   async onValidate(context) {
     // Your validation logic
@@ -683,6 +705,7 @@ npx @dcyfr/ai help
 ## Examples
 
 See [examples/](./examples/) directory:
+
 - `basic-usage.ts` - Getting started
 - `plugin-system.ts` - Plugin development
 - `configuration.ts` - Configuration usage
@@ -699,6 +722,7 @@ See [examples/](./examples/) directory:
 - [Quick Release Guide](./docs/RELEASE_QUICK_START.md) - TL;DR for releases
 
 ### Plugin Marketplace Security
+
 - [GVISOR_SETUP.md](./docs/guides/GVISOR_SETUP.md) - gVisor runtime sandboxing for untrusted plugins
 - [BEHAVIORAL_ANOMALY_DETECTION.md](./docs/guides/BEHAVIORAL_ANOMALY_DETECTION.md) - Behavioral anomaly detection system
 - [CERTIFICATION_PROGRAM.md](./docs/guides/CERTIFICATION_PROGRAM.md) - Plugin Certification Program (Bronze/Silver/Gold tiers)
@@ -714,6 +738,7 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for contribution guidelines.
 We use [Changesets](https://github.com/changesets/changesets) for automated versioning and publishing.
 
 **For contributors:**
+
 ```bash
 # Add a changeset describing your changes
 npm run changeset
@@ -724,6 +749,7 @@ git commit -m "feat: your feature"
 ```
 
 **For maintainers:**
+
 - Changesets automatically creates Release PRs
 - Merging a Release PR publishes to npm
 - See [Release Management](./docs/RELEASE_MANAGEMENT.md) for full details
@@ -737,11 +763,13 @@ git commit -m "feat: your feature"
 ### Installation Issues
 
 **Issue: `npm install @dcyfr/ai` fails with 404**
+
 - **Cause:** Package may not be published yet or npm registry issue
 - **Solution:** Verify package exists: `npm view @dcyfr/ai`, or install from GitHub: `npm install git+https://github.com/dcyfr/dcyfr-ai.git`
 - **Check:** Visit https://www.npmjs.com/package/@dcyfr/ai to confirm publication status
 
 **Issue: "Cannot find module '@dcyfr/ai'"**
+
 - **Cause:** Package not in `node_modules` or incorrect import path
 - **Solution:** Run `npm install`, verify import: `import { loadConfig } from '@dcyfr/ai'`
 - **TypeScript:** Ensure `moduleResolution: "bundler"` or `"node16"` in tsconfig.json
@@ -749,6 +777,7 @@ git commit -m "feat: your feature"
 ### Configuration Issues
 
 **Issue: `.dcyfr.yaml` not detected**
+
 - **Cause:** File in wrong location or invalid YAML syntax
 - **Solution:**
   1. Place `.dcyfr.yaml` in project root (same directory as package.json)
@@ -757,18 +786,21 @@ git commit -m "feat: your feature"
 - **Alternative:** Use `.dcyfr.json` or add `dcyfr` key to `package.json`
 
 **Issue: "Invalid configuration schema"**
+
 - **Cause:** Missing required fields or incorrect types
 - **Solution:**
   1. Run `npx @dcyfr/ai config:schema` to see full schema
   2. Ensure required fields present: `version`, `projectName`
   3. Check types match (strings in quotes, booleans without quotes, arrays with brackets)
 - **Example:** Valid config minimum:
+
 ```yaml
-version: '1.0.0'
+version: "1.0.0"
 projectName: my-app
 ```
 
 **Issue: Environment variables not overriding config**
+
 - **Cause:** Incorrect env var naming or precedence
 - **Solution:** Use `DCYFR_` prefix with nested path: `DCYFR_AGENTS_DESIGNTOKENS_COMPLIANCE=0.95`
 - **Format:** `DCYFR_<SECTION>_<SUBSECTION>_<KEY>=<value>` (uppercase, underscores)
@@ -777,6 +809,7 @@ projectName: my-app
 ### Plugin Issues
 
 **Issue: Custom plugin not loading**
+
 - **Cause:** Plugin doesn't implement required interface or missing manifest
 - **Solution:** Ensure plugin exports:
   1. `manifest` object with `name`, `version`, `description`
@@ -785,10 +818,12 @@ projectName: my-app
 - **Example:** See [examples/plugin-system.ts](./examples/plugin-system.ts)
 
 **Issue: Validation fails with "No plugins loaded"**
+
 - **Cause:** Plugins not registered with PluginLoader before validation
 - **Solution:**
+
 ```typescript
-import { PluginLoader } from '@dcyfr/ai';
+import { PluginLoader } from "@dcyfr/ai";
 const loader = new PluginLoader();
 await loader.loadPlugin(myPlugin);
 await loader.runValidation();
@@ -797,6 +832,7 @@ await loader.runValidation();
 ### CLI Issues
 
 **Issue: `npx @dcyfr/ai` command not found**
+
 - **Cause:** Package not installed or PATH issue
 - **Solution:**
   - Local: Add to devDependencies: `npm install --save-dev @dcyfr/ai`
@@ -804,6 +840,7 @@ await loader.runValidation();
   - npx: Use full package name: `npx @dcyfr/ai@latest`
 
 **Issue: CLI commands hang or timeout**
+
 - **Cause:** Large project or slow file system operations
 - **Solution:**
   1. Use `--files` flag to target specific files: `npx @dcyfr/ai validate --files "src/**/*.ts"`
@@ -827,19 +864,21 @@ A: Yes, but TypeScript is strongly recommended for better type safety and IDE su
 **Q: How do I create a custom validation plugin?**
 
 A: Implement the `Plugin` interface with `manifest` and `onValidate` method:
+
 ```typescript
 export const myPlugin = {
   manifest: {
-    name: 'my-plugin',
-    version: '1.0.0',
-    description: 'My custom validation'
+    name: "my-plugin",
+    version: "1.0.0",
+    description: "My custom validation",
   },
   async onValidate(context) {
     // Your validation logic here
     return { passed: true, issues: [] };
-  }
+  },
 };
 ```
+
 See [docs/plugins.md](./docs/plugins.md) and [examples/plugin-system.ts](./examples/plugin-system.ts) for complete guide.
 
 **Q: What's the difference between @dcyfr/ai and @dcyfr/agents?**
@@ -849,6 +888,7 @@ A: `@dcyfr/ai` is the **public harness** (plugin architecture, config management
 **Q: Can I use this with other AI providers (non-Claude)?**
 
 A: Yes! The harness supports multi-provider integration including Claude, GitHub Copilot, Groq, Ollama, OpenAI, Anthropic. Configure providers in `.dcyfr.yaml`:
+
 ```yaml
 providers:
   - name: openai
@@ -860,12 +900,14 @@ providers:
 **Q: How do I track telemetry and costs?**
 
 A: Use the `TelemetryEngine` with storage adapters:
+
 ```typescript
-import { TelemetryEngine, FileStorageAdapter } from '@dcyfr/ai';
+import { TelemetryEngine, FileStorageAdapter } from "@dcyfr/ai";
 const telemetry = new TelemetryEngine({
-  storage: new FileStorageAdapter('./telemetry')
+  storage: new FileStorageAdapter("./telemetry"),
 });
 ```
+
 Telemetry tracks: API calls, token usage, costs, latency, quality scores.
 
 **Q: Is this harness production-ready?**
@@ -879,21 +921,24 @@ A: Yes! @dcyfr/ai is used in production at dcyfr-labs and other projects. It has
 ## 📊 Performance Benchmarks
 
 ### Framework Performance
+
 - **Config Loading:** ~10ms (cached), ~50ms (first load with file I/O)
 - **Validation Framework:** Parallel execution 2-5x faster than serial (depends on plugin count)
 - **Plugin System:** Minimal overhead ~5ms per plugin registration
-- **Bundle Size:** ~200KB gzipped (includes Zod validation library)
+- **Bundle Size:** Live Bundlephobia minzip badge
 
 ### Recommended Usage Patterns
+
 - **Use parallel validation** for independent checks (faster): `mode: 'parallel'`
 - **Cache config loading** (use singleton pattern): Load once, reuse across app
 - **Batch telemetry writes** (reduce I/O overhead): Buffer writes, flush periodically
 - **Lazy load plugins** (faster startup): Only load plugins you need for current validation
 
 ### Comparison with Alternatives
+
 - **vs. Custom Scripts:** 10-20x faster due to optimized plugin execution
 - **vs. Serial Validation:** 2-5x faster with parallel execution mode
-- **vs. LangChain:** ~10x smaller bundle size (~200KB vs 2MB+)
+- **vs. LangChain:** Smaller bundle footprint (live Bundlephobia tracking)
 
 [⬆️ Back to top](#dcyfr-ai)
 
@@ -902,11 +947,14 @@ A: Yes! @dcyfr/ai is used in production at dcyfr-labs and other projects. It has
 ## 🔒 Security
 
 ### Reporting Vulnerabilities
+
 Found a security issue? Report it privately:
+
 - **GitHub Security Advisories:** [dcyfr-ai/security](https://github.com/dcyfr/dcyfr-ai/security/advisories/new)
 - **Expected Response:** Within 48 hours
 
 ### Security Considerations
+
 - **No API keys stored:** Use environment variables for sensitive data (Zod validates but doesn't store)
 - **Zod validation:** All inputs validated with schemas before processing
 - **No remote code execution:** Plugins run in local environment only (no sandboxing yet - see limitations)
@@ -914,6 +962,7 @@ Found a security issue? Report it privately:
 - **Dependencies:** Regular Dependabot updates, npm audit on CI
 
 ### Best Practices
+
 - Never commit `.env` files (use `.env.example`)
 - Use environment variables for API keys: `${OPENAI_API_KEY}`
 - Review plugin code before loading (plugins have full access to filesystem)
@@ -927,6 +976,7 @@ Found a security issue? Report it privately:
 ## ⚙️ Known Limitations
 
 ### Current Constraints
+
 - **Plugin isolation:** Plugins run in same process (no sandboxing yet) - trust plugin code before loading
 - **File-based telemetry only:** No database storage adapter yet (planned for v2.0)
 - **Config caching:** Requires manual cache invalidation on config changes (no hot-reload yet)
@@ -934,11 +984,13 @@ Found a security issue? Report it privately:
 - **TypeScript required for development:** JavaScript works at runtime but TypeScript recommended for development
 
 ### Platform-Specific Issues
+
 - **Windows:** Path separators handled automatically but some plugins may have issues
 - **Node.js version:** Requires ≥24.13.0 (uses native fetch, modern APIs)
 - **ESM-only:** Package is ESM (ECMAScript Modules) - CommonJS require() not supported
 
 ### Planned Improvements
+
 - [ ] Database storage adapter for telemetry (PostgreSQL, SQLite)
 - [ ] Plugin sandboxing for security (worker threads or VM isolation)
 - [ ] Hot-reload config watching (auto-reload on file changes)
@@ -959,10 +1011,12 @@ See [GitHub Issues](https://github.com/dcyfr/dcyfr-ai/issues) for tracked featur
 ### Commercial Use
 
 This package is dual-licensed:
+
 - **MIT License** for personal, educational, and non-commercial use (free)
 - **Commercial License** for business and revenue-generating use (paid)
 
 **Commercial use includes:**
+
 - Using @dcyfr/ai in SaaS products or revenue-generating services
 - Deploying in companies with >5 employees
 - Providing paid consulting/services using @dcyfr/ai
