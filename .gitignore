@@ -19,8 +19,6 @@ Thumbs.db
 # Keep safe templates/examples tracked
 !.env.example
 !**/.env.example
-!.env.ci
-!**/.env.ci
 
 # .env.local contains plaintext secrets — NEVER commit
 .env.local
