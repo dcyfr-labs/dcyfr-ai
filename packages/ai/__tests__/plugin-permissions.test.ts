@@ -441,6 +441,28 @@ describe('attenuatePermissions', () => {
 // ---------------------------------------------------------------------------
 
 describe('PermissionAuditLogger', () => {
+  const originalAxiomDataset = process.env['AXIOM_DATASET'];
+  const originalAxiomToken = process.env['AXIOM_TOKEN'];
+
+  beforeEach(() => {
+    delete process.env['AXIOM_DATASET'];
+    delete process.env['AXIOM_TOKEN'];
+  });
+
+  afterEach(() => {
+    if (originalAxiomDataset === undefined) {
+      delete process.env['AXIOM_DATASET'];
+    } else {
+      process.env['AXIOM_DATASET'] = originalAxiomDataset;
+    }
+
+    if (originalAxiomToken === undefined) {
+      delete process.env['AXIOM_TOKEN'];
+    } else {
+      process.env['AXIOM_TOKEN'] = originalAxiomToken;
+    }
+  });
+
   const sampleEvent = {
     timestamp: '2026-02-28T00:00:00.000Z',
     eventType: 'permission_granted' as const,

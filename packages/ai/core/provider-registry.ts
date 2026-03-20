@@ -432,22 +432,46 @@ export class ProviderRegistry {
   }
 
   /**
+   * Resolve provider API version flags for staged rollouts.
+   */
+  public static resolveApiVersionFlags(): {
+    openai: 'v4' | 'v6';
+    anthropic: 'v040' | 'v074';
+  } {
+    const rawOpenAI = (process.env.OPENAI_API_VERSION || 'v4').trim().toLowerCase();
+    const rawAnthropic = (process.env.ANTHROPIC_API_VERSION || 'v074').trim().toLowerCase();
+
+    const openai = rawOpenAI === 'v6' ? 'v6' : 'v4';
+    const anthropic = rawAnthropic === 'v040' ? 'v040' : 'v074';
+
+    return { openai, anthropic };
+  }
+
+  /**
    * Discover environment variables for provider configuration
    */
   public static discoverEnvironmentVariables(): Record<ProviderType, { 
     apiKey?: string; 
     endpoint?: string; 
+    apiVersion?: string;
     configured: boolean 
   }> {
-    const envVars: Record<ProviderType, { apiKey?: string; endpoint?: string; configured: boolean }> = {
+    const apiVersions = ProviderRegistry.resolveApiVersionFlags();
+
+    const envVars: Record<
+      ProviderType,
+      { apiKey?: string; endpoint?: string; apiVersion?: string; configured: boolean }
+    > = {
       openai: {
         apiKey: process.env.OPENAI_API_KEY,
         endpoint: process.env.OPENAI_API_BASE,
+        apiVersion: apiVersions.openai,
         configured: !!process.env.OPENAI_API_KEY
       },
       anthropic: {
         apiKey: process.env.ANTHROPIC_API_KEY,
         endpoint: process.env.ANTHROPIC_API_BASE,
+        apiVersion: apiVersions.anthropic,
         configured: !!process.env.ANTHROPIC_API_KEY
       },
       claude: {
@@ -545,21 +569,23 @@ export class ProviderRegistry {
     return {
       openai: {
         description: 'OpenAI GPT models (GPT-3.5, GPT-4, etc.)',
-        environmentVariables: ['OPENAI_API_KEY'],
+        environmentVariables: ['OPENAI_API_KEY', 'OPENAI_API_VERSION'],
         instructions: [
           '1. Create an account at https://platform.openai.com/',
           '2. Generate an API key in the API Keys section',
           '3. Set environment variable: export OPENAI_API_KEY=your_api_key_here',
+          '4. Set rollout flag: export OPENAI_API_VERSION=v4|v6',
           '4. Optional: Set OPENAI_API_BASE for custom endpoints'
         ]
       },
       anthropic: {
         description: 'Anthropic Claude models',
-        environmentVariables: ['ANTHROPIC_API_KEY'],
+        environmentVariables: ['ANTHROPIC_API_KEY', 'ANTHROPIC_API_VERSION'],
         instructions: [
           '1. Create an account at https://console.anthropic.com/',
           '2. Generate an API key in the API Keys section',
           '3. Set environment variable: export ANTHROPIC_API_KEY=your_api_key_here',
+          '4. Set rollout flag: export ANTHROPIC_API_VERSION=v040|v074',
           '4. Optional: Set ANTHROPIC_API_BASE for custom endpoints'
         ]
       },
