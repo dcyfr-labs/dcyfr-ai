@@ -758,6 +758,7 @@ export class AgentRuntime {
       const toolUse = this.parseToolUseContent(resp.content);
       if (toolUse) return toolUse;
     }
+
     // Check for direct action format
     if (resp.action) {
       return {
