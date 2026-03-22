@@ -706,6 +706,8 @@ npx @dcyfr/ai help
 
 See [examples/](./examples/) directory:
 
+- [Examples index](./examples/README.md) - prerequisites and run commands
+
 - `basic-usage.ts` - Getting started
 - `plugin-system.ts` - Plugin development
 - `configuration.ts` - Configuration usage
