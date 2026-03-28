@@ -1,13 +1,25 @@
 /**
- * Plugin System Example - Using validation plugins
- * 
- * This example demonstrates:
- * - Loading plugins dynamically
- * - Creating validation gates
- * - Running validations with custom configuration
+ * @example PluginSystem
+ * @description Validation plugin system with dynamic loading and gate orchestration.
+ *
+ * Demonstrates:
+ * - Loading plugins dynamically with PluginLoader
+ * - Running validations with custom plugin logic
+ * - Multi-plugin aggregation with ValidationFramework gates
+ *
+ * Prerequisites:
+ * - Node.js >= 20
+ * - @dcyfr/ai installed
+ *
+ * Usage:
+ *   npx tsx examples/plugin-system.ts
+ *
+ * @license MIT
+ * @copyright DCYFR Labs (https://www.dcyfr.ai)
  */
 
 import { PluginLoader, ValidationFramework } from '@dcyfr/ai';
+import type { ValidationContext, ValidationViolation } from '@dcyfr/ai';
 
 async function basicPluginExample() {
   console.log('🔌 Plugin System - Basic Example\n');
@@ -31,7 +43,7 @@ async function basicPluginExample() {
     async onLoad() {
       console.log('   📦 Custom validator loaded!');
     },
-    async onValidate(context) {
+    async onValidate(context: ValidationContext) {
       console.log(`   🔍 Validating ${context.files.length} files...`);
       
       const violations = [];
@@ -79,7 +91,7 @@ async function basicPluginExample() {
 
   if (result.violations.length > 0) {
     console.log('\n   Issues found:');
-    result.violations.forEach((v, i) => {
+    result.violations.forEach((v: ValidationViolation, i: number) => {
       console.log(`     ${i + 1}. [${v.severity}] ${v.message} (${v.file})`);
     });
   }
@@ -89,135 +101,69 @@ async function basicPluginExample() {
   console.log('\n4️⃣  Cleanup complete\n');
 }
 
-async function validationFrameworkExample() {
-  console.log('🎯 Validation Framework Example\n');
+async function multiPluginExample() {
+  console.log('🎯 Multi-Plugin Validation Example\n');
 
-  // 1. Create framework with custom gates
-  console.log('1️⃣  Creating validation framework with gates...');
+  // 1. Create a PluginLoader with multiple inline plugins
+  console.log('1️⃣  Loading multiple inline plugins...');
+  const loader = new PluginLoader({ failureMode: 'warn', timeout: 30000 });
+
+  await loader.loadPlugins([
+    {
+      manifest: { name: 'quality-checker', version: '1.0.0', description: 'Code quality checks' },
+      async onValidate() {
+        return {
+          valid: true,
+          violations: [],
+          warnings: [{ type: 'complexity', severity: 'warning', message: 'Function complexity is high, consider refactoring' }],
+        };
+      },
+    },
+    {
+      manifest: { name: 'security-scanner', version: '1.0.0', description: 'Security vulnerability scanner' },
+      async onValidate() {
+        return { valid: true, violations: [], warnings: [] };
+      },
+    },
+    {
+      manifest: { name: 'perf-analyzer', version: '1.0.0', description: 'Performance analyzer' },
+      async onValidate() {
+        return {
+          valid: false,
+          violations: [{ type: 'performance', severity: 'warning', message: 'Large bundle size detected (2.5MB)' }],
+          warnings: [],
+        };
+      },
+    },
+  ]);
+  console.log(`   ✅ Loaded ${loader.getPluginCount()} plugins\n`);
+
+  // 2. Run all plugins
+  console.log('2️⃣  Running all plugins...');
+  const result = await loader.validateAll({
+    projectRoot: process.cwd(),
+    files: ['src/**/*.ts', 'src/**/*.tsx'],
+    config: { strict: true },
+  });
+
+  // 3. Display results
+  console.log(`\n📊 Combined Result:`);
+  console.log(`   Overall: ${result.valid ? '✅ PASS' : '⚠️  ISSUES FOUND'}`);
+  console.log(`   Violations: ${result.violations.length}`);
+  console.log(`   Warnings: ${result.warnings.length}\n`);
+
+  // 4. Show how ValidationFramework adds gate-level orchestration (named plugin packages)
+  console.log('3️⃣  ValidationFramework gates (for named plugin packages):');
   const framework = new ValidationFramework({
     gates: [
-      {
-        name: 'code-quality',
-        plugins: ['quality-checker'],
-        required: true,
-        failureMode: 'error',
-      },
-      {
-        name: 'security',
-        plugins: ['security-scanner'],
-        required: true,
-        failureMode: 'error',
-      },
-      {
-        name: 'performance',
-        plugins: ['perf-analyzer'],
-        required: false,
-        failureMode: 'warn',
-      },
+      { name: 'quality', plugins: ['@dcyfr/agents/quality-checker'], required: true, failureMode: 'error' },
+      { name: 'security', plugins: ['@dcyfr/agents/security-scanner'], required: true, failureMode: 'error' },
     ],
     parallel: true,
   });
+  console.log(`   📋 Configured ${framework.getGates().length} gates (plugins resolved at validate() time)\n`);
 
-  console.log(`   📋 Configured ${framework.getGates().length} validation gates\n`);
-
-  // 2. Load plugins
-  console.log('2️⃣  Loading validation plugins...');
-  
-  const qualityPlugin = {
-    manifest: {
-      name: 'quality-checker',
-      version: '1.0.0',
-      description: 'Code quality checks',
-    },
-    async onValidate() {
-      return {
-        valid: true,
-        violations: [],
-        warnings: [
-          {
-            type: 'complexity',
-            severity: 'warning',
-            message: 'Function complexity is high, consider refactoring',
-          },
-        ],
-      };
-    },
-  };
-
-  const securityPlugin = {
-    manifest: {
-      name: 'security-scanner',
-      version: '1.0.0',
-      description: 'Security vulnerability scanner',
-    },
-    async onValidate() {
-      return {
-        valid: true,
-        violations: [],
-        warnings: [],
-      };
-    },
-  };
-
-  const perfPlugin = {
-    manifest: {
-      name: 'perf-analyzer',
-      version: '1.0.0',
-      description: 'Performance analyzer',
-    },
-    async onValidate() {
-      return {
-        valid: false,
-        violations: [
-          {
-            type: 'performance',
-            severity: 'warning',
-            message: 'Large bundle size detected (2.5MB)',
-          },
-        ],
-        warnings: [],
-      };
-    },
-  };
-
-  await framework.loadPlugins([qualityPlugin, securityPlugin, perfPlugin]);
-  console.log('   ✅ All plugins loaded\n');
-
-  // 3. Run validation
-  console.log('3️⃣  Running validation framework...');
-  const report = await framework.validate({
-    projectRoot: process.cwd(),
-    files: ['src/**/*.ts', 'src/**/*.tsx'],
-    config: {
-      strict: true,
-    },
-  });
-
-  // 4. Display results
-  console.log(`\n📊 Validation Report:`);
-  console.log(`   Overall: ${report.valid ? '✅ PASS' : '⚠️  ISSUES FOUND'}`);
-  console.log(`   Gates passed: ${report.summary.passedGates}/${report.summary.totalGates}`);
-  console.log(`   Total violations: ${report.summary.totalViolations}`);
-  console.log(`   Total warnings: ${report.summary.totalWarnings}`);
-  console.log(`   Execution time: ${report.summary.executionTime}ms\n`);
-
-  console.log('   Gate Details:');
-  report.gates.forEach(gate => {
-    const status = gate.passed ? '✅' : '❌';
-    console.log(`     ${status} ${gate.name} (${gate.executionTime}ms)`);
-    
-    if (gate.violations.length > 0) {
-      gate.violations.forEach(v => {
-        console.log(`        - [${v.severity}] ${v.message}`);
-      });
-    }
-    
-    if (gate.warnings.length > 0) {
-      gate.warnings.forEach(w => {
-        console.log(`        - [warning] ${w.message}`);
-      });
-    }
-  });
+  await loader.clearAll();
 }
 
 async function dcyfrAgentsExample() {
@@ -261,8 +207,9 @@ async function dcyfrAgentsExample() {
 async function main() {
   try {
     await basicPluginExample();
-    await validationFrameworkExample();
+    await multiPluginExample();
     await dcyfrAgentsExample();
+    // @expected-output: ✨ All examples completed!
     console.log('\n✨ All examples completed!\n');
   } catch (error) {
     console.error('\n❌ Error:', error);
