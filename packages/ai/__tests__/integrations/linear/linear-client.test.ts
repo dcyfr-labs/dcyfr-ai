@@ -145,13 +145,14 @@ describe('LinearClient', () => {
         });
 
         it('should throw on HTTP error', async () => {
-            fetchMock.mockResolvedValueOnce({
+            const clientNoRetry = new LinearClient({ apiKey: MOCK_API_KEY, maxRetries: 0 });
+            fetchMock.mockResolvedValue({
                 ok: false,
                 status: 500,
                 headers: new Map(),
             });
 
-            await expect(client.getIssue('DCYFR-123')).rejects.toThrow(
+            await expect(clientNoRetry.getIssue('DCYFR-123')).rejects.toThrow(
                 'Linear API returned 500',
             );
         });
@@ -200,14 +201,14 @@ describe('LinearClient', () => {
 
     describe('rate limiting', () => {
         it('should throw on 429 rate limit response', async () => {
-            const resetAt = new Date(Date.now() + 3600000);
-            fetchMock.mockResolvedValueOnce({
+            const clientNoRetry = new LinearClient({ apiKey: MOCK_API_KEY, maxRetries: 0 });
+            fetchMock.mockResolvedValue({
                 ok: false,
                 status: 429,
                 headers: new Map([['Retry-After', '3600']]),
             });
 
-            await expect(client.getIssue('DCYFR-123')).rejects.toBeInstanceOf(
+            await expect(clientNoRetry.getIssue('DCYFR-123')).rejects.toBeInstanceOf(
                 LinearRateLimitError,
             );
         });
@@ -231,9 +232,10 @@ describe('LinearClient', () => {
 
     describe('error handling', () => {
         it('should wrap generic errors as LinearError', async () => {
-            fetchMock.mockRejectedValueOnce(new Error('Connection refused'));
+            const clientNoRetry = new LinearClient({ apiKey: MOCK_API_KEY, maxRetries: 0 });
+            fetchMock.mockRejectedValue(new Error('Connection refused'));
 
-            await expect(client.getIssue('DCYFR-123')).rejects.toThrow(LinearError);
+            await expect(clientNoRetry.getIssue('DCYFR-123')).rejects.toThrow(LinearError);
         });
 
         it('should preserve GraphQL error details', async () => {

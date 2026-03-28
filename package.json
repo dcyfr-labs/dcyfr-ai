@@ -134,6 +134,7 @@
     "@types/better-sqlite3": "^7.6.12",
     "@types/glob": "^9.0.0",
     "@types/node": "^25.5.0",
+    "@vitest/coverage-v8": "4.1.0",
     "eslint": "^10.0.3",
     "globals": "^14.0.0",
     "typescript": "^5.3.0",

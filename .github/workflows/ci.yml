@@ -44,17 +44,25 @@ jobs:
         run: npm rebuild better-sqlite3
 
       - name: Type Check
+        id: typecheck
         run: npm run typecheck
 
       - name: Lint
+        id: lint
         run: npm run lint
         continue-on-error: true
 
       - name: Build
+        id: build
         run: npm run build
 
       - name: Test
+        id: test
         run: npm run test
+
+      - name: Test (Linear integration)
+        id: linear_tests
+        run: npm run test -- packages/ai/__tests__/integrations/linear/ --coverage --coverage.thresholds.lines=80
 
       - name: Check Changeset (PR only)
         if: github.event_name == 'pull_request'
