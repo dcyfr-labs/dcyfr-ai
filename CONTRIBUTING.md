@@ -171,6 +171,44 @@ Update relevant docs when making changes:
 - [Plugin Guide](./docs/PLUGINS.md) - For plugin system changes
 - [README](./README.md) - For major features
 
+## Examples
+
+The `examples/` directory is a first-class test surface. All examples must compile and run without errors.
+
+### Adding a new example
+
+1. Create `examples/<name>.ts` with the standard JSDoc header:
+   ```typescript
+   /**
+    * @example ExampleName
+    * @description What this example demonstrates.
+    *
+    * Prerequisites:
+    * - Node.js >= 20
+    * - @dcyfr/ai installed
+    *
+    * Usage:
+    *   npx tsx examples/<name>.ts
+    *
+    * @license MIT
+    * @copyright DCYFR Labs (https://www.dcyfr.ai)
+    */
+   ```
+2. Add `// @expected-output: <text>` comments before key `console.log` calls that signal success.
+3. Verify it compiles: `npm run examples:check`
+4. Add it to the example index table in `examples/README.md`.
+
+### When API signatures change
+
+If a public API is renamed, removed, or its signature changes:
+
+1. Search for affected imports in `examples/`: `grep -r 'MyChangedThing' examples/`
+2. Update every affected example to use the new API.
+3. Re-run `npm run examples:check` — all examples must pass with zero errors.
+4. Update `@expected-output` markers if output text changed.
+
+The `validate-examples` CI workflow will catch any regressions on every PR.
+
 ## Release Process
 
 **IMPORTANT:** @dcyfr/ai uses [Changesets](https://github.com/changesets/changesets) for automated versioning and publishing. **NEVER manually run `npm publish` or update version numbers.**

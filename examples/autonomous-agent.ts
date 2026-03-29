@@ -1,15 +1,24 @@
 /**
- * @example Autonomous Agent
- * @description Complete example demonstrating the autonomous agent runtime
- *              capabilities introduced in @dcyfr/ai v2.2.0:
+ * @example AutonomousAgent
+ * @description Complete autonomous agent runtime with all v3 subsystems.
  *
- *   1. File-first memory with hybrid search
- *   2. Dynamic skill injection
- *   3. Scheduled task execution
- *   4. Context compaction
- *   5. Messaging gateway (Telegram + CLI)
- *   6. Session management with trust levels
- *   7. Working memory persistence
+ * Demonstrates:
+ * 1. File-first memory with hybrid BM25 + vector search
+ * 2. Dynamic skill injection via SkillRegistry
+ * 3. Context compaction with utilization tracking
+ * 4. Session management with trust levels
+ * 5. Messaging gateway (Telegram + CLI adapters)
+ * 6. Scheduled task execution (cron, webhooks, event subscriptions)
+ * 7. Working memory persistence (flushWorkingMemory)
+ * 8. MCP registry integration
+ *
+ * Prerequisites:
+ * - Node.js >= 20
+ * - @dcyfr/ai installed
+ * - Skills directory at ./.claude/skills (or adjust skillsDir)
+ *
+ * Usage:
+ *   npx tsx examples/autonomous-agent.ts
  *
  * @license MIT
  * @copyright DCYFR Labs (https://www.dcyfr.ai)
@@ -17,7 +26,6 @@
 
 import {
   FileMemoryAdapter,
-  SQLiteIndex,
   flushWorkingMemory,
 } from '@dcyfr/ai/memory';
 
@@ -30,7 +38,7 @@ import {
   TelegramAdapter,
   CLIAdapter,
 } from '@dcyfr/ai/gateway';
-import { MCPToolBridge } from '@dcyfr/ai/mcp';
+import { MCPRegistry } from '@dcyfr/ai/mcp';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 1. File-First Memory with Hybrid Search
@@ -39,10 +47,8 @@ import { MCPToolBridge } from '@dcyfr/ai/mcp';
 const memory = new FileMemoryAdapter({
   rootDir: '~/.dcyfr/memory',
   agentId: 'my-autonomous-agent',
-  // Optional: enable SQLite hybrid search for faster retrieval
-  sqliteIndex: new SQLiteIndex({
-    dbPath: '~/.dcyfr/memory/my-autonomous-agent/index.db',
-  }),
+  // Optional: provide an embedFn for vector search alongside BM25
+  // embedFn: async (text) => myEmbeddingModel.embed(text),
 });
 
 // Add facts the agent learns during operation
@@ -62,28 +68,29 @@ console.log('Found memories:', results.length);
 
 const skills = new SkillRegistry({
   skillsDir: './.claude/skills',
-  // Only inject skills the agent is trusted to use
-  sessionTrustLevel: 'full',
+  // Trust level for skill access: 'public' | 'internal' | 'restricted' | 'confidential'
+  sessionTrustLevel: 'internal',
 });
 
 await skills.initialize();
 
 // Skills are automatically matched to queries via BM25 search
-const augmentedPrompt = await skills.injectSkills(
+const injectionResult = await skills.injectSkills(
   'You are a helpful assistant.',
   'I need to create a new OpenSpec change',
 );
-console.log('Augmented prompt includes relevant skills:', augmentedPrompt.length > 50);
+console.log('Augmented prompt includes relevant skills:', injectionResult.augmentedPrompt.length > 50);
+console.log('Skills injected:', injectionResult.injectedSkills.length);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 3. Context Compaction
 // ─────────────────────────────────────────────────────────────────────────────
 
 const compactor = new ContextCompactor({
-  maxContextTokens: 128_000,
-  compactionThreshold: 0.7, // Compact when 70% full
+  threshold: 0.7, // Compact when 70% full
+  maxSummaryTokens: 500,
   // Optional: LLM-powered pre-flush summarization
-  llmCall: async (prompt, systemPrompt) => {
+  llmCall: async (prompt, _systemPrompt) => {
     // Replace with your LLM provider call
     return `Summary: ${prompt.slice(0, 200)}...`;
   },
@@ -95,10 +102,9 @@ const utilization = compactor.calculateUtilization({
     { role: 'user', content: 'Hello' },
     { role: 'assistant', content: 'Hi there!' },
   ],
-  tools: [],
-  workingMemory: new Map(),
 });
-console.log(`Context utilization: ${(utilization.utilizationPercent * 100).toFixed(1)}%`);
+console.log(`Context utilization: ${(utilization.utilization * 100).toFixed(1)}%`);
+console.log(`Should compact: ${utilization.shouldCompact}`);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 4. Session Management
@@ -107,7 +113,8 @@ console.log(`Context utilization: ${(utilization.utilizationPercent * 100).toFix
 const sessions = new SessionManager();
 
 // Create a session with trust-level tool policy
-const session = sessions.create({
+const session = await sessions.create({
+  agentId: 'my-autonomous-agent',
   userId: 'admin-user',
   platform: 'telegram',
   trustLevel: 'full', // full | sandboxed | readonly
@@ -189,10 +196,11 @@ await gateway.reply(
 // ─────────────────────────────────────────────────────────────────────────────
 
 const scheduler = new AgentScheduler({
-  executor: async (taskConfig) => {
+  executor: async (taskConfig, _context) => {
+    const start = Date.now();
     console.log(`Executing scheduled task: ${taskConfig.name}`);
     // Your task logic here
-    return { success: true };
+    return { success: true, durationMs: Date.now() - start };
   },
 });
 
@@ -203,14 +211,14 @@ scheduler.schedule('0 9 * * *', {
   metadata: { priority: 'medium' },
 });
 
-// Register a webhook endpoint for CI/CD triggers
+// Register a webhook endpoint for CI/CD triggers (requires a secret)
 scheduler.webhook('/webhook/deploy', {
   name: 'deploy-trigger',
   description: 'Triggered by CI/CD pipeline',
-});
+}, process.env.WEBHOOK_SECRET ?? 'change-me-in-production');
 
-// Subscribe to events for reactive automation
-scheduler.subscribe('pr.merged', {}, {
+// Subscribe to events for reactive automation (pass null to match all payloads)
+scheduler.subscribe('pr.merged', null, {
   name: 'post-merge',
   description: 'Run post-merge checks',
 });
@@ -238,11 +246,10 @@ const flushed = flushWorkingMemory(workingMemory, {
 console.log(`Working memory saved: ${flushed.filePath} (${flushed.entriesWritten} entries)`);
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 8. MCP Tool Bridge (optional)
+// 8. MCP Registry (connect to MCP servers and discover tools)
 // ─────────────────────────────────────────────────────────────────────────────
 
-const mcpBridge = new MCPToolBridge({
-  // Register tools from MCP server configs
+const mcpRegistry = new MCPRegistry({
   servers: [
     {
       name: 'github',
@@ -253,9 +260,9 @@ const mcpBridge = new MCPToolBridge({
   ],
 });
 
-// Discover and convert MCP tools to runtime tools
-const tools = await mcpBridge.discoverTools();
-console.log(`Discovered ${tools.length} MCP tools`);
+// List all registered MCP servers
+const mcpServers = mcpRegistry.getAllServers();
+console.log(`Registered MCP servers: ${mcpServers.length}`);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Cleanup
@@ -263,4 +270,5 @@ console.log(`Discovered ${tools.length} MCP tools`);
 
 scheduler.stop();
 gateway.dispose();
+// @expected-output: Autonomous agent example complete.
 console.log('Autonomous agent example complete.');

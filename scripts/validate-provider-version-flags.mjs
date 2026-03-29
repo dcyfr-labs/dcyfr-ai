@@ -3,7 +3,7 @@
 const allowedOpenAI = new Set(["v4", "v6"]);
 const allowedAnthropic = new Set(["v040", "v074"]);
 
-const openai = process.env.OPENAI_API_VERSION?.trim() || "v4";
+const openai = process.env.OPENAI_API_VERSION?.trim() || "v6";
 const anthropic = process.env.ANTHROPIC_API_VERSION?.trim() || "v074";
 
 const errors = [];

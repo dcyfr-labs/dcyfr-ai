@@ -1,14 +1,26 @@
 /**
- * Configuration System Example - Using YAML/JSON config
- * 
- * This example demonstrates:
- * - Loading configuration from files
- * - Three-layer merge (defaults → project → env)
- * - Validating configuration
- * - Using config with plugins
+ * @example Configuration
+ * @description Configuration system with YAML/JSON loading, env overrides, and validation.
+ *
+ * Demonstrates:
+ * - Loading configuration from files (auto-detect .dcyfr.yaml / .dcyfr.json)
+ * - Three-layer merge (defaults → project → env overrides)
+ * - Validating configuration with ConfigLoader
+ * - Using configuration with the plugin/validation system
+ *
+ * Prerequisites:
+ * - Node.js >= 20
+ * - @dcyfr/ai installed
+ *
+ * Usage:
+ *   npx tsx examples/configuration.ts
+ *
+ * @license MIT
+ * @copyright DCYFR Labs (https://www.dcyfr.ai)
  */
 
 import { loadConfig, ConfigLoader } from '@dcyfr/ai';
+import type { ValidationGate } from '@dcyfr/ai';
 import { existsSync } from 'fs';
 import { writeFile } from 'fs/promises';
 
@@ -34,7 +46,7 @@ async function basicConfigExample() {
   // 3. Validation gates
   console.log('\n3️⃣  Validation Gates:');
   console.log(`   Total gates: ${config.validation.gates.length}`);
-  config.validation.gates.forEach(gate => {
+  config.validation.gates.forEach((gate: ValidationGate) => {
     console.log(`   - ${gate.name} (${gate.plugins.join(', ')})`);
   });
 }
@@ -236,6 +248,7 @@ async function main() {
     await cliExample();
     await integrationExample();
 
+    // @expected-output: ✨ All examples completed!
     console.log('\n✨ All examples completed!\n');
   } catch (error) {
     console.error('\n❌ Error:', error);
