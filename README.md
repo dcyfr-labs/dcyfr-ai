@@ -12,6 +12,15 @@
 
 Portable AI agent harness with plugin architecture for managing multiple AI providers, tracking telemetry, and ensuring quality compliance.
 
+## About DCYFR
+
+`@dcyfr/ai` is maintained by **DCYFR Labs** as part of the DCYFR AI tooling portfolio.
+
+- **DCYFR** is a registered trademark of DCYFR Labs.
+- Primary domain: [www.dcyfr.ai](https://www.dcyfr.ai)
+- Trademark guidance: [../TRADEMARK.md](../TRADEMARK.md)
+- Licensing details: [LICENSE](./LICENSE)
+
 ## 🔍 @dcyfr/ai vs. Alternatives
 
 | Feature        | @dcyfr/ai                      | LangChain  | Vercel AI SDK | AutoGPT |

@@ -30,12 +30,14 @@ This software is dual-licensed:
 - **Commercial License** required for business and revenue-generating use
 
 ### Commercial use includes:
+
 - Using @dcyfr/ai in a product or service that generates revenue
 - Deploying in a business environment (>5 employees)
 - Providing consulting/services using @dcyfr/ai for profit
 - Distributing as part of a commercial offering
 
 ### To obtain a commercial license:
+
 - View tiers: https://github.com/dcyfr/workspace/blob/main/SPONSORSHIP.md
 - Contact: licensing@dcyfr.ai
 - GitHub Sponsors: https://github.com/sponsors/dcyfr
@@ -44,4 +46,5 @@ For questions about whether your use requires a commercial license, contact lice
 
 ## Trademark
 
-"DCYFR" is a trademark of DCYFR Labs. See TRADEMARK.md for usage guidelines.
+DCYFR is a registered trademark of DCYFR Labs.
+Use of the DCYFR name, marks, and brand assets is subject to the guidelines in [../TRADEMARK.md](../TRADEMARK.md) and does not grant a separate trademark license.

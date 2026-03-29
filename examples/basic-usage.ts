@@ -1,13 +1,25 @@
 /**
- * Basic Example - Getting Started with DCYFR AI
- * 
- * This example demonstrates the core features of the framework:
- * - Telemetry tracking
- * - Provider fallback
- * - Storage adapters
+ * @example BasicUsage
+ * @description Getting started with the DCYFR AI framework.
+ *
+ * Demonstrates:
+ * - Telemetry tracking and session lifecycle
+ * - Provider fallback with automatic retry
+ * - Agent analytics and comparison
+ *
+ * Prerequisites:
+ * - Node.js >= 20
+ * - @dcyfr/ai installed
+ *
+ * Usage:
+ *   npx tsx examples/basic-usage.ts
+ *
+ * @license MIT
+ * @copyright DCYFR Labs (https://www.dcyfr.ai)
  */
 
 import { TelemetryEngine, ProviderRegistry } from '@dcyfr/ai';
+import type { ProviderType, AgentStats, ComparisonStats } from '@dcyfr/ai';
 
 async function basicExample() {
   console.log('🚀 DCYFR AI Framework - Basic Example\n');
@@ -46,6 +58,7 @@ async function basicExample() {
   console.log('6️⃣  Ending session...');
   const result = await session.end('success');
 
+  // @expected-output: ✅ Session completed:
   console.log(`\n✅ Session completed:`);
   console.log(`   Execution time: ${result.metrics.executionTime}ms`);
   console.log(`   Tokens used: ${result.metrics.tokensUsed}`);
@@ -84,7 +97,7 @@ async function providerFallbackExample() {
         phase: 'implementation',
         filesInProgress: ['src/api/docs.ts'],
       },
-      async (provider) => {
+      async (provider: ProviderType) => {
         console.log(`   Using provider: ${provider}`);
         
         // Simulate AI call
@@ -96,6 +109,7 @@ async function providerFallbackExample() {
       }
     );
 
+    // @expected-output: ✅ Task completed:
     console.log(`\n✅ Task completed:`);
     console.log(`   Provider: ${result.provider}`);
     console.log(`   Fallback used: ${result.fallbackUsed}`);
@@ -135,14 +149,14 @@ async function analyticsExample() {
   const comparison = await telemetry.compareAgents('1d');
 
   console.log('Recommendations:');
-  comparison.recommendations.forEach((rec, i) => {
+  comparison.recommendations.forEach((rec: string, i: number) => {
     console.log(`   ${i + 1}. ${rec}`);
   });
 
   // 3. Get detailed stats
   console.log('\n3️⃣  Detailed statistics:\n');
-  
-  for (const [agent, stats] of Object.entries(comparison.agents)) {
+
+  for (const [agent, stats] of Object.entries(comparison.agents) as [string, AgentStats][]) {
     if (stats.totalSessions > 0) {
       console.log(`   ${agent.toUpperCase()}:`);
       console.log(`     Sessions: ${stats.totalSessions}`);
@@ -159,6 +173,7 @@ async function main() {
     await basicExample();
     await providerFallbackExample();
     await analyticsExample();
+    // @expected-output: ✨ All examples completed successfully!
     console.log('\n✨ All examples completed successfully!\n');
   } catch (error) {
     console.error('\n❌ Error running examples:', error);

@@ -24,17 +24,30 @@ This directory contains runnable examples for core `@dcyfr/ai` capabilities.
 
 Run examples from the `dcyfr-ai/` directory.
 
-- Basic usage: `npx tsx examples/basic-usage.ts`
-- Plugin system: `npx tsx examples/plugin-system.ts`
-- Configuration: `npx tsx examples/configuration.ts`
-- Autonomous runtime: `npx tsx examples/autonomous-agent.ts`
+```bash
+npx tsx examples/basic-usage.ts       # Getting started
+npx tsx examples/plugin-system.ts     # Plugin development
+npx tsx examples/configuration.ts     # Configuration usage
+npx tsx examples/autonomous-agent.ts  # Full autonomous runtime
+```
 
-## Expected Output
+## Compile Check (CI)
 
-Each example logs step-by-step progress with numbered sections and ends with a success-style completion message.
+All examples are validated by the TypeScript compiler:
+
+```bash
+npm run examples:check
+```
+
+This runs `tsc -p tsconfig.examples.json` with `noEmit: true`. It is also enforced in the `validate-examples` CI workflow on every PR.
+
+## Expected Output Markers
+
+Each example uses `// @expected-output: <text>` comments before key `console.log` calls. These serve as smoke-test anchors for the CI `validate-examples` workflow, which verifies the marked strings appear in stdout when the example runs.
 
 ## Authoring Notes
 
-- Prefer descriptive names (for example: `example-basic-agent.ts` style when adding new files).
-- Add inline comments at setup boundaries, decision points, and cleanup sections.
-- Keep examples deterministic (avoid network calls unless explicitly required by the scenario).
+- Use the standard JSDoc header: `@example`, `@description`, `Prerequisites:`, `Usage:`, `@license`, `@copyright`.
+- Add `// @expected-output: <text>` before any `console.log` that signals successful completion.
+- Keep examples deterministic — avoid live network calls unless the scenario requires them.
+- Run `npm run examples:check` before committing example changes.

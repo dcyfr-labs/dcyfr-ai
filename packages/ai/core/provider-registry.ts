@@ -438,10 +438,10 @@ export class ProviderRegistry {
     openai: 'v4' | 'v6';
     anthropic: 'v040' | 'v074';
   } {
-    const rawOpenAI = (process.env.OPENAI_API_VERSION || 'v4').trim().toLowerCase();
+    const rawOpenAI = (process.env.OPENAI_API_VERSION || 'v6').trim().toLowerCase();
     const rawAnthropic = (process.env.ANTHROPIC_API_VERSION || 'v074').trim().toLowerCase();
 
-    const openai = rawOpenAI === 'v6' ? 'v6' : 'v4';
+    const openai = rawOpenAI === 'v4' ? 'v4' : 'v6';
     const anthropic = rawAnthropic === 'v040' ? 'v040' : 'v074';
 
     return { openai, anthropic };
@@ -574,7 +574,7 @@ export class ProviderRegistry {
           '1. Create an account at https://platform.openai.com/',
           '2. Generate an API key in the API Keys section',
           '3. Set environment variable: export OPENAI_API_KEY=your_api_key_here',
-          '4. Set rollout flag: export OPENAI_API_VERSION=v4|v6',
+          '4. Optional: Pin to legacy SDK: export OPENAI_API_VERSION=v4 (default: v6)',
           '4. Optional: Set OPENAI_API_BASE for custom endpoints'
         ]
       },
