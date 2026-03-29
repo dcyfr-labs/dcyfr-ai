@@ -1,5 +1,13 @@
 # @dcyfr/ai
 
+<!-- README-META
+  tlp_clearance: GREEN
+  status: active
+  name: dcyfr-ai
+  description: Portable AI agent harness with plugin architecture
+  last_validated: 2026-03-29
+-->
+
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/dcyfr/dcyfr-ai)
 
 > Portable AI agent harness with plugin architecture for multi-provider integration, telemetry tracking, and quality validation.
