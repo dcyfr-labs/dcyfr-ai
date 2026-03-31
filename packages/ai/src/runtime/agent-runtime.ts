@@ -1205,7 +1205,7 @@ export class AgentRuntime extends EventEmitter {
       for (const capability of this.config.capabilities.capabilities) {
         if (this.taskMatchesCapability(result.context.task.description, capability)) {
           capability.successful_completions = (capability.successful_completions || 0) + (result.success ? 1 : 0);
-          capability.success_rate = (this.calculateCapabilitySuccessRate(capability.capability_id) ?? null) ?? undefined;
+          capability.success_rate = this.calculateCapabilitySuccessRate(capability.capability_id) ?? undefined;
           
           if (result.metrics.execution_time_ms) {
             capability.completion_time_estimate_ms = this.calculateAverageCompletionTime(capability.capability_id) || 0;
