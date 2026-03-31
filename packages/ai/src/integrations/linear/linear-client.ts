@@ -34,7 +34,16 @@
  * Test: __tests__/integrations/linear/linear-client.test.ts
  */
 
-import type { GraphQLError, RequestInit } from '@dcyfr/ai/types';
+// GraphQLError type used in LinearError constructor
+type GraphQLError = { message: string; extensions?: Record<string, unknown> };
+// RequestInit with timeout extension for Linear API requests
+type RequestInit = {
+    method?: string;
+    headers?: Record<string, string>;
+    body?: string;
+    timeout?: number;
+    signal?: AbortSignal;
+};
 
 // ============================================================================
 // Types
@@ -403,7 +412,7 @@ export class LinearClient {
                 );
             }
 
-            const data = await response.json();
+            const data = await response.json() as { data?: T; errors?: GraphQLError[] };
 
             // Handle GraphQL errors
             if (data.errors && data.errors.length > 0) {
@@ -471,3 +480,4 @@ export class LinearClient {
 }
 
 export default LinearClient;
+
