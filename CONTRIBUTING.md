@@ -49,14 +49,24 @@ If you're contributing while working for a company using @dcyfr/ai commercially,
 
 ### Pull Requests
 
+**Branch Naming Convention:**
+```bash
+# Format: <type>/DCYFR-<NUMBER>-<description>
+git checkout -b feat/DCYFR-123-add-new-feature
+git checkout -b fix/DCYFR-456-resolve-bug
+```
+
+**Types:** `feat`, `fix`, `docs`, `refactor`, `test`, `chore`
+
+**PR Workflow:**
 1. Fork the repository
-2. Create feature branch: `git checkout -b feature/my-feature`
+2. Create feature branch following naming convention above
 3. Make your changes
 4. Add tests for new functionality
 5. Ensure all tests pass: `npm test`
 6. Update documentation as needed
-7. Commit with clear message
-8. Push and create PR
+7. Commit with clear message (include `DCYFR-<NUMBER>` reference)
+8. Push and create PR with title: `[DCYFR-<NUMBER>] Brief description`
 
 ## Development Setup
 
