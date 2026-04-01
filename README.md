@@ -742,9 +742,9 @@ See [examples/](./examples/) directory:
 
 ### Plugin Marketplace Security
 
-- [GVISOR_SETUP.md](./docs/guides/GVISOR_SETUP.md) - gVisor runtime sandboxing for untrusted plugins
-- [BEHAVIORAL_ANOMALY_DETECTION.md](./docs/guides/BEHAVIORAL_ANOMALY_DETECTION.md) - Behavioral anomaly detection system
-- [CERTIFICATION_PROGRAM.md](./docs/guides/CERTIFICATION_PROGRAM.md) - Plugin Certification Program (Bronze/Silver/Gold tiers)
+- [PLUGIN_DEVELOPMENT_GUIDE.md](./docs/guides/PLUGIN_DEVELOPMENT_GUIDE.md) - plugin development guide and security hardening
+- [WASM_PLUGIN_STARTER.md](./docs/guides/WASM_PLUGIN_STARTER.md) - WebAssembly plugin starter
+- Plugin certification, behavioral monitoring: see [docs/PLUGINS.md](./docs/PLUGINS.md)
 - [WASM_PLUGIN_STARTER.md](./docs/guides/WASM_PLUGIN_STARTER.md) - WebAssembly plugin starter template
 - [WASM_MIGRATION_GUIDE.md](./docs/guides/WASM_MIGRATION_GUIDE.md) - Migrate Docker plugins to WASM
 
@@ -898,7 +898,7 @@ export const myPlugin = {
 };
 ```
 
-See [docs/plugins.md](./docs/plugins.md) and [examples/plugin-system.ts](./examples/plugin-system.ts) for complete guide.
+See [docs/PLUGINS.md](./docs/PLUGINS.md) and [examples/plugin-system.ts](./examples/plugin-system.ts) for complete guide.
 
 **Q: What's the difference between @dcyfr/ai and @dcyfr/agents?**
 
@@ -1061,3 +1061,4 @@ This package is dual-licensed:
 ---
 
 **Made with ❤️ by [DCYFR Labs](https://dcyfr.ai)**
+

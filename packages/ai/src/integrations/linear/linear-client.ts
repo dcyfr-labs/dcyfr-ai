@@ -34,7 +34,13 @@
  * Test: __tests__/integrations/linear/linear-client.test.ts
  */
 
-import type { GraphQLError, RequestInit } from '@dcyfr/ai/types';
+/** Minimal GraphQL error shape returned by the Linear API. */
+interface GraphQLError {
+    message: string;
+    locations?: Array<{ line: number; column: number }>;
+    path?: string[];
+    extensions?: Record<string, unknown>;
+}
 
 // ============================================================================
 // Types
@@ -372,7 +378,7 @@ export class LinearClient {
             variables: variables ?? {},
         };
 
-        const options: RequestInit = {
+        const options: RequestInit & { timeout?: number } = {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${this.apiKey}`,
@@ -403,7 +409,7 @@ export class LinearClient {
                 );
             }
 
-            const data = await response.json();
+            const data = await response.json() as { errors?: GraphQLError[]; data?: T };
 
             // Handle GraphQL errors
             if (data.errors && data.errors.length > 0) {

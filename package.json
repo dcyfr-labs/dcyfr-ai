@@ -41,6 +41,10 @@
     "./security/prompt-scan-worker": {
       "types": "./dist/ai/src/security/prompt-scan-worker.d.ts",
       "import": "./dist/ai/src/security/prompt-scan-worker.js"
+    },
+    "./integrations/linear": {
+      "types": "./dist/ai/src/integrations/linear/index.d.ts",
+      "import": "./dist/ai/src/integrations/linear/index.js"
     }
   },
   "bin": {
