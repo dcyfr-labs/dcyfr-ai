@@ -13,6 +13,8 @@
 
 import { EventEmitter } from 'events';
 import { randomUUID } from 'crypto';
+import { appendFile, mkdir } from 'fs/promises';
+import { dirname } from 'path';
 import type { DelegationContract } from '../types/delegation-contracts';
 import type { TaskExecutionResult } from '../runtime/agent-runtime';
 
@@ -98,6 +100,24 @@ export interface DelegationChainCorrelation {
  * Delegation telemetry event base structure
  */
 export interface DelegationTelemetryEvent {
+  /** Schema version for forward/backward compatible parsing */
+  schema_version: string;
+
+  /** Trace ID for cross-service correlation */
+  trace_id: string;
+
+  /** Optional session identifier */
+  session_id?: string;
+
+  /** Optional workspace identifier (repo slug/hash) */
+  workspace_id?: string;
+
+  /** Optional repository identifier */
+  repo?: string;
+
+  /** Optional node identifier (macbook/workbench/etc.) */
+  node_id?: string;
+
   /** Unique event ID */
   event_id: string;
   
@@ -230,6 +250,21 @@ export interface TelemetryQueryFilter {
 export interface DelegationTelemetryConfig {
   /** Agent ID for correlation */
   agent_id: string;
+
+  /** Optional workspace identifier */
+  workspace_id?: string;
+
+  /** Optional repository slug/name */
+  repo?: string;
+
+  /** Optional node identifier */
+  node_id?: string;
+
+  /** Telemetry schema version */
+  schema_version?: string;
+
+  /** Optional static tags attached to every event */
+  static_tags?: string[];
   
   /** Enable/disable telemetry collection */
   enabled: boolean;
@@ -257,6 +292,14 @@ export interface DelegationTelemetryConfig {
   
   /** Enable chain correlation */
   enable_chain_correlation?: boolean;
+}
+
+/**
+ * Optional trace/session context supplied by callers to preserve correlation.
+ */
+export interface DelegationTraceContext {
+  trace_id?: string;
+  session_id?: string;
 }
 
 /**
@@ -372,6 +415,28 @@ export class InMemoryTelemetrySink implements TelemetrySink {
 }
 
 /**
+ * JSONL telemetry sink for durable append-only local storage.
+ */
+export class JsonlTelemetrySink implements TelemetrySink {
+  public readonly name = 'jsonl';
+
+  constructor(private readonly filePath: string) {}
+
+  async writeEvent(event: DelegationTelemetryEvent): Promise<void> {
+    await mkdir(dirname(this.filePath), { recursive: true });
+    await appendFile(this.filePath, `${JSON.stringify(event)}\n`, 'utf8');
+  }
+
+  async getHealth(): Promise<{ healthy: boolean; message?: string }> {
+    return { healthy: true, message: this.filePath };
+  }
+
+  async close(): Promise<void> {
+    // No persistent handles to close.
+  }
+}
+
+/**
  * Main delegation telemetry engine
  */
 export class DelegationTelemetryEngine extends EventEmitter {
@@ -390,6 +455,7 @@ export class DelegationTelemetryEngine extends EventEmitter {
       max_events_in_memory: 10000,
       enable_performance_tracking: true,
       enable_chain_correlation: true,
+      schema_version: '1.0.0',
       ...config,
     };
     
@@ -408,7 +474,8 @@ export class DelegationTelemetryEngine extends EventEmitter {
     contract: DelegationContract,
     delegatorAgent: string,
     delegateeAgent: string,
-    chainCorrelation?: Partial<DelegationChainCorrelation>
+    chainCorrelation?: Partial<DelegationChainCorrelation>,
+    traceContext?: DelegationTraceContext
   ): Promise<void> {
     const correlation = this.createOrUpdateChainCorrelation(
       contract.contract_id,
@@ -426,6 +493,8 @@ export class DelegationTelemetryEngine extends EventEmitter {
     await this.emitEvent({
       event_type: 'delegation_contract_created',
       contract_id: contract.contract_id,
+      trace_id: traceContext?.trace_id,
+      session_id: traceContext?.session_id,
       chain_correlation: correlation,
       event_data: eventData as unknown as Record<string, unknown>,
       severity: 'info',
@@ -442,7 +511,8 @@ export class DelegationTelemetryEngine extends EventEmitter {
     currentPhase: 'negotiation' | 'execution' | 'verification' | 'completion',
     elapsedTimeMs: number,
     estimatedRemainingMs?: number,
-    intermediateResults?: unknown
+    intermediateResults?: unknown,
+    traceContext?: DelegationTraceContext
   ): Promise<void> {
     const correlation = this.chainRegistry.get(contractId);
     if (!correlation) {
@@ -463,6 +533,8 @@ export class DelegationTelemetryEngine extends EventEmitter {
       event_type: 'delegation_progress',
       contract_id: contractId,
       execution_id: executionId,
+      trace_id: traceContext?.trace_id,
+      session_id: traceContext?.session_id,
       chain_correlation: correlation,
       event_data: eventData as unknown as Record<string, unknown>,
       severity: 'info',
@@ -476,7 +548,8 @@ export class DelegationTelemetryEngine extends EventEmitter {
     contractId: string,
     executionId: string,
     result: TaskExecutionResult,
-    performanceMetrics: DelegationPerformanceMetrics
+    performanceMetrics: DelegationPerformanceMetrics,
+    traceContext?: DelegationTraceContext
   ): Promise<void> {
     const correlation = this.chainRegistry.get(contractId);
     if (!correlation) {
@@ -506,6 +579,8 @@ export class DelegationTelemetryEngine extends EventEmitter {
       event_type: result.success ? 'delegation_completed' : 'delegation_failed',
       contract_id: contractId,
       execution_id: executionId,
+      trace_id: traceContext?.trace_id,
+      session_id: traceContext?.session_id,
       chain_correlation: correlation,
       event_data: eventData as unknown as Record<string, unknown>,
       performance_metrics: performanceMetrics,
@@ -522,7 +597,8 @@ export class DelegationTelemetryEngine extends EventEmitter {
     triggerThreshold: number,
     actualValue: number,
     actionTaken: string,
-    escalationTarget?: string
+    escalationTarget?: string,
+    traceContext?: DelegationTraceContext
   ): Promise<void> {
     const correlation = this.chainRegistry.get(contractId);
     if (!correlation) {
@@ -541,6 +617,8 @@ export class DelegationTelemetryEngine extends EventEmitter {
     await this.emitEvent({
       event_type: 'delegation_firebreak_triggered',
       contract_id: contractId,
+      trace_id: traceContext?.trace_id,
+      session_id: traceContext?.session_id,
       chain_correlation: correlation,
       event_data: eventData as unknown as Record<string, unknown>,
       severity: 'warning',
@@ -654,9 +732,22 @@ export class DelegationTelemetryEngine extends EventEmitter {
     
     const event: DelegationTelemetryEvent = {
       ...eventData as DelegationTelemetryEvent,
+      schema_version: this.config.schema_version || '1.0.0',
+      trace_id: eventData.trace_id || eventData.metadata?.correlation_id || randomUUID(),
+      session_id: eventData.session_id || (eventData.metadata?.session_id as string | undefined),
+      workspace_id: eventData.workspace_id || this.config.workspace_id,
+      repo: eventData.repo || this.config.repo,
+      node_id: eventData.node_id || this.config.node_id,
       event_id: randomUUID(),
       timestamp: new Date().toISOString(),
       agent_id: this.config.agent_id,
+      metadata: {
+        ...(eventData.metadata || {}),
+        tags: [
+          ...((eventData.metadata?.tags as string[] | undefined) || []),
+          ...(this.config.static_tags || []),
+        ],
+      },
     };
     
     // Add to buffer

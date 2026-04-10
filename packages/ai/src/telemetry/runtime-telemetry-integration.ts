@@ -15,11 +15,18 @@ import type { AgentRuntime } from '../runtime/agent-runtime';
 import { 
   DelegationTelemetryEngine,
   ConsoleTelemetrySink,
-  InMemoryTelemetrySink 
+  InMemoryTelemetrySink,
+  JsonlTelemetrySink,
 } from './delegation-telemetry';
-import type { DelegationTelemetryConfig, DelegationPerformanceMetrics } from './delegation-telemetry';
+import type {
+  DelegationTelemetryConfig,
+  DelegationPerformanceMetrics,
+  DelegationTraceContext,
+} from './delegation-telemetry';
 import type { DelegationContract } from '../types/delegation-contracts';
 import type { TaskExecutionContext, TaskExecutionResult } from '../runtime/agent-runtime';
+import { homedir } from 'os';
+import { join } from 'path';
 
 /**
  * Runtime telemetry integration configuration
@@ -318,7 +325,8 @@ export class RuntimeTelemetryIntegration {
             {
               chain_depth: 0,
               root_delegation_id: syntheticContractId,
-            }
+            },
+            this.getTraceContext(context, syntheticContract)
           );
         }
       });
@@ -341,7 +349,8 @@ export class RuntimeTelemetryIntegration {
               progress * 100,
               'execution',
               elapsedTime,
-              undefined
+              undefined,
+              this.getTraceContext(context)
             );
           }
         }
@@ -378,7 +387,8 @@ export class RuntimeTelemetryIntegration {
                 {
                   chain_depth: 0,
                   root_delegation_id: contractId,
-                }
+                },
+                this.getTraceContext(context, trackedContract)
               );
             }
 
@@ -387,7 +397,8 @@ export class RuntimeTelemetryIntegration {
               contractId,
               context.execution_id,
               result,
-              metrics
+              metrics,
+              this.getTraceContext(context)
             );
           }
         }
@@ -424,7 +435,8 @@ export class RuntimeTelemetryIntegration {
                 {
                   chain_depth: 0,
                   root_delegation_id: contractId,
-                }
+                },
+                this.getTraceContext(context, trackedContract)
               );
             }
 
@@ -433,7 +445,8 @@ export class RuntimeTelemetryIntegration {
               contractId,
               context.execution_id,
               result,
-              metrics
+              metrics,
+              this.getTraceContext(context)
             );
           }
         }
@@ -457,7 +470,8 @@ export class RuntimeTelemetryIntegration {
             chain_depth: (contract.metadata?.chain_depth as number) || 0,
             root_delegation_id: (contract.metadata?.root_delegation_id as string) || contract.contract_id,
             parent_delegation_id: contract.metadata?.parent_delegation_id as string | undefined,
-          }
+          },
+          this.getTraceContext(undefined, contract)
         );
       });
       
@@ -505,7 +519,9 @@ export class RuntimeTelemetryIntegration {
           'resource_limit',
           limit,
           actual,
-          'escalate'
+          'escalate',
+          undefined,
+          this.getTraceContext(context)
         );
       }
     });
@@ -561,6 +577,36 @@ export class RuntimeTelemetryIntegration {
     
     return undefined;
   }
+
+  private getTraceContext(
+    context?: TaskExecutionContext,
+    contract?: DelegationContract,
+  ): DelegationTraceContext {
+    const contextMetadata = context?.metadata as Record<string, unknown> | undefined;
+    const taskParams = context?.task?.parameters as Record<string, unknown> | undefined;
+    const contractMetadata = contract?.metadata as Record<string, unknown> | undefined;
+    const delegatedContractMetadata = context?.delegation_contract?.metadata as Record<string, unknown> | undefined;
+
+    const trace_id =
+      (contextMetadata?.trace_id as string | undefined)
+      || (taskParams?.trace_id as string | undefined)
+      || (taskParams?.traceId as string | undefined)
+      || (contractMetadata?.trace_id as string | undefined)
+      || (contractMetadata?.traceId as string | undefined)
+      || (delegatedContractMetadata?.trace_id as string | undefined)
+      || (delegatedContractMetadata?.traceId as string | undefined);
+
+    const session_id =
+      (contextMetadata?.session_id as string | undefined)
+      || (taskParams?.session_id as string | undefined)
+      || (taskParams?.sessionId as string | undefined)
+      || (contractMetadata?.session_id as string | undefined)
+      || (contractMetadata?.sessionId as string | undefined)
+      || (delegatedContractMetadata?.session_id as string | undefined)
+      || (delegatedContractMetadata?.sessionId as string | undefined);
+
+    return { trace_id, session_id };
+  }
 }
 
 /**
@@ -570,14 +616,25 @@ export function createDefaultTelemetryIntegration(
   agentId: string,
   options?: Partial<RuntimeTelemetryIntegrationConfig>
 ): RuntimeTelemetryIntegration {
+  const jsonlPath = process.env.DCYFR_TELEMETRY_JSONL_PATH
+    || join(homedir(), '.dcyfr', 'telemetry', 'delegation-events.jsonl');
+  const includeJsonl = process.env.DCYFR_TELEMETRY_JSONL_DISABLED !== '1';
+
+  const sinks = [
+    new ConsoleTelemetrySink(),
+    new InMemoryTelemetrySink(1000),
+    ...(includeJsonl ? [new JsonlTelemetrySink(jsonlPath)] : []),
+  ];
+
   const config: RuntimeTelemetryIntegrationConfig = {
     telemetry_config: {
       agent_id: agentId,
+      workspace_id: process.env.DCYFR_WORKSPACE_ID || process.env.DCYFR_WORKSPACE || process.cwd(),
+      repo: process.env.DCYFR_REPO || process.env.GITHUB_REPOSITORY,
+      node_id: process.env.DCYFR_NODE_ID || process.env.HOSTNAME,
+      schema_version: '1.0.0',
       enabled: true,
-      sinks: [
-        new ConsoleTelemetrySink(),
-        new InMemoryTelemetrySink(1000),
-      ],
+      sinks,
       buffer_size: 50,
       flush_interval_ms: 3000,
       sampling_rate: 1.0,

@@ -15,6 +15,7 @@ export {
   DelegationTelemetryEngine,
   ConsoleTelemetrySink,
   InMemoryTelemetrySink,
+  JsonlTelemetrySink,
 } from './delegation-telemetry';
 
 export type {
@@ -29,6 +30,7 @@ export type {
   TelemetrySink,
   TelemetryQueryFilter,
   DelegationTelemetryConfig,
+  DelegationTraceContext,
 } from './delegation-telemetry';
 
 // Runtime integration
