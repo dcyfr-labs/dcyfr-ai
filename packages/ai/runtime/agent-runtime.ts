@@ -39,7 +39,7 @@ function parseVersion(version: string): VersionInfo {
 function checkVersionCompatibility(runtimeVersion: string, agentsVersion?: string): void {
   // Current @dcyfr/ai version
   const runtime = parseVersion(runtimeVersion);
-  
+
   if (!agentsVersion) {
     console.warn(
       '[AgentRuntime] Warning: Unable to detect @dcyfr/ai-agents version. ' +
@@ -47,14 +47,14 @@ function checkVersionCompatibility(runtimeVersion: string, agentsVersion?: strin
     );
     return;
   }
-  
+
   const agents = parseVersion(agentsVersion);
-  
+
   // Version compatibility rules:
   // - Major version must match (1.x.x with 1.x.x)
   // - Runtime can be newer minor version than agents
   // - Agents should not be more than 1 major version ahead
-  
+
   if (runtime.major !== agents.major) {
     console.warn(
       '[AgentRuntime] Version Mismatch Warning: ' +
@@ -74,10 +74,10 @@ function checkVersionCompatibility(runtimeVersion: string, agentsVersion?: strin
 
 /**
  * AgentRuntime - Executes multi-step tasks with LLM integration
- * 
+ *
  * Bridges agent execution loop with LLM providers, memory, and telemetry.
  * Supports tool execution, observation recording, and multi-iteration reasoning.
- * 
+ *
  * @example
  * ```typescript
  * const runtime = new AgentRuntime(
@@ -86,7 +86,7 @@ function checkVersionCompatibility(runtimeVersion: string, agentsVersion?: strin
  *   memory,
  *   telemetry
  * );
- * 
+ *
  * const result = await runtime.execute({
  *   task: 'Review the authentication logic in auth.ts',
  *   userId: 'user-123',
@@ -113,12 +113,12 @@ export class AgentRuntime {
   ) {
     // Version compatibility check
     this.performVersionCheck();
-    
+
     this.agentName = agentName;
     this.providerRegistry = providerRegistry;
     this.memory = memory;
     this.telemetry = telemetry;
-    
+
     // Apply default configuration
     this.config = {
       maxIterations: config?.maxIterations ?? 10,
@@ -145,10 +145,10 @@ export class AgentRuntime {
     try {
       // Get current runtime version from package.json
       const runtimeVersion = '1.0.4'; // This should be dynamically imported in production
-      
+
       // Try to detect agents package version
       let agentsVersion: string | undefined;
-      
+
       try {
         // This is a best-effort detection - in practice, the calling package
         // would need to provide this information
@@ -160,7 +160,7 @@ export class AgentRuntime {
       } catch {
         // Ignore errors in version detection
       }
-      
+
       checkVersionCompatibility(runtimeVersion, agentsVersion);
     } catch (error) {
       // Don't fail initialization due to version checking issues
@@ -170,12 +170,12 @@ export class AgentRuntime {
 
   /**
    * Register a before-execution hook
-   * 
+   *
    * Hooks are called before task execution begins.
    * A hook can reject execution by throwing PermissionDeniedError.
-   * 
+   *
    * @param hook - Function to call before execution
-   * 
+   *
    * @example
    * ```typescript
    * runtime.beforeExecute(async (context) => {
@@ -191,12 +191,12 @@ export class AgentRuntime {
 
   /**
    * Register an after-execution hook
-   * 
+   *
    * Hooks are called after task execution completes (success or failure).
    * Useful for logging, auditing, or cleanup operations.
-   * 
+   *
    * @param hook - Function to call after execution
-   * 
+   *
    * @example
    * ```typescript
    * runtime.afterExecute(async (context, result) => {
@@ -215,7 +215,7 @@ export class AgentRuntime {
 
   /**
    * Execute a task from start to completion
-   * 
+   *
    * @param context - Task context with description, tools, and metadata
    * @returns Execution result with output, cost, and telemetry data
    */
@@ -713,9 +713,9 @@ export class AgentRuntime {
         //   - OpenAI-compatible API via Msty Vibe CLI Proxy for copilot
         //   - GitHub Models API (models.github.ai) for github-models
         //   - Msty Local AI API for msty
-        
+
         console.warn(`[AgentRuntime] Calling LLM provider: ${provider} (mock response)`);
-        
+
         // Mock response that will be parsed
         return {
           content: `Thought: I need to analyze the task and determine the best approach.\nFinal Answer: Task analysis complete.`,
@@ -820,8 +820,8 @@ export class AgentRuntime {
     // Extract text content for text-based parsing
     const textContent =
       typeof resp.content === 'string' ? resp.content :
-      typeof resp.text === 'string' ? resp.text :
-      String(original);
+        typeof resp.text === 'string' ? resp.text :
+          String(original);
     return this.parseTextDecision(textContent);
   }
 
@@ -853,20 +853,20 @@ export class AgentRuntime {
     const thought = thoughtMatch ? thoughtMatch[1].trim() : 'Thinking...';
     const finalizedMatch = text.match(/Finalized:\s*(true|false)/i);
     const finalized = finalizedMatch ? finalizedMatch[1].toLowerCase() === 'true' : undefined;
-    
+
     // Check for Final Answer (agent is done — treat as implicitly finalized)
     if (text.includes('Final Answer:')) {
       return { thought, finalized: finalized ?? true, action: undefined };
     }
-    
+
     // Extract action
     const actionMatch = text.match(/Action:\s*(.+?)(?=\n|$)/);
     const actionInputMatch = text.match(/Action Input:\s*(.+?)(?=\n(?:Thought|Action|$)|$)/s);
-    
+
     if (actionMatch && actionInputMatch) {
       const toolName = actionMatch[1].trim();
       const inputStr = actionInputMatch[1].trim();
-      
+
       try {
         const input = JSON.parse(inputStr);
         return {
@@ -882,7 +882,7 @@ export class AgentRuntime {
         return { thought, finalized, action: undefined };
       }
     }
-    
+
     // No action found
     return { thought, finalized, action: undefined };
   }
@@ -907,14 +907,14 @@ export class AgentRuntime {
         error: new Error(`Tool not found: ${action.tool}`),
         timestamp: Date.now(),
       };
-      
+
       this.emitEvent({
         type: 'error',
         error: observation.error,
         context: 'tool_not_found',
         timestamp: Date.now(),
       });
-      
+
       return observation;
     }
 
@@ -973,7 +973,7 @@ export class AgentRuntime {
       };
     } catch (error) {
       const duration = Date.now() - startTime;
-      
+
       // Emit error event
       this.emitEvent({
         type: 'error',
@@ -1045,10 +1045,10 @@ export class AgentRuntime {
    */
   private async retrieveContext(context: TaskContext): Promise<string> {
     const startTime = Date.now();
-    
+
     try {
       let memories: MemorySearchResult[] = [];
-      
+
       // Determine scope and call appropriate search method
       if (context.userId) {
         memories = await Promise.race([
@@ -1119,7 +1119,7 @@ export class AgentRuntime {
         error: error instanceof Error ? error.message : String(error),
         timestamp: Date.now(),
       });
-      
+
       console.warn('[AgentRuntime] Memory search failed:', error);
       return '';
     }
@@ -1134,7 +1134,7 @@ export class AgentRuntime {
     result: AgentExecutionResult
   ): Promise<void> {
     const summary = `Task: ${context.task}\nOutcome: ${result.outcome}\nIterations: ${state.iteration}\nTools used: ${state.observations.map((o) => o.tool).join(', ')}`;
-    
+
     // Store in user memory if userId is present
     if (context.userId) {
       await this.memory.addUserMemory(context.userId, summary, {
@@ -1191,7 +1191,7 @@ export class AgentRuntime {
     }): Promise<Array<{ content: string; score: number }>> => {
       try {
         let memories: MemorySearchResult[] = [];
-        
+
         if (params.scope === 'user' && (params.userId || context.userId)) {
           memories = await Promise.race([
             this.memory.searchUserMemories(
@@ -1236,13 +1236,13 @@ export class AgentRuntime {
   private calculateCost(state: RuntimeState): number {
     type TokenData = { input: number; output: number }; const tokens = state.workingMemory.get('tokens') as TokenData | undefined;
     const provider = state.workingMemory.get('provider') as string;
-    
+
     if (!tokens) {
       return 0;
     }
-    
+
     const totalTokens = (tokens.input || 0) + (tokens.output || 0);
-    
+
     // Provider-specific pricing (per million tokens)
     const pricing: Record<string, number> = {
       claude: 15.0, // $15 per 1M tokens
@@ -1254,9 +1254,9 @@ export class AgentRuntime {
       ollama: 0, // Local model
       msty: 0, // Local Ollama-compatible models
     };
-    
+
     const pricePerMillion = pricing[provider] || 0;
-    
+
     // Calculate cost: (tokens / 1,000,000) * price per million
     return (totalTokens / 1_000_000) * pricePerMillion;
   }
@@ -1295,7 +1295,7 @@ export class AgentRuntime {
         console.error('[AgentRuntime] Event listener error:', error);
       }
     }
-    
+
     // Also log for debugging (can be disabled in production)
     if (process.env.NODE_ENV !== 'production') {
       console.log('[AgentRuntime Event]', event);
