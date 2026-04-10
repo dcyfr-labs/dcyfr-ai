@@ -568,3 +568,190 @@ describe('createDefaultTelemetryIntegration', () => {
     expect(integration).toBeDefined();
   });
 });
+
+// ─── Trace context propagation regression ────────────────────────────────────
+
+describe('Trace context propagation', () => {
+  let engine: DelegationTelemetryEngine;
+  let sink: InMemoryTelemetrySink;
+
+  beforeEach(() => {
+    sink = new InMemoryTelemetrySink(50);
+    engine = new DelegationTelemetryEngine({
+      agent_id: 'trace-test-agent',
+      enabled: true,
+      sinks: [sink],
+      flush_interval_ms: 0,
+      sampling_rate: 1.0,
+      min_severity: 'debug',
+      schema_version: '1.0.0',
+      workspace_id: 'test-workspace',
+      repo: 'dcyfr/dcyfr-ai',
+      node_id: 'test-node',
+      static_tags: ['env:test'],
+    });
+  });
+
+  afterEach(async () => { await engine.close(); });
+
+  it('populates schema_version, workspace_id, repo, node_id on every event', async () => {
+    const contract = createMockDelegationContract();
+    await engine.logContractCreated(contract, 'a', 'b');
+    await engine.flushBuffer();
+
+    const [ev] = sink.getAllEvents();
+    expect(ev.schema_version).toBe('1.0.0');
+    expect(ev.workspace_id).toBe('test-workspace');
+    expect(ev.repo).toBe('dcyfr/dcyfr-ai');
+    expect(ev.node_id).toBe('test-node');
+  });
+
+  it('assigns a UUID trace_id when none is supplied', async () => {
+    const contract = createMockDelegationContract();
+    await engine.logContractCreated(contract, 'a', 'b');
+    await engine.flushBuffer();
+
+    const [ev] = sink.getAllEvents();
+    expect(ev.trace_id).toBeDefined();
+    expect(ev.trace_id).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+    );
+  });
+
+  it('preserves caller-supplied trace_id', async () => {
+    const contract = createMockDelegationContract();
+    await engine.logContractCreated(contract, 'a', 'b', undefined, {
+      trace_id: 'my-trace-123',
+      session_id: 'my-session-456',
+    });
+    await engine.flushBuffer();
+
+    const [ev] = sink.getAllEvents();
+    expect(ev.trace_id).toBe('my-trace-123');
+    expect(ev.session_id).toBe('my-session-456');
+  });
+
+  it('propagates trace context through progress event', async () => {
+    const contract = createMockDelegationContract();
+    await engine.logContractCreated(contract, 'a', 'b', undefined, { trace_id: 'trace-xyz' });
+    await engine.logDelegationProgress(
+      contract.contract_id, 'exec-1', 50, 'execution', 5000, undefined, undefined,
+      { trace_id: 'trace-xyz', session_id: 'sess-1' },
+    );
+    await engine.flushBuffer();
+
+    const progressEv = sink.getAllEvents().find(e => e.event_type === 'delegation_progress');
+    expect(progressEv?.trace_id).toBe('trace-xyz');
+    expect(progressEv?.session_id).toBe('sess-1');
+  });
+
+  it('propagates trace context through completion event', async () => {
+    const contract = createMockDelegationContract();
+    await engine.logContractCreated(contract, 'a', 'b', undefined, { trace_id: 'trace-comp' });
+    const result = createMockTaskExecutionResult(true);
+    const metrics = createMockPerformanceMetrics();
+    await engine.logDelegationCompleted(
+      contract.contract_id, 'exec-2', result, metrics,
+      { trace_id: 'trace-comp', session_id: 'sess-comp' },
+    );
+    await engine.flushBuffer();
+
+    const completedEv = sink.getAllEvents().find(e => e.event_type === 'delegation_completed');
+    expect(completedEv?.trace_id).toBe('trace-comp');
+    expect(completedEv?.session_id).toBe('sess-comp');
+  });
+
+  it('attaches static_tags to every event', async () => {
+    const contract = createMockDelegationContract();
+    await engine.logContractCreated(contract, 'a', 'b');
+    await engine.flushBuffer();
+
+    const [ev] = sink.getAllEvents();
+    expect((ev.metadata?.tags as string[]) ?? []).toContain('env:test');
+  });
+});
+
+// ─── JSONL sink ───────────────────────────────────────────────────────────────
+
+import { tmpdir } from 'os';
+import { join } from 'path';
+import { readFile, rm } from 'fs/promises';
+import { JsonlTelemetrySink } from '../../src/telemetry';
+
+describe('JsonlTelemetrySink', () => {
+  let tmpPath: string;
+
+  beforeEach(() => {
+    tmpPath = join(tmpdir(), `telemetry-test-${Date.now()}.jsonl`);
+  });
+
+  afterEach(async () => {
+    await rm(tmpPath, { force: true });
+  });
+
+  it('creates file and writes a valid JSONL line per event', async () => {
+    const jSink = new JsonlTelemetrySink(tmpPath);
+    const memSink = new InMemoryTelemetrySink(10);
+
+    const engine = new DelegationTelemetryEngine({
+      agent_id: 'jsonl-test-agent',
+      enabled: true,
+      sinks: [jSink, memSink],
+      flush_interval_ms: 0,
+      sampling_rate: 1.0,
+      min_severity: 'debug',
+    });
+
+    const contract = createMockDelegationContract();
+    await engine.logContractCreated(contract, 'a', 'b', undefined, {
+      trace_id: 'trace-jsonl-001',
+    });
+    await engine.flushBuffer();
+    await engine.close();
+
+    const raw = await readFile(tmpPath, 'utf8');
+    const lines = raw.trim().split('\n').filter(Boolean);
+    expect(lines).toHaveLength(1);
+
+    const parsed = JSON.parse(lines[0]) as DelegationTelemetryEvent;
+    expect(parsed.event_type).toBe('delegation_contract_created');
+    expect(parsed.trace_id).toBe('trace-jsonl-001');
+    expect(parsed.contract_id).toBe(contract.contract_id);
+    expect(parsed.schema_version).toBeDefined();
+  });
+
+  it('appends newline-delimited records for multiple events', async () => {
+    const jSink = new JsonlTelemetrySink(tmpPath);
+
+    const engine = new DelegationTelemetryEngine({
+      agent_id: 'jsonl-multi-agent',
+      enabled: true,
+      sinks: [jSink],
+      flush_interval_ms: 0,
+      sampling_rate: 1.0,
+      min_severity: 'debug',
+    });
+
+    const c1 = { ...createMockDelegationContract(), contract_id: 'contract-jl-1' };
+    const c2 = { ...createMockDelegationContract(), contract_id: 'contract-jl-2' };
+    await engine.logContractCreated(c1, 'a', 'b');
+    await engine.logContractCreated(c2, 'b', 'c');
+    await engine.flushBuffer();
+    await engine.close();
+
+    const raw = await readFile(tmpPath, 'utf8');
+    const lines = raw.trim().split('\n').filter(Boolean);
+    expect(lines).toHaveLength(2);
+
+    const ids = lines.map(l => (JSON.parse(l) as DelegationTelemetryEvent).contract_id);
+    expect(ids).toContain('contract-jl-1');
+    expect(ids).toContain('contract-jl-2');
+  });
+
+  it('getHealth returns healthy with filePath message', async () => {
+    const jSink = new JsonlTelemetrySink(tmpPath);
+    const health = await jSink.getHealth();
+    expect(health.healthy).toBe(true);
+    expect(health.message).toContain(tmpPath);
+  });
+});
