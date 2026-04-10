@@ -854,9 +854,9 @@ export class AgentRuntime {
     const finalizedMatch = text.match(/Finalized:\s*(true|false)/i);
     const finalized = finalizedMatch ? finalizedMatch[1].toLowerCase() === 'true' : undefined;
     
-    // Check for Final Answer (agent is done)
+    // Check for Final Answer (agent is done — treat as implicitly finalized)
     if (text.includes('Final Answer:')) {
-      return { thought, finalized, action: undefined };
+      return { thought, finalized: finalized ?? true, action: undefined };
     }
     
     // Extract action

@@ -28,6 +28,8 @@ describe('AgentRuntime completion guard', () => {
   });
 
   it('retries once then succeeds when Finalized: true is provided', async () => {
+    // Guard fires on ambiguous responses (no Final Answer, no Finalized: true).
+    // On retry the model adds both markers, so execution succeeds.
     let calls = 0;
     providerRegistry = {
       executeWithFallback: vi.fn().mockImplementation(async () => {
@@ -36,7 +38,7 @@ describe('AgentRuntime completion guard', () => {
           return {
             provider: 'test-provider',
             data: {
-              content: 'Thought: I am done\nFinal Answer: draft answer',
+              content: 'Thought: I am still processing the task',
               usage: { inputTokens: 10, outputTokens: 8 },
             },
           };
@@ -74,11 +76,13 @@ describe('AgentRuntime completion guard', () => {
   });
 
   it('fails with completion_guard_failed after retry budget is exhausted', async () => {
+    // All responses are ambiguous (no Final Answer, no Finalized: true).
+    // Guard fires, retry is also ambiguous, budget is exhausted → failure.
     providerRegistry = {
       executeWithFallback: vi.fn().mockResolvedValue({
         provider: 'test-provider',
         data: {
-          content: 'Thought: done but without explicit marker\nFinal Answer: answer without finalized flag',
+          content: 'Thought: still thinking about the answer',
           usage: { inputTokens: 10, outputTokens: 8 },
         },
       }),
