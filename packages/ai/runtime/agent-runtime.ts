@@ -132,6 +132,8 @@ export class AgentRuntime {
       persistWorkingMemory: config?.persistWorkingMemory ?? false,
       debugWorkingMemory: config?.debugWorkingMemory ?? false,
       systemPrompt: config?.systemPrompt ?? this.getDefaultSystemPrompt(),
+      completionGuardEnabled: config?.completionGuardEnabled ?? true,
+      completionGuardMaxRetries: config?.completionGuardMaxRetries ?? 1,
     };
   }
 
@@ -460,6 +462,7 @@ export class AgentRuntime {
       workingMemory: new Map(),
       isFinished: false,
       steps: [],
+      completionGuardRetries: 0,
     };
 
     // Retrieve memory context if enabled
@@ -552,6 +555,40 @@ export class AgentRuntime {
         name: observation.tool,
       });
     } else {
+      const finalized = decision && typeof decision === 'object' && 'finalized' in decision
+        ? (decision as { finalized?: boolean }).finalized === true
+        : false;
+
+      if (this.config.completionGuardEnabled && !finalized) {
+        if (state.completionGuardRetries < this.config.completionGuardMaxRetries) {
+          state.completionGuardRetries++;
+          const retryPrompt =
+            'Completion guard: before finishing, respond with both `Finalized: true` and `Final Answer:`.';
+
+          state.messages.push({
+            role: 'system',
+            content: retryPrompt,
+          });
+
+          this.emitEvent({
+            type: 'completion_guard_retry',
+            attempt: state.completionGuardRetries,
+            maxRetries: this.config.completionGuardMaxRetries,
+            timestamp: Date.now(),
+          });
+
+          return;
+        }
+
+        state.workingMemory.set('completion_guard_failed', true);
+        state.workingMemory.set(
+          'completion_guard_reason',
+          'Missing explicit Finalized: true marker after retry budget exhausted'
+        );
+        state.isFinished = true;
+        return;
+      }
+
       state.isFinished = true;
     }
   }
@@ -603,6 +640,20 @@ export class AgentRuntime {
       ) {
         await this.summarizeMessages(state, context);
       }
+    }
+
+    if (state.workingMemory.get('completion_guard_failed') === true) {
+      return {
+        success: false,
+        outcome: 'completion_guard_failed',
+        executionTime: Date.now() - startTime,
+        cost: this.calculateCost(state),
+        iterations: state.iteration,
+        error: String(
+          state.workingMemory.get('completion_guard_reason')
+          || 'Completion guard failed: explicit Finalized: true not received'
+        ),
+      };
     }
 
     // Check if max iterations reached
@@ -800,10 +851,12 @@ export class AgentRuntime {
     // Extract thought
     const thoughtMatch = text.match(/Thought:\s*(.+?)(?=\n(?:Action|Final Answer)|$)/s);
     const thought = thoughtMatch ? thoughtMatch[1].trim() : 'Thinking...';
+    const finalizedMatch = text.match(/Finalized:\s*(true|false)/i);
+    const finalized = finalizedMatch ? finalizedMatch[1].toLowerCase() === 'true' : undefined;
     
     // Check for Final Answer (agent is done)
     if (text.includes('Final Answer:')) {
-      return { thought, action: undefined };
+      return { thought, finalized, action: undefined };
     }
     
     // Extract action
@@ -818,6 +871,7 @@ export class AgentRuntime {
         const input = JSON.parse(inputStr);
         return {
           thought,
+          finalized,
           action: {
             tool: toolName,
             input,
@@ -825,12 +879,12 @@ export class AgentRuntime {
         };
       } catch (_error) {
         console.warn('[AgentRuntime] Failed to parse action input as JSON:', inputStr);
-        return { thought, action: undefined };
+        return { thought, finalized, action: undefined };
       }
     }
     
     // No action found
-    return { thought, action: undefined };
+    return { thought, finalized, action: undefined };
   }
 
   /**

@@ -34,6 +34,9 @@ export interface RuntimeState {
     observation?: string;
     timestamp: number;
   }>;
+
+  /** Number of completion-guard retries already used */
+  completionGuardRetries: number;
 }
 
 /**
@@ -68,6 +71,9 @@ export interface Observation {
 export interface Decision {
   /** Agent's reasoning about the current state */
   thought: string;
+
+  /** Explicit completion signal required by completion guard */
+  finalized?: boolean;
   
   /** Action to take (undefined means agent is done) */
   action?: {
@@ -112,6 +118,15 @@ export interface RuntimeConfig {
   
   /** System prompt override (if not provided, uses agent's default) */
   systemPrompt?: string;
+
+  /**
+   * Require explicit `Finalized: true` before allowing completion.
+   * If missing, runtime issues a bounded retry prompt.
+   */
+  completionGuardEnabled?: boolean;
+
+  /** Maximum completion-guard retries before failing execution */
+  completionGuardMaxRetries?: number;
 }
 
 /**
@@ -181,8 +196,8 @@ export interface AgentExecutionResult {
   /** Error message (if failed) */
   error?: string;
   
-  /** Execution outcome (success | timeout | max_iterations_reached | routing_failed | error) */
-  outcome: 'success' | 'timeout' | 'max_iterations_reached' | 'routing_failed' | 'queue_overflow' | 'error';
+  /** Execution outcome (success | timeout | max_iterations_reached | routing_failed | completion_guard_failed | error) */
+  outcome: 'success' | 'timeout' | 'max_iterations_reached' | 'routing_failed' | 'queue_overflow' | 'completion_guard_failed' | 'error';
   
   /** Execution time in milliseconds */
   executionTime: number;
