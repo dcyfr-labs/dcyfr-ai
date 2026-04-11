@@ -2,10 +2,10 @@
 /**
  * DCYFR Delegation Telemetry Tests
  * TLP:AMBER - Internal Use Only
- * 
+ *
  * Comprehensive test suite for delegation telemetry engine, runtime integration,
  * event correlation, and performance tracking.
- * 
+ *
  * @module tests/telemetry/delegation-telemetry.test
  * @version 1.0.0
  * @date 2026-02-13
@@ -123,10 +123,22 @@ function createMockPerformanceMetrics(): DelegationPerformanceMetrics {
 describe('DelegationTelemetryEngine', () => {
   let telemetryEngine: DelegationTelemetryEngine;
   let memorySink: InMemoryTelemetrySink;
-  
+  let previousTelemetryEnv: Record<string, string | undefined>;
+
   beforeEach(() => {
+    previousTelemetryEnv = {
+      DCYFR_TELEMETRY_SCHEMA_VERSION: process.env.DCYFR_TELEMETRY_SCHEMA_VERSION,
+      DCYFR_TELEMETRY_WORKSPACE_ID: process.env.DCYFR_TELEMETRY_WORKSPACE_ID,
+      DCYFR_TELEMETRY_NODE_ID: process.env.DCYFR_TELEMETRY_NODE_ID,
+      DCYFR_TELEMETRY_REPO: process.env.DCYFR_TELEMETRY_REPO,
+    };
+    process.env.DCYFR_TELEMETRY_SCHEMA_VERSION = '1.0.0';
+    process.env.DCYFR_TELEMETRY_WORKSPACE_ID = '/tmp/test-workspace';
+    process.env.DCYFR_TELEMETRY_NODE_ID = 'test-node-id';
+    process.env.DCYFR_TELEMETRY_REPO = 'dcyfr/test-repo';
+
     memorySink = new InMemoryTelemetrySink(100);
-    
+
     const config: DelegationTelemetryConfig = {
       agent_id: 'test-agent-001',
       enabled: true,
@@ -136,19 +148,24 @@ describe('DelegationTelemetryEngine', () => {
       sampling_rate: 1.0,
       min_severity: 'debug',
     };
-    
+
     telemetryEngine = new DelegationTelemetryEngine(config);
   });
-  
+
   afterEach(async () => {
     await telemetryEngine.flushBuffer();
     await telemetryEngine.close();
+
+    process.env.DCYFR_TELEMETRY_SCHEMA_VERSION = previousTelemetryEnv.DCYFR_TELEMETRY_SCHEMA_VERSION;
+    process.env.DCYFR_TELEMETRY_WORKSPACE_ID = previousTelemetryEnv.DCYFR_TELEMETRY_WORKSPACE_ID;
+    process.env.DCYFR_TELEMETRY_NODE_ID = previousTelemetryEnv.DCYFR_TELEMETRY_NODE_ID;
+    process.env.DCYFR_TELEMETRY_REPO = previousTelemetryEnv.DCYFR_TELEMETRY_REPO;
   });
-  
+
   describe('Contract Creation Events', () => {
     it('should emit contract created event with correct metadata', async () => {
       const contract = createMockDelegationContract();
-      
+
       await telemetryEngine.logContractCreated(
         contract,
         'agent-alpha',
@@ -158,12 +175,12 @@ describe('DelegationTelemetryEngine', () => {
           root_delegation_id: 'test-root-001',
         }
       );
-      
+
       await telemetryEngine.flushBuffer();
       const events = memorySink.getAllEvents();
-      
+
       expect(events).toHaveLength(1);
-      
+
       const event = events[0];
       expect(event.event_type).toBe('delegation_contract_created');
       expect(event.contract_id).toBe(contract.contract_id);
@@ -171,7 +188,12 @@ describe('DelegationTelemetryEngine', () => {
       expect(event.chain_correlation.root_delegation_id).toBe('test-root-001');
       expect(event.chain_correlation.chain_depth).toBe(1);
       expect(event.severity).toBe('info');
-      
+      expect(event.schema_version).toBe('1.0.0');
+      expect(event.workspace_id).toBe('/tmp/test-workspace');
+      expect(event.node_id).toBe('test-node-id');
+      expect(event.repo).toBe('dcyfr/test-repo');
+      expect(event.trace_id).toBeTruthy();
+
       // Verify event data
       const eventData = event.event_data as { contract: DelegationContract };
       expect(eventData.contract).toEqual(contract);
@@ -179,10 +201,10 @@ describe('DelegationTelemetryEngine', () => {
       expect(eventData.delegatee_agent).toBe('agent-beta');
       expect(eventData.priority_score).toBe(7);
     });
-    
+
     it('should track chain correlation correctly', async () => {
       const contract = createMockDelegationContract();
-      
+
       await telemetryEngine.logContractCreated(
         contract,
         'parent-agent',
@@ -195,11 +217,11 @@ describe('DelegationTelemetryEngine', () => {
           chain_participants: ['root-agent', 'parent-agent', 'child-agent'],
         }
       );
-      
+
       await telemetryEngine.flushBuffer();
       const events = memorySink.getAllEvents();
       const chainCorrelation = events[0].chain_correlation;
-      
+
       expect(chainCorrelation.root_delegation_id).toBe('root-001');
       expect(chainCorrelation.parent_delegation_id).toBe('parent-001');
       expect(chainCorrelation.chain_depth).toBe(2);
@@ -208,16 +230,16 @@ describe('DelegationTelemetryEngine', () => {
       expect(chainCorrelation.chain_status).toBe('active');
     });
   });
-  
+
   describe('Delegation Progress Events', () => {
     it('should emit progress events with correct phase information', async () => {
       const contractId = 'test-contract-001';
       const executionId = 'exec-001';
-      
+
       // Create initial contract for correlation
       const contract = createMockDelegationContract();
       await telemetryEngine.logContractCreated(contract, 'agent-1', 'agent-2');
-      
+
       // Log progress update
       await telemetryEngine.logDelegationProgress(
         contractId,
@@ -228,15 +250,15 @@ describe('DelegationTelemetryEngine', () => {
         10000, // 10 seconds remaining
         { intermediate_data: 'test' }
       );
-      
+
       await telemetryEngine.flushBuffer();
       const events = memorySink.getAllEvents();
       const progressEvent = events.find(e => e.event_type === 'delegation_progress');
-      
+
       expect(progressEvent).toBeDefined();
       expect(progressEvent!.contract_id).toBe(contractId);
       expect(progressEvent!.execution_id).toBe(executionId);
-      
+
       const progressData = progressEvent!.event_data as any;
       expect(progressData.progress_percentage).toBe(75);
       expect(progressData.current_phase).toBe('execution');
@@ -247,25 +269,25 @@ describe('DelegationTelemetryEngine', () => {
       expect(progressData.checkpoints_completed).toContain('halfway_milestone');
       expect(progressData.checkpoints_completed).toContain('near_completion');
     });
-    
+
     it('should calculate checkpoints based on phase and progress', async () => {
       const contractId = 'test-contract-001';
       const executionId = 'exec-001';
-      
+
       // Create contract for correlation
       const contract = createMockDelegationContract();
       await telemetryEngine.logContractCreated(contract, 'agent-1', 'agent-2');
-      
+
       // Test negotiation phase checkpoints
       await telemetryEngine.logDelegationProgress(contractId, executionId, 100, 'negotiation', 5000);
-      
+
       await telemetryEngine.flushBuffer();
       const events = memorySink.getAllEvents();
-      const negotiationEvent = events.find(e => 
-        e.event_type === 'delegation_progress' && 
+      const negotiationEvent = events.find(e =>
+        e.event_type === 'delegation_progress' &&
         (e.event_data as any).current_phase === 'negotiation'
       );
-      
+
       const checkpoints = (negotiationEvent!.event_data as any).checkpoints_completed;
       expect(checkpoints).toContain('contract_validation');
       expect(checkpoints).toContain('capability_assessment');
@@ -273,30 +295,30 @@ describe('DelegationTelemetryEngine', () => {
       expect(checkpoints).toContain('contract_accepted');
     });
   });
-  
+
   describe('Delegation Completion Events', () => {
     it('should emit completion event with performance metrics', async () => {
       const contractId = 'test-contract-001';
       const executionId = 'exec-001';
       const result = createMockTaskExecutionResult(true);
       const metrics = createMockPerformanceMetrics();
-      
+
       // Create contract for correlation
       const contract = createMockDelegationContract();
       await telemetryEngine.logContractCreated(contract, 'agent-1', 'agent-2');
-      
+
       await telemetryEngine.logDelegationCompleted(contractId, executionId, result, metrics);
-      
+
       await telemetryEngine.flushBuffer();
       const events = memorySink.getAllEvents();
       const completionEvent = events.find(e => e.event_type === 'delegation_completed');
-      
+
       expect(completionEvent).toBeDefined();
       expect(completionEvent!.contract_id).toBe(contractId);
       expect(completionEvent!.execution_id).toBe(executionId);
       expect(completionEvent!.performance_metrics).toEqual(metrics);
       expect(completionEvent!.severity).toBe('info');
-      
+
       const eventData = completionEvent!.event_data as any;
       expect(eventData.success).toBe(true);
       expect(eventData.result).toEqual(result.output);
@@ -307,58 +329,58 @@ describe('DelegationTelemetryEngine', () => {
         verification_method: 'capability_match',
       });
     });
-    
+
     it('should emit failure event with correct severity', async () => {
       const contractId = 'test-contract-001';
       const executionId = 'exec-001';
       const result = createMockTaskExecutionResult(false);
       const metrics = createMockPerformanceMetrics();
-      
+
       // Create contract for correlation
       const contract = createMockDelegationContract();
       await telemetryEngine.logContractCreated(contract, 'agent-1', 'agent-2');
-      
+
       await telemetryEngine.logDelegationCompleted(contractId, executionId, result, metrics);
-      
+
       await telemetryEngine.flushBuffer();
       const events = memorySink.getAllEvents();
       const failureEvent = events.find(e => e.event_type === 'delegation_failed');
-      
+
       expect(failureEvent).toBeDefined();
       expect(failureEvent!.severity).toBe('warning');
-      
+
       const eventData = failureEvent!.event_data as any;
       expect(eventData.success).toBe(false);
       expect(eventData.completion_reason).toBe('failure');
     });
-    
+
     it('should update chain status on completion', async () => {
       const contractId = 'test-contract-001';
       const executionId = 'exec-001';
       const result = createMockTaskExecutionResult(true);
       const metrics = createMockPerformanceMetrics();
-      
+
       // Create contract for correlation
       const contract = createMockDelegationContract();
       await telemetryEngine.logContractCreated(contract, 'agent-1', 'agent-2');
-      
+
       await telemetryEngine.logDelegationCompleted(contractId, executionId, result, metrics);
-      
+
       const correlation = telemetryEngine.getChainCorrelation(contractId);
       expect(correlation).toBeDefined();
       expect(correlation!.chain_status).toBe('completed');
       expect(correlation!.chain_completed_at).toBeDefined();
     });
   });
-  
+
   describe('Firebreak Events', () => {
     it('should emit firebreak triggered events', async () => {
       const contractId = 'test-contract-001';
-      
+
       // Create contract for correlation
       const contract = createMockDelegationContract();
       await telemetryEngine.logContractCreated(contract, 'agent-1', 'agent-2');
-      
+
       await telemetryEngine.logFirebreakTriggered(
         contractId,
         'max_depth',
@@ -367,14 +389,14 @@ describe('DelegationTelemetryEngine', () => {
         'escalate',
         'human-supervisor'
       );
-      
+
       await telemetryEngine.flushBuffer();
       const events = memorySink.getAllEvents();
       const firebreakEvent = events.find(e => e.event_type === 'delegation_firebreak_triggered');
-      
+
       expect(firebreakEvent).toBeDefined();
       expect(firebreakEvent!.severity).toBe('warning');
-      
+
       const eventData = firebreakEvent!.event_data as any;
       expect(eventData.firebreak_type).toBe('max_depth');
       expect(eventData.trigger_threshold).toBe(10);
@@ -383,59 +405,59 @@ describe('DelegationTelemetryEngine', () => {
       expect(eventData.escalation_target).toBe('human-supervisor');
     });
   });
-  
+
   describe('Event Querying', () => {
     beforeEach(async () => {
       // Populate with test events
       const contract1 = { ...createMockDelegationContract(), contract_id: 'contract-1' };
       const contract2 = { ...createMockDelegationContract(), contract_id: 'contract-2' };
-      
+
       await telemetryEngine.logContractCreated(contract1, 'agent-1', 'agent-2');
       await telemetryEngine.logContractCreated(contract2, 'agent-2', 'agent-3');
       await telemetryEngine.logDelegationProgress('contract-1', 'exec-1', 50, 'execution', 5000);
       await telemetryEngine.logFirebreakTriggered('contract-2', 'timeout', 30000, 45000, 'escalate');
-      
+
       await telemetryEngine.flushBuffer();
     });
-    
+
     it('should query events by contract ID', async () => {
       const events = await telemetryEngine.queryEvents({
         contract_id: 'contract-1',
       });
-      
+
       expect(events.length).toBeGreaterThan(0);
       events.forEach(event => {
         expect(event.contract_id).toBe('contract-1');
       });
     });
-    
+
     it('should query events by event type', async () => {
       const events = await telemetryEngine.queryEvents({
         event_type: 'delegation_contract_created',
       });
-      
+
       expect(events.length).toBe(2);
       events.forEach(event => {
         expect(event.event_type).toBe('delegation_contract_created');
       });
     });
-    
+
     it('should query events by severity', async () => {
       const events = await telemetryEngine.queryEvents({
         severity: ['warning'],
       });
-      
+
       expect(events.length).toBeGreaterThan(0);
       events.forEach(event => {
         expect(event.severity).toBe('warning');
       });
     });
-    
+
     it('should apply query limits', async () => {
       const events = await telemetryEngine.queryEvents({
         limit: 1,
       });
-      
+
       expect(events).toHaveLength(1);
     });
   });
@@ -445,10 +467,10 @@ describe('RuntimeTelemetryIntegration', () => {
   let agentRuntime: AgentRuntime;
   let telemetryIntegration: RuntimeTelemetryIntegration;
   let memorySink: InMemoryTelemetrySink;
-  
+
   beforeEach(() => {
     memorySink = new InMemoryTelemetrySink(100);
-    
+
     const telemetryConfig: RuntimeTelemetryIntegrationConfig = {
       telemetry_config: {
         agent_id: 'test-agent-runtime',
@@ -458,89 +480,89 @@ describe('RuntimeTelemetryIntegration', () => {
         flush_interval_ms: 0,
       },
     };
-    
+
     telemetryIntegration = new RuntimeTelemetryIntegration(telemetryConfig);
-    
+
     agentRuntime = new AgentRuntime({
       agent_id: 'test-agent-runtime',
       agent_name: 'Test Agent',
       version: '1.0.0',
       enable_telemetry: false, // Use manual integration
     });
-    
+
     telemetryIntegration.attach(agentRuntime);
   });
-  
+
   afterEach(async () => {
     await telemetryIntegration.detach(agentRuntime);
     await agentRuntime.shutdown();
   });
-  
+
   it('should capture task lifecycle events', async () => {
     const taskDescription = 'Test telemetry task';
-    
+
     // Execute a task to generate events
     const resultPromise = agentRuntime.executeTask(taskDescription);
-    
+
     // Wait a bit for events to be emitted
     await new Promise(resolve => setTimeout(resolve, 100));
-    
+
     // Get telemetry events
     const events = memorySink.getAllEvents();
-    
+
     // Should have at least task:started events captured
     expect(events.length).toBeGreaterThan(0);
-    
+
     // Wait for task completion
     await resultPromise;
-    
+
     // Get final events
     await telemetryIntegration.getTelemetryEngine().flushBuffer();
     const finalEvents = memorySink.getAllEvents();
-    
+
     // Event count can be equal in fast environments; ensure no regression in captured telemetry
     expect(finalEvents.length).toBeGreaterThanOrEqual(events.length);
   });
-  
+
   it('should capture delegation contract events', async () => {
     const contract = createMockDelegationContract();
-    
+
     // Execute task with delegation contract
     await agentRuntime.executeTask(
       'Test delegation task',
       { test: true },
       contract
     );
-    
+
     await telemetryIntegration.getTelemetryEngine().flushBuffer();
     const events = memorySink.getAllEvents();
-    
+
     // Should have delegation-related events
-    const delegationEvents = events.filter(e => 
+    const delegationEvents = events.filter(e =>
       e.event_type.includes('delegation') || e.event_type.includes('contract')
     );
-    
+
     expect(delegationEvents.length).toBeGreaterThan(0);
-    
+
     // Should have contract creation event
-    const contractCreatedEvent = events.find(e => 
+    const contractCreatedEvent = events.find(e =>
       e.event_type === 'delegation_contract_created'
     );
     expect(contractCreatedEvent).toBeDefined();
     expect(contractCreatedEvent!.contract_id).toBe(contract.contract_id);
   });
-  
+
   it('should track performance metrics', async () => {
     const startTime = Date.now();
-    
+
     await agentRuntime.executeTask('Performance test task');
-    
+
     await telemetryIntegration.getTelemetryEngine().flushBuffer();
     const events = memorySink.getAllEvents();
-    
+
     // Look for events with performance metrics
     const metricsEvents = events.filter(e => e.performance_metrics);
-    
+
     if (metricsEvents.length > 0) {
       const metricsEvent = metricsEvents[0];
       expect(metricsEvent.performance_metrics!.execution_time_ms).toBeGreaterThan(0);
@@ -554,17 +576,17 @@ describe('RuntimeTelemetryIntegration', () => {
 describe('createDefaultTelemetryIntegration', () => {
   it('should create integration with default sinks', () => {
     const integration = createDefaultTelemetryIntegration('test-agent');
-    
+
     expect(integration).toBeDefined();
     expect(integration.getTelemetryEngine()).toBeDefined();
   });
-  
+
   it('should accept custom configuration options', () => {
     const integration = createDefaultTelemetryIntegration('test-agent', {
       track_retry_attempts: false,
       min_execution_time_threshold_ms: 1000,
     });
-    
+
     expect(integration).toBeDefined();
   });
 });

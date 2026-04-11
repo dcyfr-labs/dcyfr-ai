@@ -2,10 +2,10 @@
 /**
  * DCYFR Delegation Telemetry System
  * TLP:AMBER - Internal Use Only
- * 
+ *
  * Comprehensive telemetry system for tracking delegation contracts, chain
  * correlation, performance metrics, and event streaming for DCYFR AI agents.
- * 
+ *
  * @module telemetry/delegation-telemetry
  * @version 1.0.0
  * @date 2026-02-13
@@ -13,13 +13,14 @@
 
 import { EventEmitter } from 'events';
 import { randomUUID } from 'crypto';
+import { basename } from 'node:path';
 import type { DelegationContract } from '../types/delegation-contracts';
 import type { TaskExecutionResult } from '../runtime/agent-runtime';
 
 /**
  * Delegation telemetry event types
  */
-export type DelegationTelemetryEventType = 
+export type DelegationTelemetryEventType =
   | 'delegation_contract_created'
   | 'delegation_contract_accepted'
   | 'delegation_contract_rejected'
@@ -38,16 +39,16 @@ export type DelegationTelemetryEventType =
 export interface DelegationPerformanceMetrics {
   /** Contract creation to acceptance time (ms) */
   contract_negotiation_time_ms: number;
-  
+
   /** Task execution time (ms) */
   execution_time_ms: number;
-  
+
   /** Verification time (ms) */
   verification_time_ms?: number;
-  
+
   /** Total delegation lifecycle time (ms) */
   total_lifecycle_time_ms: number;
-  
+
   /** Resource utilization */
   resource_utilization: {
     peak_memory_mb: number;
@@ -55,7 +56,7 @@ export interface DelegationPerformanceMetrics {
     network_calls: number;
     disk_io_bytes: number;
   };
-  
+
   /** Quality metrics */
   quality_metrics: {
     success_rate: number;
@@ -71,25 +72,25 @@ export interface DelegationPerformanceMetrics {
 export interface DelegationChainCorrelation {
   /** Root delegation ID (top-level contract) */
   root_delegation_id: string;
-  
+
   /** Parent delegation ID (immediate parent) */
   parent_delegation_id?: string;
-  
+
   /** Chain depth (0 = root) */
   chain_depth: number;
-  
+
   /** Total contracts in chain */
   total_chain_contracts: number;
-  
+
   /** Chain participants (agent IDs) */
   chain_participants: string[];
-  
+
   /** Chain start timestamp */
   chain_started_at: string;
-  
+
   /** Chain completion timestamp */
   chain_completed_at?: string;
-  
+
   /** Chain status */
   chain_status: 'active' | 'completed' | 'failed' | 'cancelled';
 }
@@ -100,34 +101,49 @@ export interface DelegationChainCorrelation {
 export interface DelegationTelemetryEvent {
   /** Unique event ID */
   event_id: string;
-  
+
   /** Event type */
   event_type: DelegationTelemetryEventType;
-  
+
   /** Event timestamp */
   timestamp: string;
-  
+
+  /** Telemetry schema version */
+  schema_version?: string;
+
+  /** Workspace identifier (repo path or slug) */
+  workspace_id?: string;
+
+  /** Trace correlation ID */
+  trace_id?: string;
+
+  /** Node identifier where event was emitted */
+  node_id?: string;
+
+  /** Repository identifier in owner/repo format when available */
+  repo?: string;
+
   /** Agent that generated the event */
   agent_id: string;
-  
+
   /** Delegation contract ID */
   contract_id: string;
-  
+
   /** Task execution ID */
   execution_id?: string;
-  
+
   /** Chain correlation */
   chain_correlation: DelegationChainCorrelation;
-  
+
   /** Event-specific data */
   event_data: Record<string, unknown>;
-  
+
   /** Performance metrics (when applicable) */
   performance_metrics?: DelegationPerformanceMetrics;
-  
+
   /** Event severity level */
   severity: 'debug' | 'info' | 'warning' | 'error' | 'critical';
-  
+
   /** Additional metadata */
   metadata?: {
     user_agent?: string;
@@ -193,16 +209,16 @@ export interface FirebreakTriggeredEventData {
 export interface TelemetrySink {
   /** Sink name/identifier */
   name: string;
-  
+
   /** Write event to sink */
   writeEvent(event: DelegationTelemetryEvent): Promise<void>;
-  
+
   /** Query events from sink (optional) */
   queryEvents?(filter: TelemetryQueryFilter): Promise<DelegationTelemetryEvent[]>;
-  
+
   /** Get sink health status */
   getHealth(): Promise<{ healthy: boolean; message?: string }>;
-  
+
   /** Close sink connection */
   close(): Promise<void>;
 }
@@ -230,31 +246,31 @@ export interface TelemetryQueryFilter {
 export interface DelegationTelemetryConfig {
   /** Agent ID for correlation */
   agent_id: string;
-  
+
   /** Enable/disable telemetry collection */
   enabled: boolean;
-  
+
   /** Telemetry sinks (console, file, database, etc.) */
   sinks: TelemetrySink[];
-  
+
   /** Buffer size for batching events */
   buffer_size?: number;
-  
+
   /** Buffer flush interval (ms) */
   flush_interval_ms?: number;
-  
+
   /** Event sampling rate (0-1, 1 = all events) */
   sampling_rate?: number;
-  
+
   /** Minimum severity level to emit */
   min_severity?: 'debug' | 'info' | 'warning' | 'error' | 'critical';
-  
+
   /** Maximum events to store in memory */
   max_events_in_memory?: number;
-  
+
   /** Enable performance tracking */
   enable_performance_tracking?: boolean;
-  
+
   /** Enable chain correlation */
   enable_chain_correlation?: boolean;
 }
@@ -264,7 +280,7 @@ export interface DelegationTelemetryConfig {
  */
 export class ConsoleTelemetrySink implements TelemetrySink {
   public readonly name = 'console';
-  
+
   async writeEvent(event: DelegationTelemetryEvent): Promise<void> {
     console.log(`[TELEMETRY] ${event.timestamp} [${event.severity.toUpperCase()}] ${event.event_type}`, {
       agent_id: event.agent_id,
@@ -274,11 +290,11 @@ export class ConsoleTelemetrySink implements TelemetrySink {
       data: event.event_data,
     });
   }
-  
+
   async getHealth(): Promise<{ healthy: boolean; message?: string }> {
     return { healthy: true };
   }
-  
+
   async close(): Promise<void> {
     // No cleanup needed for console sink
   }
@@ -291,80 +307,80 @@ export class InMemoryTelemetrySink implements TelemetrySink {
   public readonly name = 'memory';
   private events: DelegationTelemetryEvent[] = [];
   private maxEvents: number;
-  
+
   constructor(maxEvents = 1000) {
     this.maxEvents = maxEvents;
   }
-  
+
   async writeEvent(event: DelegationTelemetryEvent): Promise<void> {
     this.events.push(event);
-    
+
     // Keep only the most recent events
     if (this.events.length > this.maxEvents) {
       this.events = this.events.slice(-this.maxEvents);
     }
   }
-  
+
   async queryEvents(filter: TelemetryQueryFilter): Promise<DelegationTelemetryEvent[]> {
     let filteredEvents = [...this.events];
-    
+
     if (filter.agent_id) {
       filteredEvents = filteredEvents.filter(e => e.agent_id === filter.agent_id);
     }
-    
+
     if (filter.contract_id) {
       filteredEvents = filteredEvents.filter(e => e.contract_id === filter.contract_id);
     }
-    
+
     if (filter.event_type) {
       const types = Array.isArray(filter.event_type) ? filter.event_type : [filter.event_type];
       filteredEvents = filteredEvents.filter(e => types.includes(e.event_type));
     }
-    
+
     if (filter.severity) {
       filteredEvents = filteredEvents.filter(e => filter.severity!.includes(e.severity));
     }
-    
+
     if (filter.start_time) {
       filteredEvents = filteredEvents.filter(e => new Date(e.timestamp) >= filter.start_time!);
     }
-    
+
     if (filter.end_time) {
       filteredEvents = filteredEvents.filter(e => new Date(e.timestamp) <= filter.end_time!);
     }
-    
+
     if (filter.chain_correlation?.root_delegation_id) {
-      filteredEvents = filteredEvents.filter(e => 
+      filteredEvents = filteredEvents.filter(e =>
         e.chain_correlation.root_delegation_id === filter.chain_correlation!.root_delegation_id
       );
     }
-    
+
     if (filter.chain_correlation?.chain_depth !== undefined) {
-      filteredEvents = filteredEvents.filter(e => 
+      filteredEvents = filteredEvents.filter(e =>
         e.chain_correlation.chain_depth === filter.chain_correlation!.chain_depth
       );
     }
-    
+
     if (filter.limit) {
       filteredEvents = filteredEvents.slice(0, filter.limit);
     }
-    
+
     return filteredEvents;
   }
-  
+
   async getHealth(): Promise<{ healthy: boolean; message?: string }> {
     return { healthy: true, message: `${this.events.length}/${this.maxEvents} events stored` };
   }
-  
+
   async close(): Promise<void> {
     this.events = [];
   }
-  
+
   /** Get all events for testing */
   getAllEvents(): DelegationTelemetryEvent[] {
     return [...this.events];
   }
-  
+
   /** Clear all events */
   clear(): void {
     this.events = [];
@@ -379,7 +395,7 @@ export class DelegationTelemetryEngine extends EventEmitter {
   private eventBuffer: DelegationTelemetryEvent[] = [];
   private flushTimer?: NodeJS.Timeout;
   private chainRegistry = new Map<string, DelegationChainCorrelation>();
-  
+
   constructor(config: DelegationTelemetryConfig) {
     super();
     this.config = {
@@ -392,7 +408,7 @@ export class DelegationTelemetryEngine extends EventEmitter {
       enable_chain_correlation: true,
       ...config,
     };
-    
+
     // Start periodic buffer flush
     if (this.config.flush_interval_ms! > 0) {
       this.flushTimer = setInterval(() => {
@@ -400,7 +416,7 @@ export class DelegationTelemetryEngine extends EventEmitter {
       }, this.config.flush_interval_ms);
     }
   }
-  
+
   /**
    * Create a delegation contract telemetry event
    */
@@ -414,7 +430,7 @@ export class DelegationTelemetryEngine extends EventEmitter {
       contract.contract_id,
       chainCorrelation
     );
-    
+
     const eventData: ContractCreatedEventData = {
       contract,
       delegator_agent: delegatorAgent,
@@ -422,7 +438,7 @@ export class DelegationTelemetryEngine extends EventEmitter {
       estimated_completion_ms: contract.metadata?.estimated_duration_ms,
       priority_score: contract.priority || 5,
     };
-    
+
     await this.emitEvent({
       event_type: 'delegation_contract_created',
       contract_id: contract.contract_id,
@@ -431,7 +447,7 @@ export class DelegationTelemetryEngine extends EventEmitter {
       severity: 'info',
     });
   }
-  
+
   /**
    * Log delegation progress update
    */
@@ -449,7 +465,7 @@ export class DelegationTelemetryEngine extends EventEmitter {
       console.warn(`[DelegationTelemetry] No chain correlation found for contract ${contractId}`);
       return;
     }
-    
+
     const eventData: ContractProgressEventData = {
       progress_percentage: progressPercentage,
       current_phase: currentPhase,
@@ -458,7 +474,7 @@ export class DelegationTelemetryEngine extends EventEmitter {
       intermediate_results: intermediateResults,
       checkpoints_completed: this.getCompletedCheckpoints(currentPhase, progressPercentage),
     };
-    
+
     await this.emitEvent({
       event_type: 'delegation_progress',
       contract_id: contractId,
@@ -468,7 +484,7 @@ export class DelegationTelemetryEngine extends EventEmitter {
       severity: 'info',
     });
   }
-  
+
   /**
    * Log delegation completion
    */
@@ -483,12 +499,12 @@ export class DelegationTelemetryEngine extends EventEmitter {
       console.warn(`[DelegationTelemetry] No chain correlation found for contract ${contractId}`);
       return;
     }
-    
+
     // Update chain completion status
     correlation.chain_completed_at = new Date().toISOString();
     correlation.chain_status = result.success ? 'completed' : 'failed';
     this.chainRegistry.set(contractId, correlation);
-    
+
     const eventData: ContractCompletionEventData = {
       success: result.success,
       result: result.output,
@@ -498,10 +514,10 @@ export class DelegationTelemetryEngine extends EventEmitter {
         verification_method: result.verification.verification_method,
       } : undefined,
       final_metrics: performanceMetrics,
-      completion_reason: result.success ? 'success' : 
+      completion_reason: result.success ? 'success' :
         (result.error?.type.includes('timeout') ? 'timeout' : 'failure'),
     };
-    
+
     await this.emitEvent({
       event_type: result.success ? 'delegation_completed' : 'delegation_failed',
       contract_id: contractId,
@@ -512,7 +528,7 @@ export class DelegationTelemetryEngine extends EventEmitter {
       severity: result.success ? 'info' : 'warning',
     });
   }
-  
+
   /**
    * Log firebreak trigger event
    */
@@ -529,7 +545,7 @@ export class DelegationTelemetryEngine extends EventEmitter {
       console.warn(`[DelegationTelemetry] No chain correlation found for contract ${contractId}`);
       return;
     }
-    
+
     const eventData: FirebreakTriggeredEventData = {
       firebreak_type: firebreakType as any,
       trigger_threshold: triggerThreshold,
@@ -537,7 +553,7 @@ export class DelegationTelemetryEngine extends EventEmitter {
       action_taken: actionTaken as any,
       escalation_target: escalationTarget,
     };
-    
+
     await this.emitEvent({
       event_type: 'delegation_firebreak_triggered',
       contract_id: contractId,
@@ -546,13 +562,13 @@ export class DelegationTelemetryEngine extends EventEmitter {
       severity: 'warning',
     });
   }
-  
+
   /**
    * Get telemetry events matching filter
    */
   async queryEvents(filter: TelemetryQueryFilter): Promise<DelegationTelemetryEvent[]> {
     const allResults: DelegationTelemetryEvent[] = [];
-    
+
     // Query all sinks that support querying
     for (const sink of this.config.sinks) {
       if (sink.queryEvents) {
@@ -564,40 +580,40 @@ export class DelegationTelemetryEngine extends EventEmitter {
         }
       }
     }
-    
+
     // Sort by timestamp and apply limit
     allResults.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-    
+
     if (filter.limit) {
       return allResults.slice(0, filter.limit);
     }
-    
+
     return allResults;
   }
-  
+
   /**
    * Get chain correlation information
    */
   getChainCorrelation(contractId: string): DelegationChainCorrelation | undefined {
     return this.chainRegistry.get(contractId);
   }
-  
+
   /**
    * Get all chain correlations
    */
   getAllChainCorrelations(): Map<string, DelegationChainCorrelation> {
     return new Map(this.chainRegistry);
   }
-  
+
   /**
    * Flush event buffer to sinks
    */
   async flushBuffer(): Promise<void> {
     if (this.eventBuffer.length === 0) return;
-    
+
     const eventsToFlush = [...this.eventBuffer];
     this.eventBuffer = [];
-    
+
     // Write to all sinks in parallel
     const writePromises = this.config.sinks.map(async (sink) => {
       try {
@@ -608,11 +624,11 @@ export class DelegationTelemetryEngine extends EventEmitter {
         console.error(`[DelegationTelemetry] Error writing to sink ${sink.name}:`, error);
       }
     });
-    
+
     await Promise.allSettled(writePromises);
     this.emit('events_flushed', eventsToFlush.length);
   }
-  
+
   /**
    * Close telemetry engine and cleanup
    */
@@ -621,47 +637,75 @@ export class DelegationTelemetryEngine extends EventEmitter {
     if (this.flushTimer) {
       clearInterval(this.flushTimer);
     }
-    
+
     // Flush remaining events
     await this.flushBuffer();
-    
+
     // Close all sinks
     const closePromises = this.config.sinks.map(sink => sink.close());
     await Promise.allSettled(closePromises);
-    
+
     // Clear registry
     this.chainRegistry.clear();
-    
+
     this.emit('telemetry_closed');
   }
-  
+
   // Private methods
-  
+
   private async emitEvent(eventData: Partial<DelegationTelemetryEvent>): Promise<void> {
     if (!this.config.enabled) return;
-    
+
     // Apply sampling
     if (this.config.sampling_rate! < 1 && Math.random() > this.config.sampling_rate!) {
       return;
     }
-    
+
     // Check severity filter
     const severityLevels = ['debug', 'info', 'warning', 'error', 'critical'];
     const minSeverityIndex = severityLevels.indexOf(this.config.min_severity!);
     const eventSeverityIndex = severityLevels.indexOf(eventData.severity!);
-    
+
     if (eventSeverityIndex < minSeverityIndex) return;
-    
+
+    const eventDataRecord = eventData as Record<string, unknown>;
+    const workspaceId =
+      (eventDataRecord.workspace_id as string | undefined) ||
+      process.env.DCYFR_TELEMETRY_WORKSPACE_ID ||
+      process.cwd();
+    const nodeId =
+      (eventDataRecord.node_id as string | undefined) ||
+      process.env.DCYFR_TELEMETRY_NODE_ID ||
+      process.env.HOSTNAME ||
+      'unknown-node';
+    const repo =
+      (eventDataRecord.repo as string | undefined) ||
+      process.env.DCYFR_TELEMETRY_REPO ||
+      process.env.GITHUB_REPOSITORY ||
+      basename(workspaceId);
+    const traceId =
+      (eventDataRecord.trace_id as string | undefined) ||
+      randomUUID();
+    const schemaVersion =
+      (eventDataRecord.schema_version as string | undefined) ||
+      process.env.DCYFR_TELEMETRY_SCHEMA_VERSION ||
+      '1.0.0';
+
     const event: DelegationTelemetryEvent = {
       ...eventData as DelegationTelemetryEvent,
       event_id: randomUUID(),
       timestamp: new Date().toISOString(),
       agent_id: this.config.agent_id,
+      schema_version: schemaVersion,
+      workspace_id: workspaceId,
+      trace_id: traceId,
+      node_id: nodeId,
+      repo,
     };
-    
+
     // Add to buffer
     this.eventBuffer.push(event);
-    
+
     // Emit event to listeners
     this.emit('telemetry_event', event);
 
@@ -670,25 +714,25 @@ export class DelegationTelemetryEngine extends EventEmitter {
       await this.flushBuffer();
       return;
     }
-    
+
     // Flush if buffer is full
     if (this.eventBuffer.length >= this.config.buffer_size!) {
       await this.flushBuffer();
     }
   }
-  
+
   private createOrUpdateChainCorrelation(
     contractId: string,
     partial?: Partial<DelegationChainCorrelation>
   ): DelegationChainCorrelation {
     const existing = this.chainRegistry.get(contractId);
-    
+
     if (existing) {
       const updated = { ...existing, ...partial };
       this.chainRegistry.set(contractId, updated);
       return updated;
     }
-    
+
     const correlation: DelegationChainCorrelation = {
       root_delegation_id: partial?.root_delegation_id || contractId,
       parent_delegation_id: partial?.parent_delegation_id,
@@ -699,11 +743,11 @@ export class DelegationTelemetryEngine extends EventEmitter {
       chain_status: partial?.chain_status || 'active',
       ...partial,
     };
-    
+
     this.chainRegistry.set(contractId, correlation);
     return correlation;
   }
-  
+
   private checkpointThresholds: Record<string, Array<{ threshold: number; name: string }>> = {
     negotiation: [
       { threshold: 25, name: 'contract_validation' },
