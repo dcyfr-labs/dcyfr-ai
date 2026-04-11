@@ -2,24 +2,31 @@
 /**
  * DCYFR Agent Runtime Telemetry Integration
  * TLP:AMBER - Internal Use Only
- * 
+ *
  * Integration layer that connects the AgentRuntime's EventEmitter system
  * with the DelegationTelemetryEngine for comprehensive delegation monitoring.
- * 
+ *
  * @module telemetry/runtime-telemetry-integration
  * @version 1.0.0
  * @date 2026-02-13
  */
 
 import type { AgentRuntime } from '../runtime/agent-runtime';
-import { 
+import {
   DelegationTelemetryEngine,
   ConsoleTelemetrySink,
-  InMemoryTelemetrySink 
+  InMemoryTelemetrySink,
+  JsonlTelemetrySink,
 } from './delegation-telemetry';
-import type { DelegationTelemetryConfig, DelegationPerformanceMetrics } from './delegation-telemetry';
+import type {
+  DelegationTelemetryConfig,
+  DelegationPerformanceMetrics,
+  DelegationTraceContext,
+} from './delegation-telemetry';
 import type { DelegationContract } from '../types/delegation-contracts';
 import type { TaskExecutionContext, TaskExecutionResult } from '../runtime/agent-runtime';
+import { homedir } from 'os';
+import { join } from 'path';
 
 /**
  * Runtime telemetry integration configuration
@@ -27,19 +34,19 @@ import type { TaskExecutionContext, TaskExecutionResult } from '../runtime/agent
 export interface RuntimeTelemetryIntegrationConfig {
   /** Telemetry engine configuration */
   telemetry_config: DelegationTelemetryConfig;
-  
+
   /** Track task execution metrics */
   track_task_metrics?: boolean;
-  
+
   /** Track delegation contract lifecycle */
   track_delegation_lifecycle?: boolean;
-  
+
   /** Track resource utilization */
   track_resource_utilization?: boolean;
-  
+
   /** Track retry attempts */
   track_retry_attempts?: boolean;
-  
+
   /** Minimum execution time to track (ms) */
   min_execution_time_threshold_ms?: number;
 }
@@ -58,7 +65,7 @@ class TaskExecutionTracker {
       progress: number;
     }>;
   }>();
-  
+
   startTask(executionId: string, context: TaskExecutionContext, contractId?: string): void {
     this.tasks.set(executionId, {
       start_time: Date.now(),
@@ -67,7 +74,7 @@ class TaskExecutionTracker {
       checkpoints: [],
     });
   }
-  
+
   addCheckpoint(executionId: string, name: string, progress: number): void {
     const task = this.tasks.get(executionId);
     if (task) {
@@ -78,32 +85,32 @@ class TaskExecutionTracker {
       });
     }
   }
-  
+
   completeTask(executionId: string, result: TaskExecutionResult): DelegationPerformanceMetrics | null {
     const task = this.tasks.get(executionId);
     if (!task) return null;
-    
+
     const endTime = Date.now();
     const totalTime = endTime - task.start_time;
-    
+
     // Calculate phase times from checkpoints
     let negotiationTime = 0;
     let executionTime = result.metrics.execution_time_ms || totalTime;
     let verificationTime = 0;
-    
+
     if (task.checkpoints.length > 0) {
       const executionStart = task.checkpoints.find(cp => cp.name === 'task_started')?.timestamp || task.start_time;
       const executionEnd = task.checkpoints.find(cp => cp.name === 'task_completed')?.timestamp || endTime;
       const verificationStart = task.checkpoints.find(cp => cp.name === 'verification_started')?.timestamp;
       const verificationEnd = task.checkpoints.find(cp => cp.name === 'verification_complete')?.timestamp;
-      
+
       negotiationTime = executionStart - task.start_time;
       executionTime = executionEnd - executionStart;
       if (verificationStart && verificationEnd) {
         verificationTime = verificationEnd - verificationStart;
       }
     }
-    
+
     const metrics: DelegationPerformanceMetrics = {
       contract_negotiation_time_ms: negotiationTime,
       execution_time_ms: executionTime,
@@ -122,22 +129,22 @@ class TaskExecutionTracker {
         retry_count: 0, // Would need to track retries separately
       },
     };
-    
+
     this.tasks.delete(executionId);
     return metrics;
   }
-  
+
   private estimateMemoryUsage(): number {
     // Rough estimate - would be better with process.memoryUsage()
     const usage = process.memoryUsage();
     return Math.round(usage.heapUsed / 1024 / 1024);
   }
-  
+
   private countNetworkCalls(context: TaskExecutionContext): number {
     // Count tools that might make network calls
     const networkTools = ['web_search', 'api_call', 'fetch', 'http_request'];
     const toolCalls = ((context.task.parameters?.tool_calls as Array<{ name?: string }> | undefined) ?? []);
-    return toolCalls.filter(tool => 
+    return toolCalls.filter(tool =>
       networkTools.some(netTool => (tool.name || '').includes(netTool))
     ).length;
   }
@@ -155,7 +162,7 @@ class ContractLifecycleTracker {
     status: 'created' | 'accepted' | 'rejected' | 'executing' | 'completed' | 'failed';
     execution_id?: string;
   }>();
-  
+
   trackContractCreated(
     contract: DelegationContract,
     delegatorAgent: string,
@@ -169,7 +176,7 @@ class ContractLifecycleTracker {
       status: 'created',
     });
   }
-  
+
   trackContractAccepted(contractId: string, executionId: string): void {
     const contract = this.contracts.get(contractId);
     if (contract) {
@@ -178,7 +185,7 @@ class ContractLifecycleTracker {
       this.contracts.set(contractId, contract);
     }
   }
-  
+
   trackContractRejected(contractId: string): void {
     const contract = this.contracts.get(contractId);
     if (contract) {
@@ -186,7 +193,7 @@ class ContractLifecycleTracker {
       this.contracts.set(contractId, contract);
     }
   }
-  
+
   trackContractExecuting(contractId: string): void {
     const contract = this.contracts.get(contractId);
     if (contract) {
@@ -194,7 +201,7 @@ class ContractLifecycleTracker {
       this.contracts.set(contractId, contract);
     }
   }
-  
+
   trackContractCompleted(contractId: string, success: boolean): void {
     const contract = this.contracts.get(contractId);
     if (contract) {
@@ -202,11 +209,11 @@ class ContractLifecycleTracker {
       this.contracts.set(contractId, contract);
     }
   }
-  
+
   getContract(contractId: string) {
     return this.contracts.get(contractId);
   }
-  
+
   getAllContracts(): Map<string, any> {
     return new Map(this.contracts);
   }
@@ -222,7 +229,7 @@ export class RuntimeTelemetryIntegration {
   private contractTracker = new ContractLifecycleTracker();
   private isAttached = false;
   private executionToSyntheticContractId = new Map<string, string>();
-  
+
   constructor(config: RuntimeTelemetryIntegrationConfig) {
     this.config = {
       track_task_metrics: true,
@@ -232,10 +239,10 @@ export class RuntimeTelemetryIntegration {
       min_execution_time_threshold_ms: 100,
       ...config,
     };
-    
+
     this.telemetryEngine = new DelegationTelemetryEngine(this.config.telemetry_config);
   }
-  
+
   /**
    * Attach telemetry to an AgentRuntime instance
    */
@@ -244,44 +251,44 @@ export class RuntimeTelemetryIntegration {
       console.warn('[RuntimeTelemetryIntegration] Already attached to a runtime');
       return;
     }
-    
+
     this.isAttached = true;
-    
+
     // Listen to all runtime events and emit telemetry
     this.setupEventListeners(runtime);
-    
+
     console.log(`[RuntimeTelemetryIntegration] Attached to agent runtime: ${runtime.getAgentInfo().agent_id}`);
   }
-  
+
   /**
    * Detach telemetry from runtime
    */
   async detach(_runtime: AgentRuntime): Promise<void> {
     if (!this.isAttached) return;
-    
+
     // Close telemetry engine
     await this.telemetryEngine.close();
-    
+
     this.isAttached = false;
     console.log('[RuntimeTelemetryIntegration] Detached from agent runtime');
   }
-  
+
   /**
    * Get telemetry engine for direct access
    */
   getTelemetryEngine(): DelegationTelemetryEngine {
     return this.telemetryEngine;
   }
-  
+
   /**
    * Query telemetry events
    */
   async queryEvents(filter: any): Promise<any[]> {
     return this.telemetryEngine.queryEvents(filter);
   }
-  
+
   // Private methods
-  
+
   private setupEventListeners(runtime: AgentRuntime): void {
     // Task lifecycle events
     if (this.config.track_task_metrics) {
@@ -318,18 +325,19 @@ export class RuntimeTelemetryIntegration {
             {
               chain_depth: 0,
               root_delegation_id: syntheticContractId,
-            }
+            },
+            this.getTraceContext(context, syntheticContract)
           );
         }
       });
-      
+
       runtime.on('task:progress', (context: TaskExecutionContext, progress: number) => {
         this.taskTracker.addCheckpoint(
           context.execution_id,
           `progress_${Math.round(progress * 100)}`,
           progress
         );
-        
+
         // Emit progress telemetry
         if (this.config.track_delegation_lifecycle) {
           const contractId = this.findContractIdForContext(context);
@@ -341,16 +349,17 @@ export class RuntimeTelemetryIntegration {
               progress * 100,
               'execution',
               elapsedTime,
-              undefined
+              undefined,
+              this.getTraceContext(context)
             );
           }
         }
       });
-      
+
       runtime.on('task:completed', async (result: TaskExecutionResult) => {
         const context = result.context;
         const metrics = this.taskTracker.completeTask(context.execution_id, result);
-        
+
         if (metrics && this.config.track_delegation_lifecycle) {
           const contractId = this.findContractIdForContext(context);
           if (contractId) {
@@ -378,7 +387,8 @@ export class RuntimeTelemetryIntegration {
                 {
                   chain_depth: 0,
                   root_delegation_id: contractId,
-                }
+                },
+                this.getTraceContext(context, trackedContract)
               );
             }
 
@@ -387,16 +397,17 @@ export class RuntimeTelemetryIntegration {
               contractId,
               context.execution_id,
               result,
-              metrics
+              metrics,
+              this.getTraceContext(context)
             );
           }
         }
       });
-      
+
       runtime.on('task:failed', async (result: TaskExecutionResult) => {
         const context = result.context;
         const metrics = this.taskTracker.completeTask(context.execution_id, result);
-        
+
         if (metrics && this.config.track_delegation_lifecycle) {
           const contractId = this.findContractIdForContext(context);
           if (contractId) {
@@ -424,7 +435,8 @@ export class RuntimeTelemetryIntegration {
                 {
                   chain_depth: 0,
                   root_delegation_id: contractId,
-                }
+                },
+                this.getTraceContext(context, trackedContract)
               );
             }
 
@@ -433,22 +445,23 @@ export class RuntimeTelemetryIntegration {
               contractId,
               context.execution_id,
               result,
-              metrics
+              metrics,
+              this.getTraceContext(context)
             );
           }
         }
       });
     }
-    
+
     // Delegation contract events
     if (this.config.track_delegation_lifecycle) {
       runtime.on('delegation:contract:received', async (contract: DelegationContract) => {
         // Note: We need to infer delegator/delegatee from context
         const delegatorAgent = (contract.metadata?.delegator_agent as string) || 'unknown';
         const delegateeAgent = runtime.getAgentInfo().agent_id;
-        
+
         this.contractTracker.trackContractCreated(contract, delegatorAgent, delegateeAgent);
-        
+
         await this.telemetryEngine.logContractCreated(
           contract,
           delegatorAgent,
@@ -457,21 +470,22 @@ export class RuntimeTelemetryIntegration {
             chain_depth: (contract.metadata?.chain_depth as number) || 0,
             root_delegation_id: (contract.metadata?.root_delegation_id as string) || contract.contract_id,
             parent_delegation_id: contract.metadata?.parent_delegation_id as string | undefined,
-          }
+          },
+          this.getTraceContext(undefined, contract)
         );
       });
-      
+
       runtime.on('delegation:contract:accepted', (contract: DelegationContract) => {
         const executionId = contract.contract_id;
         this.contractTracker.trackContractAccepted(contract.contract_id, executionId);
         this.taskTracker.addCheckpoint(executionId, 'contract_accepted', 0);
       });
-      
+
       runtime.on('delegation:contract:rejected', (contract: DelegationContract, _reason: string) => {
         this.contractTracker.trackContractRejected(contract.contract_id);
       });
     }
-    
+
     // Retry events
     if (this.config.track_retry_attempts) {
       runtime.on('task:retry:attempt', (context: TaskExecutionContext, attempt: number) => {
@@ -481,7 +495,7 @@ export class RuntimeTelemetryIntegration {
           0 // Retry doesn't change progress
         );
       });
-      
+
       runtime.on('task:retry:exhausted', (context: TaskExecutionContext) => {
         this.taskTracker.addCheckpoint(
           context.execution_id,
@@ -490,7 +504,7 @@ export class RuntimeTelemetryIntegration {
         );
       });
     }
-    
+
     // Resource limit events
     runtime.on('resource:limit:exceeded', async (resourceType: string, actual: number, limit: number) => {
       const currentTasks = runtime.getCurrentTasks();
@@ -505,11 +519,13 @@ export class RuntimeTelemetryIntegration {
           'resource_limit',
           limit,
           actual,
-          'escalate'
+          'escalate',
+          undefined,
+          this.getTraceContext(context)
         );
       }
     });
-    
+
     // Capability assessment events
     runtime.on('capability:assessed', () => {
       const currentTasks = runtime.getCurrentTasks();
@@ -521,7 +537,7 @@ export class RuntimeTelemetryIntegration {
         );
       }
     });
-    
+
     runtime.on('confidence:updated', (_capabilityId: string, _oldConfidence: number, confidence: number) => {
       const currentTasks = runtime.getCurrentTasks();
       if (currentTasks[0]) {
@@ -533,7 +549,7 @@ export class RuntimeTelemetryIntegration {
       }
     });
   }
-  
+
   private findContractIdForContext(context: TaskExecutionContext): string | undefined {
     // Try direct delegated contract reference
     if (context.delegation_contract?.contract_id) {
@@ -545,21 +561,51 @@ export class RuntimeTelemetryIntegration {
     if (syntheticContractId) {
       return syntheticContractId;
     }
-    
+
     // Try to find contract ID from task description or parameters
     if (context.task.description) {
       const match = context.task.description.match(/contract[_-]id[:\s]+([a-zA-Z0-9-]+)/i);
       if (match) return match[1];
     }
-    
+
     // Look in all tracked contracts for matching execution context
     for (const [contractId, contract] of Array.from(this.contractTracker.getAllContracts().entries())) {
       if (contract.execution_id === context.execution_id) {
         return contractId;
       }
     }
-    
+
     return undefined;
+  }
+
+  private getTraceContext(
+    context?: TaskExecutionContext,
+    contract?: DelegationContract,
+  ): DelegationTraceContext {
+    const contextMetadata = context?.metadata as Record<string, unknown> | undefined;
+    const taskParams = context?.task?.parameters as Record<string, unknown> | undefined;
+    const contractMetadata = contract?.metadata as Record<string, unknown> | undefined;
+    const delegatedContractMetadata = context?.delegation_contract?.metadata as Record<string, unknown> | undefined;
+
+    const trace_id =
+      (contextMetadata?.trace_id as string | undefined)
+      || (taskParams?.trace_id as string | undefined)
+      || (taskParams?.traceId as string | undefined)
+      || (contractMetadata?.trace_id as string | undefined)
+      || (contractMetadata?.traceId as string | undefined)
+      || (delegatedContractMetadata?.trace_id as string | undefined)
+      || (delegatedContractMetadata?.traceId as string | undefined);
+
+    const session_id =
+      (contextMetadata?.session_id as string | undefined)
+      || (taskParams?.session_id as string | undefined)
+      || (taskParams?.sessionId as string | undefined)
+      || (contractMetadata?.session_id as string | undefined)
+      || (contractMetadata?.sessionId as string | undefined)
+      || (delegatedContractMetadata?.session_id as string | undefined)
+      || (delegatedContractMetadata?.sessionId as string | undefined);
+
+    return { trace_id, session_id };
   }
 }
 
@@ -570,14 +616,25 @@ export function createDefaultTelemetryIntegration(
   agentId: string,
   options?: Partial<RuntimeTelemetryIntegrationConfig>
 ): RuntimeTelemetryIntegration {
+  const jsonlPath = process.env.DCYFR_TELEMETRY_JSONL_PATH
+    || join(homedir(), '.dcyfr', 'telemetry', 'delegation-events.jsonl');
+  const includeJsonl = process.env.DCYFR_TELEMETRY_JSONL_DISABLED !== '1';
+
+  const sinks = [
+    new ConsoleTelemetrySink(),
+    new InMemoryTelemetrySink(1000),
+    ...(includeJsonl ? [new JsonlTelemetrySink(jsonlPath)] : []),
+  ];
+
   const config: RuntimeTelemetryIntegrationConfig = {
     telemetry_config: {
       agent_id: agentId,
+      workspace_id: process.env.DCYFR_WORKSPACE_ID || process.env.DCYFR_WORKSPACE || process.cwd(),
+      repo: process.env.DCYFR_REPO || process.env.GITHUB_REPOSITORY,
+      node_id: process.env.DCYFR_NODE_ID || process.env.HOSTNAME,
+      schema_version: '1.0.0',
       enabled: true,
-      sinks: [
-        new ConsoleTelemetrySink(),
-        new InMemoryTelemetrySink(1000),
-      ],
+      sinks,
       buffer_size: 50,
       flush_interval_ms: 3000,
       sampling_rate: 1.0,
@@ -587,7 +644,7 @@ export function createDefaultTelemetryIntegration(
     },
     ...options,
   };
-  
+
   return new RuntimeTelemetryIntegration(config);
 }
 

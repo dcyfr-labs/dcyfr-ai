@@ -1,6 +1,6 @@
 /**
  * DCYFR AI Framework - Main Entry Point
- * 
+ *
  * Portable AI agent framework with plugin architecture
  * @module @dcyfr/ai
  */
@@ -37,6 +37,41 @@ export type {
   ExecutionResult,
   CostEstimate,
 } from './types';
+
+// Delegation telemetry exports
+export {
+  DelegationTelemetryEngine,
+  ConsoleTelemetrySink,
+  InMemoryTelemetrySink,
+  JsonlTelemetrySink,
+  RuntimeTelemetryIntegration,
+  createDefaultTelemetryIntegration,
+  analyzeDelegationChain,
+  generatePerformanceSummary,
+  findChainAnomalies,
+  createTelemetryFilter,
+  DEFAULT_DEV_TELEMETRY_CONFIG,
+  DEFAULT_PROD_TELEMETRY_CONFIG,
+  TELEMETRY_VERSION,
+} from './src/telemetry';
+
+export type {
+  DelegationTelemetryEventType,
+  DelegationTelemetryEvent,
+  DelegationPerformanceMetrics,
+  DelegationChainCorrelation,
+  ContractCreatedEventData,
+  ContractProgressEventData,
+  ContractCompletionEventData,
+  FirebreakTriggeredEventData,
+  TelemetrySink,
+  TelemetryQueryFilter,
+  DelegationTelemetryConfig,
+  DelegationTraceContext,
+  RuntimeTelemetryIntegrationConfig,
+  DelegationChainAnalysis,
+  PerformanceSummary,
+} from './src/telemetry';
 
 // Telemetry types
 export type {

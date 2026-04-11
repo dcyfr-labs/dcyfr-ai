@@ -1,10 +1,10 @@
 /**
  * DCYFR Delegation Telemetry System
  * TLP:AMBER - Internal Use Only
- * 
+ *
  * Comprehensive telemetry system for monitoring delegation contracts,
  * chain correlation, performance metrics, and event streaming.
- * 
+ *
  * @module telemetry
  * @version 1.0.0
  * @date 2026-02-13
@@ -15,6 +15,7 @@ export {
   DelegationTelemetryEngine,
   ConsoleTelemetrySink,
   InMemoryTelemetrySink,
+  JsonlTelemetrySink,
 } from './delegation-telemetry';
 
 export type {
@@ -29,6 +30,7 @@ export type {
   TelemetrySink,
   TelemetryQueryFilter,
   DelegationTelemetryConfig,
+  DelegationTraceContext,
 } from './delegation-telemetry';
 
 // Runtime integration
