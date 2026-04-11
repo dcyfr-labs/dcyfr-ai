@@ -567,6 +567,52 @@ describe('createDefaultTelemetryIntegration', () => {
 
     expect(integration).toBeDefined();
   });
+
+  it('derives non-empty repo and node identifiers without env overrides', async () => {
+    const original = {
+      dcyfrRepo: process.env.DCYFR_REPO,
+      githubRepo: process.env.GITHUB_REPOSITORY,
+      dcyfrNode: process.env.DCYFR_NODE_ID,
+      hostname: process.env.HOSTNAME,
+      jsonlDisabled: process.env.DCYFR_TELEMETRY_JSONL_DISABLED,
+    };
+
+    process.env.DCYFR_REPO = '';
+    process.env.GITHUB_REPOSITORY = '';
+    process.env.DCYFR_NODE_ID = '';
+    process.env.HOSTNAME = '';
+    process.env.DCYFR_TELEMETRY_JSONL_DISABLED = '1';
+
+    const integration = createDefaultTelemetryIntegration('default-identity-agent');
+    const runtime = new AgentRuntime({
+      agent_id: 'default-identity-agent',
+      agent_name: 'Default Identity Agent',
+      version: '1.0.0',
+      enable_telemetry: false,
+    });
+
+    try {
+      integration.attach(runtime);
+      await runtime.executeTask('default identity telemetry task');
+      await integration.getTelemetryEngine().flushBuffer();
+
+      const events = await integration.queryEvents({ limit: 1 });
+      expect(events.length).toBeGreaterThan(0);
+      expect(events[0].repo).toBeTruthy();
+      expect(events[0].repo).not.toBe('unknown-repo');
+      expect(events[0].node_id).toBeTruthy();
+      expect(events[0].node_id).not.toBe('unknown-node');
+    } finally {
+      await integration.detach(runtime);
+      await runtime.shutdown();
+
+      process.env.DCYFR_REPO = original.dcyfrRepo;
+      process.env.GITHUB_REPOSITORY = original.githubRepo;
+      process.env.DCYFR_NODE_ID = original.dcyfrNode;
+      process.env.HOSTNAME = original.hostname;
+      process.env.DCYFR_TELEMETRY_JSONL_DISABLED = original.jsonlDisabled;
+    }
+  });
 });
 
 // ─── Trace context propagation regression ────────────────────────────────────

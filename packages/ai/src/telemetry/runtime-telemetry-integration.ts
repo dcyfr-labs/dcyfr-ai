@@ -23,10 +23,47 @@ import type {
   DelegationPerformanceMetrics,
   DelegationTraceContext,
 } from './delegation-telemetry';
+import { execSync } from 'child_process';
 import type { DelegationContract } from '../types/delegation-contracts';
 import type { TaskExecutionContext, TaskExecutionResult } from '../runtime/agent-runtime';
-import { homedir } from 'os';
-import { join } from 'path';
+import { homedir, hostname } from 'os';
+import { basename, join } from 'path';
+
+function deriveRepoIdentifier(): string {
+  const fromEnv = process.env.DCYFR_REPO || process.env.GITHUB_REPOSITORY;
+  if (fromEnv) return fromEnv;
+
+  try {
+    const gitRoot = execSync('git rev-parse --show-toplevel', {
+      cwd: process.cwd(),
+      stdio: ['ignore', 'pipe', 'ignore'],
+      encoding: 'utf8',
+    }).trim();
+
+    if (gitRoot) {
+      const remoteUrl = execSync('git config --get remote.origin.url', {
+        cwd: gitRoot,
+        stdio: ['ignore', 'pipe', 'ignore'],
+        encoding: 'utf8',
+      }).trim();
+
+      const sshMatch = remoteUrl.match(/[:/]([^/]+)\/([^/.]+)(?:\.git)?$/);
+      if (sshMatch?.[1] && sshMatch?.[2]) {
+        return `${sshMatch[1]}/${sshMatch[2]}`;
+      }
+
+      return basename(gitRoot) || 'unknown-repo';
+    }
+  } catch {
+    // ignore git lookup failures and continue with cwd fallback
+  }
+
+  return basename(process.cwd()) || 'unknown-repo';
+}
+
+function deriveNodeIdentifier(): string {
+  return process.env.DCYFR_NODE_ID || process.env.HOSTNAME || hostname() || 'unknown-node';
+}
 
 /**
  * Runtime telemetry integration configuration
@@ -630,8 +667,8 @@ export function createDefaultTelemetryIntegration(
     telemetry_config: {
       agent_id: agentId,
       workspace_id: process.env.DCYFR_WORKSPACE_ID || process.env.DCYFR_WORKSPACE || process.cwd(),
-      repo: process.env.DCYFR_REPO || process.env.GITHUB_REPOSITORY,
-      node_id: process.env.DCYFR_NODE_ID || process.env.HOSTNAME,
+      repo: deriveRepoIdentifier(),
+      node_id: deriveNodeIdentifier(),
       schema_version: '1.0.0',
       enabled: true,
       sinks,
