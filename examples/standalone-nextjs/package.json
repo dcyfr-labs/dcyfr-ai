@@ -24,6 +24,9 @@
     "eslint-config-next": "^15.1.0",
     "typescript": "^5.3.0"
   },
+  "overrides": {
+    "axios": "1.15.0"
+  },
   "dcyfr": {
     "version": "1.0.0",
     "projectName": "standalone-example",
@@ -37,7 +40,9 @@
       "gates": [
         {
           "name": "typescript",
-          "plugins": ["typescript-compiler"],
+          "plugins": [
+            "typescript-compiler"
+          ],
           "required": true,
           "failureMode": "error"
         }
