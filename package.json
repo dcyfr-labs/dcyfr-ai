@@ -151,7 +151,8 @@
     "mem0ai": {
       "@anthropic-ai/sdk": "^0.74.0",
       "axios": "1.15.0"
-    }
+    },
+    "picomatch": "4.0.4"
   },
   "engines": {
     "node": ">=20.0.0",
