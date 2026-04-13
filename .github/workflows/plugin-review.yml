@@ -225,7 +225,7 @@ jobs:
         continue-on-error: true   # artifact may be absent if scan was skipped
 
       - name: Post scan summary comment
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         env:
           PLUGIN_ID:      ${{ needs.security-scan.outputs.plugin-id }}
           RECOMMENDATION: ${{ needs.security-scan.outputs.recommendation }}
@@ -389,7 +389,7 @@ jobs:
 
     steps:
       - name: Enforce security gate
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         env:
           RECOMMENDATION: ${{ needs.security-scan.outputs.recommendation }}
           TRUST_SCORE:    ${{ needs.security-scan.outputs.trust-score }}
