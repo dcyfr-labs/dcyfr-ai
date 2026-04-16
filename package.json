@@ -1,6 +1,6 @@
 {
   "name": "@dcyfr/ai",
-  "version": "3.0.1",
+  "version": "3.0.2",
   "description": "Portable AI agent harness with plugin architecture",
   "main": "./dist/ai/index.js",
   "types": "./dist/ai/index.d.ts",
@@ -92,12 +92,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/dcyfr/dcyfr-ai.git"
+    "url": "https://github.com/dcyfr-labs/dcyfr-ai.git"
   },
   "bugs": {
-    "url": "https://github.com/dcyfr/dcyfr-ai/issues"
+    "url": "https://github.com/dcyfr-labs/dcyfr-ai/issues"
   },
-  "homepage": "https://github.com/dcyfr/dcyfr-ai#readme",
+  "homepage": "https://github.com/dcyfr-labs/dcyfr-ai#readme",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.82.0",
     "@azure/identity": "^4.0.0",
