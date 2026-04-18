@@ -7,13 +7,18 @@
 
 /**
  * Supported AI provider types
+ *
+ * Tier 0 (local, private, low perf):      local, ollama
+ * Tier 1 (workbench, private, medium perf): workbench
+ * Tier 2 (remote, included, limited):      github-models
+ * Tier 3 (remote, high perf, high cost):   anthropic
  */
-export type ProviderType = "claude" | "groq" | "ollama" | "copilot" | "openai" | "anthropic" | "msty" | "github-models";
+export type ProviderType = "local" | "ollama" | "workbench" | "github-models" | "anthropic";
 
 /**
- * Agent types - typically maps to primary providers
+ * Agent types - maps to primary providers
  */
-export type AgentType = "claude" | "copilot" | "groq" | "ollama" | "github-models";
+export type AgentType = "ollama" | "workbench" | "github-models" | "anthropic";
 
 /**
  * Task classification types

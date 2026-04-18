@@ -101,8 +101,8 @@ export class RuntimeValidator {
   }> {
     console.log('📡 Checking Provider Configuration...');
     const providerRegistry = new ProviderRegistry({
-      primaryProvider: 'openai',
-      fallbackChain: ['github-models', 'anthropic', 'ollama'],
+      primaryProvider: 'ollama',
+      fallbackChain: ['workbench', 'github-models', 'anthropic'],
       autoReturn: false,
       healthCheckInterval: 60000
     });
@@ -114,7 +114,7 @@ export class RuntimeValidator {
     console.log(`   ✓ ${providerValidation.available.length} providers available`);
 
     if (providerValidation.configured.length === 0) {
-      issues.push('No providers configured - set API keys for OpenAI, Anthropic, GitHub Models, or setup Ollama');
+      issues.push('No providers configured — set LOCAL_LLM_BASE_URL (Tier 0), WORKBENCH_BASE_URL (Tier 1), GITHUB_TOKEN (Tier 2), or ANTHROPIC_API_KEY (Tier 3)');
     }
     if (providerValidation.available.length === 0) {
       issues.push('No providers available - check API keys and network connectivity');

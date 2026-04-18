@@ -276,9 +276,9 @@ export class AgentRuntime {
 
       // Create telemetry session
       // Note: startSession expects AgentType, but we have agentName as string
-      // For now, we'll use 'claude' as default - this should be configurable
+      // Default to anthropic (Tier 3) — override via config once AgentType is propagated
       sessionManager = this.telemetry.startSession(
-        'claude' as const, // TODO: Make agentType configurable
+        'anthropic' as const,
         {
           taskType: 'feature',
           description: context.task,
@@ -656,12 +656,10 @@ export class AgentRuntime {
         // TODO: Actual provider-specific API calls
         // For now, return a mock response that demonstrates the format
         // Real implementation would call:
-        //   - Anthropic API for claude/anthropic
-        //   - OpenAI API for openai/groq
-        //   - Ollama API for ollama
-        //   - OpenAI-compatible API via Msty Vibe CLI Proxy for copilot
-        //   - GitHub Models API (models.github.ai) for github-models
-        //   - Msty Local AI API for msty
+        //   Tier 0 (local):    MLX/LLaMA.cpp (:11973/:11454) or Ollama (:11434) — OpenAI-compat
+        //   Tier 1 (workbench): WORKBENCH_BASE_URL via Tailscale — Ollama/OpenAI-compat
+        //   Tier 2 (github):   GitHub Models API (models.inference.ai.azure.com)
+        //   Tier 3 (anthropic): Anthropic Messages API — native @anthropic-ai/sdk
         
         console.warn(`[AgentRuntime] Calling LLM provider: ${provider} (mock response)`);
         
@@ -1189,16 +1187,13 @@ export class AgentRuntime {
     
     const totalTokens = (tokens.input || 0) + (tokens.output || 0);
     
-    // Provider-specific pricing (per million tokens)
+    // Provider-specific pricing (per million tokens) — 4-tier hierarchy
     const pricing: Record<string, number> = {
-      claude: 15.0, // $15 per 1M tokens
-      anthropic: 15.0, // Same as claude
-      openai: 10.0, // Approximate for GPT-4
-      'github-models': 0, // Free with GitHub Pro/Teams
-      copilot: 0, // Subscription-based via Msty Vibe CLI Proxy, no per-token cost
-      groq: 0, // Free tier
-      ollama: 0, // Local model
-      msty: 0, // Local Ollama-compatible models
+      local: 0,            // Tier 0 — MLX/LLaMA.cpp/Ollama, no cost
+      ollama: 0,           // Tier 0 — Ollama local, no cost
+      workbench: 0,        // Tier 1 — GPU node, no per-token cost
+      'github-models': 0,  // Tier 2 — included with Copilot/Pro
+      anthropic: 15.0,     // Tier 3 — ~$15/1M tokens (Sonnet 4.6)
     };
     
     const pricePerMillion = pricing[provider] || 0;

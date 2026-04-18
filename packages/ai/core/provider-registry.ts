@@ -18,7 +18,7 @@
  * 
  * const registry = new ProviderRegistry({
  *   primaryProvider: 'claude',
- *   fallbackChain: ['groq', 'ollama'],
+ *   fallbackChain: ['workbench', 'github-models', 'anthropic'],
  *   autoReturn: true,
  *   healthCheckInterval: 60000,
  * });
@@ -100,74 +100,57 @@ export class ProviderRegistry {
   }
 
   private initializeProviderConfigs(): void {
+    const localUrl = process.env.LOCAL_LLM_BASE_URL || 'http://localhost:11973/v1';
+    const workbenchUrl = process.env.WORKBENCH_BASE_URL;
+
     const defaultConfigs: ProviderConfig[] = [
+      // Tier 0 — Local (local, private, low perf)
       {
-        name: 'claude',
-        healthCheckUrl: 'https://api.anthropic.com/v1/messages',
-        maxRetries: 3,
-        retryDelay: 1000,
-        timeout: 30000,
-        enabled: true,
-      },
-      {
-        name: 'groq',
-        healthCheckUrl: 'https://api.groq.com/openai/v1/models',
-        maxRetries: 2,
-        retryDelay: 500,
-        timeout: 20000,
+        name: 'local',
+        apiEndpoint: localUrl,
+        healthCheckUrl: `${localUrl}/models`,
+        maxRetries: 1,
+        retryDelay: 100,
+        timeout: 60000,
         enabled: true,
       },
       {
         name: 'ollama',
-        apiEndpoint: 'http://localhost:11434',
-        healthCheckUrl: 'http://localhost:11434/api/tags',
+        apiEndpoint: process.env.OLLAMA_HOST || 'http://localhost:11434',
+        healthCheckUrl: `${process.env.OLLAMA_HOST || 'http://localhost:11434'}/api/tags`,
         maxRetries: 1,
         retryDelay: 100,
-        timeout: 10000,
+        timeout: 60000,
         enabled: true,
       },
+      // Tier 1 — Workbench (networked, private, medium perf)
       {
-        name: 'msty',
-        apiEndpoint: process.env.MSTY_LOCAL_AI_URL || 'http://localhost:11964',
-        healthCheckUrl: `${process.env.MSTY_LOCAL_AI_URL || 'http://localhost:11964'}/v1/models`,
+        name: 'workbench',
+        apiEndpoint: workbenchUrl || '',
+        healthCheckUrl: workbenchUrl ? `${workbenchUrl}/models` : '',
         maxRetries: 2,
         retryDelay: 500,
-        timeout: 30000,
-        enabled: !!process.env.MSTY_LOCAL_AI_URL,
+        timeout: 120000,
+        enabled: !!workbenchUrl,
       },
-      {
-        name: 'copilot',
-        apiEndpoint: process.env.MSTY_VIBE_PROXY_URL || 'http://localhost:8317',
-        healthCheckUrl: `${process.env.MSTY_VIBE_PROXY_URL || 'http://localhost:8317'}/v1/models`,
-        maxRetries: 2,
-        retryDelay: 500,
-        timeout: 30000,
-        enabled: true,
-      },
+      // Tier 2 — GitHub Models (remote, included, limited daily use)
       {
         name: 'github-models',
-        apiEndpoint: 'https://models.github.ai/inference',
-        healthCheckUrl: 'https://models.github.ai/inference/models',
+        apiEndpoint: 'https://models.inference.ai.azure.com',
+        healthCheckUrl: 'https://models.inference.ai.azure.com/models',
         maxRetries: 3,
         retryDelay: 1000,
         timeout: 30000,
         enabled: !!process.env.GITHUB_TOKEN,
       },
-      {
-        name: 'openai',
-        healthCheckUrl: 'https://api.openai.com/v1/models',
-        maxRetries: 3,
-        retryDelay: 1000,
-        timeout: 30000,
-        enabled: true,
-      },
+      // Tier 3 — Anthropic (remote, high perf, high cost)
       {
         name: 'anthropic',
-        healthCheckUrl: 'https://api.anthropic.com/v1/messages',
+        healthCheckUrl: 'https://api.anthropic.com/v1/models',
         maxRetries: 3,
         retryDelay: 1000,
-        timeout: 30000,
-        enabled: true,
+        timeout: 60000,
+        enabled: !!process.env.ANTHROPIC_API_KEY,
       },
     ];
 
@@ -462,45 +445,33 @@ export class ProviderRegistry {
       ProviderType,
       { apiKey?: string; endpoint?: string; apiVersion?: string; configured: boolean }
     > = {
-      openai: {
-        apiKey: process.env.OPENAI_API_KEY,
-        endpoint: process.env.OPENAI_API_BASE,
-        apiVersion: apiVersions.openai,
-        configured: !!process.env.OPENAI_API_KEY
-      },
-      anthropic: {
-        apiKey: process.env.ANTHROPIC_API_KEY,
-        endpoint: process.env.ANTHROPIC_API_BASE,
-        apiVersion: apiVersions.anthropic,
-        configured: !!process.env.ANTHROPIC_API_KEY
-      },
-      claude: {
-        apiKey: process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY,
-        endpoint: process.env.ANTHROPIC_API_BASE || process.env.CLAUDE_API_BASE,
-        configured: !!(process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY)
+      // Tier 0 — Local
+      local: {
+        endpoint: process.env.LOCAL_LLM_BASE_URL || 'http://localhost:11973/v1',
+        configured: true, // Always available; falls back to MLX default endpoint
       },
       ollama: {
         endpoint: process.env.OLLAMA_HOST || 'http://localhost:11434',
-        configured: true // Ollama doesn't require API key
+        configured: true, // No API key required
       },
-      groq: {
-        apiKey: process.env.GROQ_API_KEY,
-        endpoint: process.env.GROQ_API_BASE,
-        configured: !!process.env.GROQ_API_KEY
+      // Tier 1 — Workbench
+      workbench: {
+        endpoint: process.env.WORKBENCH_BASE_URL,
+        configured: !!process.env.WORKBENCH_BASE_URL,
       },
-      msty: {
-        endpoint: process.env.MSTY_LOCAL_AI_URL || 'http://localhost:11964',
-        configured: !!process.env.MSTY_LOCAL_AI_URL
-      },
-      copilot: {
-        endpoint: process.env.MSTY_VIBE_PROXY_URL || 'http://localhost:8317',
-        configured: true // Copilot via Msty Vibe CLI Proxy (subscription-based)
-      },
+      // Tier 2 — GitHub Models
       'github-models': {
         apiKey: process.env.GITHUB_TOKEN,
-        endpoint: 'https://models.github.ai/inference',
-        configured: !!process.env.GITHUB_TOKEN
-      }
+        endpoint: 'https://models.inference.ai.azure.com',
+        configured: !!process.env.GITHUB_TOKEN,
+      },
+      // Tier 3 — Anthropic
+      anthropic: {
+        apiKey: process.env.ANTHROPIC_API_KEY,
+        endpoint: process.env.ANTHROPIC_API_BASE || 'https://api.anthropic.com',
+        apiVersion: apiVersions.anthropic,
+        configured: !!process.env.ANTHROPIC_API_KEY,
+      },
     };
 
     return envVars;
@@ -567,88 +538,62 @@ export class ProviderRegistry {
     instructions: string[];
   }> {
     return {
-      openai: {
-        description: 'OpenAI GPT models (GPT-3.5, GPT-4, etc.)',
-        environmentVariables: ['OPENAI_API_KEY', 'OPENAI_API_VERSION'],
+      // Tier 0 — Local (private, low perf)
+      local: {
+        description: 'Local inference servers (MLX :11973, LLaMA.cpp :11454)',
+        environmentVariables: ['LOCAL_LLM_BASE_URL', 'LOCAL_LLM_MODEL', 'LOCAL_LLM_API_KEY (optional)'],
         instructions: [
-          '1. Create an account at https://platform.openai.com/',
-          '2. Generate an API key in the API Keys section',
-          '3. Set environment variable: export OPENAI_API_KEY=your_api_key_here',
-          '4. Optional: Pin to legacy SDK: export OPENAI_API_VERSION=v4 (default: v6)',
-          '4. Optional: Set OPENAI_API_BASE for custom endpoints'
-        ]
-      },
-      anthropic: {
-        description: 'Anthropic Claude models',
-        environmentVariables: ['ANTHROPIC_API_KEY', 'ANTHROPIC_API_VERSION'],
-        instructions: [
-          '1. Create an account at https://console.anthropic.com/',
-          '2. Generate an API key in the API Keys section',
-          '3. Set environment variable: export ANTHROPIC_API_KEY=your_api_key_here',
-          '4. Set rollout flag: export ANTHROPIC_API_VERSION=v040|v074',
-          '4. Optional: Set ANTHROPIC_API_BASE for custom endpoints'
-        ]
-      },
-      claude: {
-        description: 'Anthropic Claude (alias for anthropic)',
-        environmentVariables: ['ANTHROPIC_API_KEY', 'CLAUDE_API_KEY'],
-        instructions: [
-          'Same as anthropic provider - uses ANTHROPIC_API_KEY',
-          'Also accepts CLAUDE_API_KEY for backward compatibility'
+          '1. Start MLX server: mlx_lm.server --host 127.0.0.1 --port 11973',
+          '   Or LLaMA.cpp: llama-server --host 127.0.0.1 --port 11454 -m <model>',
+          '2. Set: export LOCAL_LLM_BASE_URL=http://127.0.0.1:11973/v1',
+          '3. Set: export LOCAL_LLM_MODEL=mlx-community/Phi-3.5-mini-instruct-4bit',
+          '4. No auth required (LOCAL_LLM_API_KEY defaults to "local")'
         ]
       },
       ollama: {
-        description: 'Local Ollama models',
+        description: 'Local Ollama models (OpenAI-compatible, :11434)',
         environmentVariables: ['OLLAMA_HOST (optional)'],
         instructions: [
-          '1. Install Ollama from https://ollama.ai/',
-          '2. Start Ollama: ollama serve',
-          '3. Pull a model: ollama pull llama2',
+          '1. Install Ollama: https://ollama.ai/',
+          '2. Start: ollama serve',
+          '3. Pull a model: ollama pull qwen2.5-coder:14b',
           '4. Default endpoint: http://localhost:11434',
-          '5. Optional: Set OLLAMA_HOST for custom endpoint'
+          '5. Optional: export OLLAMA_HOST=http://localhost:11434'
         ]
       },
-      groq: {
-        description: 'Groq fast inference API',
-        environmentVariables: ['GROQ_API_KEY'],
+      // Tier 1 — Workbench (networked, private, medium perf)
+      workbench: {
+        description: 'RTX 3060 GPU node via Tailscale running Ollama',
+        environmentVariables: ['WORKBENCH_BASE_URL', 'WORKBENCH_MODEL (optional)', 'WORKBENCH_API_KEY (optional)'],
         instructions: [
-          '1. Create an account at https://console.groq.com/',
-          '2. Generate an API key in the API Keys section',
-          '3. Set environment variable: export GROQ_API_KEY=your_api_key_here'
+          '1. Ensure Tailscale is connected to the workbench node',
+          '2. Set: export WORKBENCH_BASE_URL=http://<tailscale-ip>:11434',
+          '3. Optional: export WORKBENCH_MODEL=qwen2.5-coder:14b',
+          '4. Optional: export WORKBENCH_API_KEY=<key> (if auth is enabled on the node)'
         ]
       },
-      msty: {
-        description: 'Msty Local AI server (Ollama-compatible models)',
-        environmentVariables: ['MSTY_LOCAL_AI_URL'],
-        instructions: [
-          '1. Install Msty from https://msty.app/',
-          '2. Start the Local AI server (default port: 11964)',
-          '3. Set environment variable: export MSTY_LOCAL_AI_URL=http://localhost:11964',
-          '4. Use for local Ollama-compatible models'
-        ]
-      },
-      copilot: {
-        description: 'GitHub Copilot via Msty Vibe CLI Proxy (Claude Sonnet 4.5/4.6, Opus 4.5/4.6, Haiku 4.5)',
-        environmentVariables: ['MSTY_VIBE_PROXY_URL'],
-        instructions: [
-          '1. Install Msty from https://msty.app/',
-          '2. Enable Vibe CLI Proxy in Msty settings',
-          '3. Sign in with your GitHub Copilot account in Msty',
-          '4. Default endpoint: http://localhost:8317',
-          '5. Optional: export MSTY_VIBE_PROXY_URL=http://localhost:8317',
-          '6. Available models: claude-sonnet-4.5, claude-opus-4.5, claude-haiku-4.5',
-          '7. FREE with GitHub Copilot subscription (no per-token cost)'
-        ]
-      },
+      // Tier 2 — GitHub Models (remote, included, limited daily use)
       'github-models': {
-        description: 'GitHub Models API (GPT-4o, Llama, Mistral — no Claude)',
+        description: 'GitHub Models API — GPT-4o, Llama, Mistral (requires Copilot/Pro)',
         environmentVariables: ['GITHUB_TOKEN'],
         instructions: [
-          '1. Use your existing GITHUB_TOKEN (already configured)',
-          '2. Provides free access to GPT-4o, Llama, Mistral models',
-          '3. Endpoint: https://models.github.ai/inference',
-          '4. No additional subscription required with GitHub Pro/Teams',
-          '5. Note: Claude models are NOT available — use copilot provider instead'
+          '1. Requires GitHub Pro or Copilot subscription',
+          '2. Use your existing GITHUB_TOKEN (needs models:read scope)',
+          '3. Endpoint: https://models.inference.ai.azure.com',
+          '4. Available models: gpt-4o, gpt-4o-mini, text-embedding-3-small',
+          '5. Daily rate limits apply — use for dev/triage, not production throughput'
+        ]
+      },
+      // Tier 3 — Anthropic (remote, high perf, high cost)
+      anthropic: {
+        description: 'Anthropic Claude models (Sonnet, Opus, Haiku) — high cost, use sparingly',
+        environmentVariables: ['ANTHROPIC_API_KEY'],
+        instructions: [
+          '1. Create an account at https://console.anthropic.com/',
+          '2. Generate an API key in the API Keys section',
+          '3. Set: export ANTHROPIC_API_KEY=your_api_key_here',
+          '4. Use native @anthropic-ai/sdk — does NOT support OpenAI compat shim',
+          '5. Reserve for complex multi-step tasks; prefer Tier 0–2 for automation'
         ]
       }
     };

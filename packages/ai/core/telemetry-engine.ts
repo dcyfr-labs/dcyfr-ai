@@ -13,7 +13,7 @@
  * const telemetry = new TelemetryEngine({ storage: 'memory' });
  * 
  * // Start tracking a task
- * const session = telemetry.startSession('claude', {
+ * const session = telemetry.startSession('anthropic', {
  *   taskType: 'feature',
  *   description: 'Implement dark mode',
  * });
@@ -166,11 +166,10 @@ export class TelemetrySessionManager {
 
   private getCostPerMillionTokens(agent: AgentType): number {
     const costs: Record<AgentType, number> = {
-      claude: 15, // $15 per 1M tokens (Sonnet 4.5)
-      'github-models': 0, // Free with GitHub Pro/Teams
-      copilot: 0, // Subscription-based via Msty Vibe CLI Proxy, no per-token cost
-      groq: 0, // Free tier
-      ollama: 0, // Local
+      ollama: 0,           // Tier 0 local — no cost
+      workbench: 0,        // Tier 1 GPU node — no per-token cost
+      'github-models': 0,  // Tier 2 — included with Copilot/Pro
+      anthropic: 15,       // Tier 3 — ~$15/1M tokens (Sonnet 4.6)
     };
     return costs[agent];
   }
@@ -349,7 +348,7 @@ export class TelemetryEngine {
    * Compare stats across all agents
    */
   async compareAgents(period = '30d'): Promise<ComparisonStats> {
-    const agents: AgentType[] = ['claude', 'copilot', 'groq', 'ollama', 'github-models'];
+    const agents: AgentType[] = ['ollama', 'workbench', 'github-models', 'anthropic'];
     const stats: Record<AgentType, AgentStats> = {} as Record<AgentType, AgentStats>;
 
     for (const agent of agents) {
