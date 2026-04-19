@@ -1,4 +1,8 @@
-# @dcyfr/ai
+<div align="center">
+  <img src="https://raw.githubusercontent.com/dcyfr-labs/dcyfr-labs/main/public/images/dcyfr-avatar.svg" alt="DCYFR Logo" width="120" height="120" />
+  <h1>@dcyfr/ai</h1>
+  <p><em>Portable AI agent harness with plugin architecture for multi-provider integration, telemetry tracking, and quality validation.</em></p>
+</div>
 
 <!-- README-META
   tlp_clearance: GREEN
@@ -9,8 +13,6 @@
 -->
 
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/dcyfr/dcyfr-ai)
-
-> Portable AI agent harness with plugin architecture for multi-provider integration, telemetry tracking, and quality validation.
 
 [![npm](https://img.shields.io/npm/v/@dcyfr/ai?logo=npm&logoColor=white)](https://www.npmjs.com/package/@dcyfr/ai)
 [![Downloads](https://img.shields.io/npm/dm/@dcyfr/ai?logo=npm&logoColor=white)](https://www.npmjs.com/package/@dcyfr/ai)
@@ -37,7 +39,7 @@ Portable AI agent harness with plugin architecture for managing multiple AI prov
 | Plugin System  | ✅ Custom                      | ✅ Complex | ❌            | ❌      |
 | Telemetry      | ✅ Built-in                    | ❌         | ❌            | ❌      |
 | Zero Config    | ✅                             | ❌         | ✅            | ❌      |
-| Bundle Size    | Live Bundlephobia minzip badge | ~2.3MB     | ~450KB        | N/A     |
+| Bundle Size    | [![](https://img.shields.io/bundlephobia/minzip/@dcyfr/ai)](https://bundlephobia.com/package/@dcyfr/ai) | ~2.3MB     | ~450KB        | N/A     |
 | TypeScript     | ✅ Strict                      | Partial    | ✅            | ❌      |
 | Quality Gates  | ✅                             | ❌         | ❌            | ❌      |
 | Config System  | YAML/JSON/package              | Code-only  | Code-only     | JSON    |
@@ -53,7 +55,7 @@ Portable AI agent harness with plugin architecture for managing multiple AI prov
 
 - **Weekly Downloads:** Check [npm stats](https://www.npmjs.com/package/@dcyfr/ai)
 - **Dependencies:** 28 production dependencies
-- **Bundle Size:** Live Bundlephobia minzip badge (see above)
+- **Bundle Size:** See badge above ([![minzip](https://img.shields.io/bundlephobia/minzip/@dcyfr/ai)](https://bundlephobia.com/package/@dcyfr/ai))
 - **TypeScript:** Full type definitions included
 - **ESM Support:** ✅ Full ESM modules with tree shaking
 
@@ -100,10 +102,6 @@ Portable AI agent harness with plugin architecture for managing multiple AI prov
 - ⚙️ **Configuration System** - YAML/JSON config with three-layer merge
 - 📊 **Comprehensive Telemetry** - Track usage, costs, quality metrics, performance
 - ✅ **Validation Harness** - Quality gates with parallel/serial execution
-- 💾 **Pluggable Storage** - Memory, file-based, or custom adapters
-- ⚡ **Type-Safe** - Full TypeScript support with Zod validation
-- 📦 **Bundle Profile** - Live Bundlephobia minzip badge
-- 🛠️ **CLI Tools** - Config validation and initialization
 
 ## Installation
 
@@ -178,7 +176,7 @@ npx @dcyfr/ai config:validate --verbose
 
 ### Migrating from LangChain
 
-**Why migrate:** Smaller bundle footprint than LangChain (see live Bundlephobia badge), built-in telemetry, simpler API
+**Why migrate:** Smaller bundle footprint than LangChain (see [bundlephobia](https://bundlephobia.com/package/@dcyfr/ai)), built-in telemetry, simpler API
 
 ```typescript
 // LangChain (before)
@@ -206,7 +204,7 @@ const response = await runtime.chat({
 
 - Simpler configuration (YAML/JSON vs code-only)
 - Built-in telemetry tracking (no additional setup)
-- Smaller bundle size than LangChain (see live Bundlephobia badge)
+- Smaller bundle size than LangChain (see [bundlephobia](https://bundlephobia.com/package/@dcyfr/ai))
 - Type-safe validation with Zod
 - Quality gates included out of the box
 
@@ -260,7 +258,7 @@ const report = await validator.validate({
 ### Prerequisites
 
 ```bash
-# Node.js 18+ required
+# Node.js 24+ required
 node --version
 
 # Install @dcyfr/ai
@@ -944,7 +942,7 @@ A: Yes! @dcyfr/ai is used in production at dcyfr-labs and other projects. It has
 - **Config Loading:** ~10ms (cached), ~50ms (first load with file I/O)
 - **Validation Framework:** Parallel execution 2-5x faster than serial (depends on plugin count)
 - **Plugin System:** Minimal overhead ~5ms per plugin registration
-- **Bundle Size:** Live Bundlephobia minzip badge
+- **Bundle Size:** See [bundlephobia.com/@dcyfr/ai](https://bundlephobia.com/package/@dcyfr/ai) for current minzip size
 
 ### Recommended Usage Patterns
 
@@ -957,7 +955,7 @@ A: Yes! @dcyfr/ai is used in production at dcyfr-labs and other projects. It has
 
 - **vs. Custom Scripts:** 10-20x faster due to optimized plugin execution
 - **vs. Serial Validation:** 2-5x faster with parallel execution mode
-- **vs. LangChain:** Smaller bundle footprint (live Bundlephobia tracking)
+- **vs. LangChain:** Smaller bundle footprint ([bundlephobia](https://bundlephobia.com/package/@dcyfr/ai))
 
 [⬆️ Back to top](#dcyfr-ai)
 

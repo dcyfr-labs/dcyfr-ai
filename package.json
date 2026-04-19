@@ -52,6 +52,7 @@
     "build": "tsc && node scripts/fix-esm-imports.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit",
     "examples:check": "tsc -p tsconfig.examples.json",
     "lint": "eslint packages/",
