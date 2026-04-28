@@ -62,7 +62,11 @@ jobs:
 
       - name: Test (Linear integration)
         id: linear_tests
-        run: npm run test -- packages/ai/__tests__/integrations/linear/ --coverage --coverage.thresholds.lines=80
+        # Scope coverage to the Linear integration source so the 80% threshold
+        # is measured against ~110 lines (linear-client.ts + issue-mapper.ts),
+        # not the whole 14k-line packages/ai/ tree (which would always read
+        # ~0.7% and fail the gate).
+        run: npm run test -- packages/ai/__tests__/integrations/linear/ --coverage --coverage.include='src/integrations/linear/**' --coverage.thresholds.lines=80
 
       - name: Check Changeset (PR only)
         if: github.event_name == 'pull_request'
