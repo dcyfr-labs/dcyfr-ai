@@ -2,7 +2,11 @@
  * Provider Registry Tests
  *
  * Validates provider configuration, environment variable discovery,
- * and setup instructions for copilot, github-models, and msty providers.
+ * and setup instructions for the 4-tier provider architecture:
+ *   Tier 0 — local, ollama (private, low perf)
+ *   Tier 1 — workbench (private, medium perf)
+ *   Tier 2 — github-models (included, limited daily use)
+ *   Tier 3 — anthropic (high cost, high perf)
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
@@ -10,20 +14,19 @@ import { ProviderRegistry } from '../core/provider-registry.js';
 
 describe('ProviderRegistry', () => {
   describe('Provider Configurations', () => {
-    it('should initialize with correct copilot defaults', () => {
+    it('should initialize with anthropic as primary provider', () => {
       const registry = new ProviderRegistry({
-        primaryProvider: 'copilot',
-        fallbackChain: ['ollama'],
+        primaryProvider: 'anthropic',
+        fallbackChain: ['github-models', 'ollama'],
         autoReturn: false,
         healthCheckInterval: 60000,
       });
 
-      // Copilot should be the current provider
-      expect(registry.getCurrentProvider()).toBe('copilot');
+      expect(registry.getCurrentProvider()).toBe('anthropic');
       registry.destroy();
     });
 
-    it('should initialize with correct github-models defaults', () => {
+    it('should initialize with github-models as primary provider', () => {
       const registry = new ProviderRegistry({
         primaryProvider: 'github-models',
         fallbackChain: ['ollama'],
@@ -47,26 +50,26 @@ describe('ProviderRegistry', () => {
       process.env = originalEnv;
     });
 
-    it('should return copilot as always configured', () => {
+    it('should return local as always configured', () => {
       const envVars = ProviderRegistry.discoverEnvironmentVariables();
-      expect(envVars.copilot.configured).toBe(true);
+      expect(envVars.local.configured).toBe(true);
     });
 
-    it('should return correct copilot default endpoint', () => {
-      delete process.env.MSTY_VIBE_PROXY_URL;
+    it('should return correct local default endpoint', () => {
+      delete process.env.LOCAL_LLM_BASE_URL;
       const envVars = ProviderRegistry.discoverEnvironmentVariables();
-      expect(envVars.copilot.endpoint).toBe('http://localhost:8317');
+      expect(envVars.local.endpoint).toBe('http://localhost:11973/v1');
     });
 
-    it('should respect MSTY_VIBE_PROXY_URL override for copilot', () => {
-      process.env.MSTY_VIBE_PROXY_URL = 'http://custom-host:9999';
+    it('should respect LOCAL_LLM_BASE_URL override', () => {
+      process.env.LOCAL_LLM_BASE_URL = 'http://custom-host:9999/v1';
       const envVars = ProviderRegistry.discoverEnvironmentVariables();
-      expect(envVars.copilot.endpoint).toBe('http://custom-host:9999');
+      expect(envVars.local.endpoint).toBe('http://custom-host:9999/v1');
     });
 
     it('should return correct github-models endpoint', () => {
       const envVars = ProviderRegistry.discoverEnvironmentVariables();
-      expect(envVars['github-models'].endpoint).toBe('https://models.github.ai/inference');
+      expect(envVars['github-models'].endpoint).toBe('https://models.inference.ai.azure.com');
     });
 
     it('should detect github-models as configured when GITHUB_TOKEN is set', () => {
@@ -82,16 +85,23 @@ describe('ProviderRegistry', () => {
       expect(envVars['github-models'].configured).toBe(false);
     });
 
-    it('should return correct msty default endpoint', () => {
-      delete process.env.MSTY_LOCAL_AI_URL;
+    it('should detect anthropic as configured when ANTHROPIC_API_KEY is set', () => {
+      process.env.ANTHROPIC_API_KEY = 'sk-ant-test';
       const envVars = ProviderRegistry.discoverEnvironmentVariables();
-      expect(envVars.msty.endpoint).toBe('http://localhost:11964');
+      expect(envVars.anthropic.configured).toBe(true);
+      expect(envVars.anthropic.apiKey).toBe('sk-ant-test');
     });
 
-    it('should detect msty as configured when MSTY_LOCAL_AI_URL is set', () => {
-      process.env.MSTY_LOCAL_AI_URL = 'http://localhost:11964';
+    it('should detect anthropic as not configured without ANTHROPIC_API_KEY', () => {
+      delete process.env.ANTHROPIC_API_KEY;
       const envVars = ProviderRegistry.discoverEnvironmentVariables();
-      expect(envVars.msty.configured).toBe(true);
+      expect(envVars.anthropic.configured).toBe(false);
+    });
+
+    it('should detect workbench as configured when WORKBENCH_BASE_URL is set', () => {
+      process.env.WORKBENCH_BASE_URL = 'http://workbench.local:11434';
+      const envVars = ProviderRegistry.discoverEnvironmentVariables();
+      expect(envVars.workbench.configured).toBe(true);
     });
 
     it('should return correct ollama default endpoint', () => {
@@ -100,109 +110,105 @@ describe('ProviderRegistry', () => {
       expect(envVars.ollama.endpoint).toBe('http://localhost:11434');
     });
 
-    it('should include all expected providers', () => {
+    it('should include all 5 supported providers', () => {
       const envVars = ProviderRegistry.discoverEnvironmentVariables();
       const providers = Object.keys(envVars);
-      expect(providers).toContain('openai');
-      expect(providers).toContain('anthropic');
-      expect(providers).toContain('claude');
+      expect(providers).toContain('local');
       expect(providers).toContain('ollama');
-      expect(providers).toContain('groq');
-      expect(providers).toContain('msty');
-      expect(providers).toContain('copilot');
+      expect(providers).toContain('workbench');
       expect(providers).toContain('github-models');
+      expect(providers).toContain('anthropic');
     });
   });
 
   describe('getProviderSetupInstructions', () => {
-    it('should describe copilot as using Msty Vibe CLI Proxy', () => {
+    it('should describe local as MLX/LLaMA.cpp inference servers', () => {
       const instructions = ProviderRegistry.getProviderSetupInstructions();
-      expect(instructions.copilot.description).toContain('Msty Vibe CLI Proxy');
-      expect(instructions.copilot.description).toContain('Claude');
+      expect(instructions.local.description).toContain('Local inference');
     });
 
-    it('should list MSTY_VIBE_PROXY_URL for copilot', () => {
+    it('should list LOCAL_LLM_BASE_URL for local', () => {
       const instructions = ProviderRegistry.getProviderSetupInstructions();
-      expect(instructions.copilot.environmentVariables).toContain('MSTY_VIBE_PROXY_URL');
+      expect(instructions.local.environmentVariables).toContain('LOCAL_LLM_BASE_URL');
     });
 
-    it('should mention port 8317 in copilot instructions', () => {
+    it('should mention port 11973 in local instructions', () => {
       const instructions = ProviderRegistry.getProviderSetupInstructions();
-      const allInstructions = instructions.copilot.instructions.join(' ');
-      expect(allInstructions).toContain('8317');
+      const allInstructions = instructions.local.instructions.join(' ');
+      expect(allInstructions).toContain('11973');
     });
 
-    it('should mention copilot is free with subscription', () => {
+    it('should describe github-models as requiring Copilot/Pro subscription', () => {
       const instructions = ProviderRegistry.getProviderSetupInstructions();
-      const allInstructions = instructions.copilot.instructions.join(' ');
-      expect(allInstructions).toContain('FREE');
+      expect(instructions['github-models'].description).toContain('Copilot');
     });
 
-    it('should clarify github-models has no Claude', () => {
+    it('should list GITHUB_TOKEN for github-models', () => {
       const instructions = ProviderRegistry.getProviderSetupInstructions();
-      expect(instructions['github-models'].description).toContain('no Claude');
+      expect(instructions['github-models'].environmentVariables).toContain('GITHUB_TOKEN');
     });
 
-    it('should show correct github-models endpoint', () => {
+    it('should describe anthropic as Claude models', () => {
       const instructions = ProviderRegistry.getProviderSetupInstructions();
-      const allInstructions = instructions['github-models'].instructions.join(' ');
-      expect(allInstructions).toContain('models.github.ai');
+      expect(instructions.anthropic.description).toContain('Claude');
     });
 
-    it('should describe msty as Local AI server', () => {
+    it('should list ANTHROPIC_API_KEY for anthropic', () => {
       const instructions = ProviderRegistry.getProviderSetupInstructions();
-      expect(instructions.msty.description).toContain('Local AI');
+      expect(instructions.anthropic.environmentVariables).toContain('ANTHROPIC_API_KEY');
     });
 
-    it('should show correct msty port in instructions', () => {
+    it('should describe workbench as Tailscale GPU node', () => {
       const instructions = ProviderRegistry.getProviderSetupInstructions();
-      const allInstructions = instructions.msty.instructions.join(' ');
-      expect(allInstructions).toContain('11964');
+      expect(instructions.workbench.description).toContain('Tailscale');
     });
 
-    it('should include all expected providers', () => {
+    it('should describe ollama as Local Ollama models', () => {
+      const instructions = ProviderRegistry.getProviderSetupInstructions();
+      expect(instructions.ollama.description).toContain('Ollama');
+    });
+
+    it('should include all 5 supported providers', () => {
       const instructions = ProviderRegistry.getProviderSetupInstructions();
       const providers = Object.keys(instructions);
-      expect(providers).toContain('openai');
-      expect(providers).toContain('anthropic');
-      expect(providers).toContain('claude');
+      expect(providers).toContain('local');
       expect(providers).toContain('ollama');
-      expect(providers).toContain('groq');
-      expect(providers).toContain('msty');
-      expect(providers).toContain('copilot');
+      expect(providers).toContain('workbench');
       expect(providers).toContain('github-models');
+      expect(providers).toContain('anthropic');
     });
   });
 
   describe('Health Status', () => {
     it('should initialize all providers with available health status', () => {
       const registry = new ProviderRegistry({
-        primaryProvider: 'claude',
-        fallbackChain: ['copilot', 'github-models', 'ollama'],
+        primaryProvider: 'anthropic',
+        fallbackChain: ['github-models', 'ollama'],
         autoReturn: false,
         healthCheckInterval: 60000,
       });
 
       const healthStatus = registry.getHealthStatus();
-      expect(healthStatus.get('copilot')?.available).toBe(true);
+      expect(healthStatus.get('anthropic')?.available).toBe(true);
       expect(healthStatus.get('github-models')?.available).toBe(true);
       expect(healthStatus.get('ollama')?.available).toBe(true);
+
       registry.destroy();
     });
   });
 
   describe('Provider Config Updates', () => {
-    it('should allow updating copilot configuration', () => {
+    it('should allow updating github-models configuration', () => {
       const registry = new ProviderRegistry({
-        primaryProvider: 'claude',
-        fallbackChain: ['copilot'],
+        primaryProvider: 'anthropic',
+        fallbackChain: ['github-models'],
         autoReturn: false,
         healthCheckInterval: 60000,
       });
 
       // Should not throw
       expect(() => {
-        registry.updateProviderConfig('copilot', {
+        registry.updateProviderConfig('github-models', {
           timeout: 60000,
           maxRetries: 5,
         });
@@ -213,7 +219,7 @@ describe('ProviderRegistry', () => {
 
     it('should throw for unknown provider', () => {
       const registry = new ProviderRegistry({
-        primaryProvider: 'claude',
+        primaryProvider: 'anthropic',
         fallbackChain: [],
         autoReturn: false,
         healthCheckInterval: 60000,
