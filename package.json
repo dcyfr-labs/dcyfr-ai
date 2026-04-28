@@ -153,7 +153,9 @@
       "@anthropic-ai/sdk": "^0.74.0",
       "axios": "1.15.0"
     },
-    "picomatch": "4.0.4"
+    "picomatch": "4.0.4",
+    "uuid": "^14.0.0",
+    "postcss": "^8.5.10"
   },
   "engines": {
     "node": ">=20.0.0",
