@@ -119,7 +119,7 @@
     "gray-matter": "^4.0.3",
     "groq-sdk": "1.1.2",
     "inquirer": "^13.2.2",
-    "mem0ai": "^2.2.3",
+    "mem0ai": "^3.0.2",
     "neo4j-driver": "^5.28.1",
     "ollama": "^0.5.14",
     "openai": "^6.0.0",
