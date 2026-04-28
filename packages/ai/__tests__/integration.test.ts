@@ -15,18 +15,18 @@ describe('TelemetryEngine', () => {
   });
 
   it('should create a new session', () => {
-    const session = telemetry.startSession('claude', {
+    const session = telemetry.startSession('anthropic', {
       taskType: 'feature',
       description: 'Test task',
     });
 
     expect(session).toBeDefined();
-    expect(session.getSession().agent).toBe('claude');
+    expect(session.getSession().agent).toBe('anthropic');
     expect(session.getSession().taskType).toBe('feature');
   });
 
   it('should record metrics', () => {
-    const session = telemetry.startSession('claude', {
+    const session = telemetry.startSession('anthropic', {
       taskType: 'feature',
       description: 'Test task',
     });
@@ -40,7 +40,7 @@ describe('TelemetryEngine', () => {
   });
 
   it('should record validations', () => {
-    const session = telemetry.startSession('claude', {
+    const session = telemetry.startSession('anthropic', {
       taskType: 'feature',
       description: 'Test task',
     });
@@ -54,7 +54,7 @@ describe('TelemetryEngine', () => {
   });
 
   it('should record violations', () => {
-    const session = telemetry.startSession('claude', {
+    const session = telemetry.startSession('anthropic', {
       taskType: 'feature',
       description: 'Test task',
     });
@@ -75,7 +75,7 @@ describe('TelemetryEngine', () => {
   });
 
   it('should track cost', () => {
-    const session = telemetry.startSession('claude', {
+    const session = telemetry.startSession('anthropic', {
       taskType: 'feature',
       description: 'Test task',
     });
@@ -89,7 +89,7 @@ describe('TelemetryEngine', () => {
   });
 
   it('should end session and calculate execution time', async () => {
-    const session = telemetry.startSession('claude', {
+    const session = telemetry.startSession('anthropic', {
       taskType: 'feature',
       description: 'Test task',
     });
@@ -105,22 +105,22 @@ describe('TelemetryEngine', () => {
   });
 
   it('should get agent stats', async () => {
-    const session1 = telemetry.startSession('claude', {
+    const session1 = telemetry.startSession('anthropic', {
       taskType: 'feature',
       description: 'Test task 1',
     });
     await session1.end('success');
 
-    const session2 = telemetry.startSession('claude', {
+    const session2 = telemetry.startSession('anthropic', {
       taskType: 'bug',
       description: 'Test task 2',
     });
     await session2.end('success');
 
-    const stats = await telemetry.getAgentStats('claude', '1d');
+    const stats = await telemetry.getAgentStats('anthropic', '1d');
 
     expect(stats.totalSessions).toBe(2);
-    expect(stats.agent).toBe('claude');
+    expect(stats.agent).toBe('anthropic');
   });
 });
 
@@ -129,21 +129,21 @@ describe('ProviderRegistry', () => {
 
   beforeEach(() => {
     registry = new ProviderRegistry({
-      primaryProvider: 'claude',
-      fallbackChain: ['groq', 'ollama'],
+      primaryProvider: 'anthropic',
+      fallbackChain: ['github-models', 'ollama'],
       autoReturn: false,
       healthCheckInterval: 60000,
     });
   });
 
   it('should initialize with primary provider', () => {
-    expect(registry.getCurrentProvider()).toBe('claude');
+    expect(registry.getCurrentProvider()).toBe('anthropic');
   });
 
   it('should get health status', () => {
     const healthStatus = registry.getHealthStatus();
     expect(healthStatus.size).toBeGreaterThan(0);
-    expect(healthStatus.has('claude')).toBe(true);
+    expect(healthStatus.has('anthropic')).toBe(true);
   });
 
   it('should execute successfully when provider is available', async () => {
