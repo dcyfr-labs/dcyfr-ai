@@ -26,7 +26,9 @@
   },
   "overrides": {
     "axios": "1.15.0",
-    "undici": "6.24.0"
+    "undici": "6.24.0",
+    "postcss": "^8.5.10",
+    "uuid": "^14.0.0"
   },
   "dcyfr": {
     "version": "1.0.0",
