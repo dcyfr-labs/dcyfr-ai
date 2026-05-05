@@ -85,7 +85,9 @@ const LOCAL_PATTERNS: Array<{
     confidence: 0.95,
   },
   {
-    pattern: /<script[^>]*>[\s\S]*<\/script>/i,
+    // \s* before > catches '</script >' / '</script\n>' which the bare
+    // `</script>` pattern misses (CodeQL js/bad-tag-filter).
+    pattern: /<script[^>]*>[\s\S]*<\/script\s*>/i,
     category: 'xss-attempt',
     severity: 'high',
     confidence: 0.9,
