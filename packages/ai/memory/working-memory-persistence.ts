@@ -16,6 +16,8 @@ import { existsSync, mkdirSync, writeFileSync, readdirSync, readFileSync } from 
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
 
+import { atomicWriteFile } from '../utils/safe-fs.js';
+
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
 /* ------------------------------------------------------------------ */
@@ -207,7 +209,8 @@ export function flushWorkingMemory(
   });
 
   const content = lines.join('\n');
-  writeFileSync(filePath, content, 'utf-8');
+  // Atomic rewrite — closes CodeQL js/insecure-temporary-file.
+  atomicWriteFile(filePath, content);
 
   return {
     filePath,

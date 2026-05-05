@@ -19,6 +19,7 @@
 import { writeFileSync, mkdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { atomicWriteFile } from '../utils/safe-fs.js';
 import { ExecutionMode } from '../types/agent-capabilities.js';
 import type { BackgroundQueueStatus } from './session-queue.js';
 import type { ModeAdjustedScore } from '../reputation/execution-mode-reputation.js';
@@ -255,6 +256,7 @@ export class ExecutionModeDashboard {
 
   private _persist(report: ExecutionModeDashboardReport, date: string): void {
     mkdirSync(this.reportBaseDir, { recursive: true });
-    writeFileSync(this.reportPath(date), JSON.stringify(report, null, 2), 'utf8');
+    // Atomic rewrite — closes CodeQL js/insecure-temporary-file.
+    atomicWriteFile(this.reportPath(date), JSON.stringify(report, null, 2));
   }
 }
