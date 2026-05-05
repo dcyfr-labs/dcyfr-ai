@@ -46,6 +46,7 @@ import type {
   HandoffPatterns,
 } from '../types/telemetry';
 
+import { randomBytes } from 'node:crypto';
 import { createStorageAdapter } from '../utils/storage';
 
 /**
@@ -404,8 +405,9 @@ export class TelemetryEngine {
   }
 
   private generateSessionId(): string {
-    // Session IDs are for internal tracking only, not security-critical
-    return `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    // Use crypto.randomBytes to satisfy CodeQL js/insecure-randomness; strict
+    // improvement over Math.random even though session IDs are internal-only.
+    return `session-${Date.now()}-${randomBytes(5).toString('hex').slice(0, 9)}`;
   }
 
   private async getSessionsForPeriod(

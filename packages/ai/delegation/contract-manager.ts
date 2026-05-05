@@ -11,6 +11,7 @@
  */
 
 import { EventEmitter } from 'events';
+import { randomBytes } from 'node:crypto';
 import Database from 'better-sqlite3';
 import type {
   DelegationContract,
@@ -646,7 +647,9 @@ export class DelegationContractManager extends EventEmitter {
     await this.validateContractSecurity(request, legacyRequest, normalizedPermissionTokens);
 
     // Use explicit contract_id if provided (for testing), otherwise generate
-    const contract_id = request.contract_id || `contract-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+    // crypto.randomBytes for delegation-contract IDs — these are persisted
+    // and gate authorization checks, so must not be predictable.
+    const contract_id = request.contract_id || `contract-${Date.now()}-${randomBytes(5).toString('hex').slice(0, 7)}`;
     const created_at = request.created_at || new Date().toISOString();
     const status = request.status || 'pending';
     
@@ -692,7 +695,7 @@ export class DelegationContractManager extends EventEmitter {
 
     const sessionId = request.session_id ?? (
       executionMode !== ExecutionMode.INTERACTIVE
-        ? `session-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+        ? `session-${Date.now()}-${randomBytes(5).toString('hex').slice(0, 7)}`
         : undefined
     );
     const initialMetadata: Record<string, unknown> = {
