@@ -85,9 +85,10 @@ const LOCAL_PATTERNS: Array<{
     confidence: 0.95,
   },
   {
-    // \s* before > catches '</script >' / '</script\n>' which the bare
-    // `</script>` pattern misses (CodeQL js/bad-tag-filter).
-    pattern: /<script[^>]*>[\s\S]*<\/script\s*>/i,
+    // [^>]* (was \s*) catches whitespace + arbitrary attribute soup after
+    // </script — e.g. '</script\t\n bar>' (CodeQL js/bad-tag-filter v2,
+    // stricter than the v1 fix that only handled trailing whitespace).
+    pattern: /<script[^>]*>[\s\S]*<\/script[^>]*>/i,
     category: 'xss-attempt',
     severity: 'high',
     confidence: 0.9,

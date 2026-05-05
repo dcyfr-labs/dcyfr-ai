@@ -281,15 +281,26 @@ export class ConfigLoader {
   }
 
   /**
-   * Set nested object value using dot notation
+   * Set nested object value using dot notation.
+   *
+   * Refuses to traverse __proto__ / constructor / prototype to prevent
+   * prototype pollution via attacker-controlled config paths
+   * (CodeQL js/prototype-pollution-utility).
    */
   private setNestedValue(obj: Record<string, unknown>, path: string, value: unknown): void {
     const keys = path.split('.');
-    let current = obj;
 
+    // Reject any segment that would walk into a prototype-pollution gadget.
+    for (const k of keys) {
+      if (k === '__proto__' || k === 'constructor' || k === 'prototype') {
+        return; // silently drop — caller-controlled path is unsafe
+      }
+    }
+
+    let current = obj;
     for (let i = 0; i < keys.length - 1; i++) {
       const key = keys[i];
-      if (!(key in current)) {
+      if (!Object.prototype.hasOwnProperty.call(current, key)) {
         current[key] = {};
       }
       current = current[key] as Record<string, unknown>;
