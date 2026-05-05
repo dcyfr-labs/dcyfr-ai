@@ -41,9 +41,17 @@ function parseArrayValue(str) {
  * Parse agent frontmatter
  */
 function parseAgentFrontmatter(content) {
-  // Remove comments before frontmatter
-  const withoutComments = content.replace(/<!--[\s\S]*?-->\n*/g, '');
-  
+  // Strip HTML comments. Loop until fixpoint to handle nested/adjacent
+  // comments — CodeQL js/incomplete-multi-character-sanitization flagged
+  // the single-pass replace as leaving '<!--' in residue when the input
+  // contained nested or chained comment blocks.
+  let withoutComments = content;
+  let prev;
+  do {
+    prev = withoutComments;
+    withoutComments = withoutComments.replace(/<!--[\s\S]*?-->\n*/g, '');
+  } while (withoutComments !== prev);
+
   const match = withoutComments.match(/^---\n([\s\S]*?)\n---/);
   if (!match) {
     throw new Error('No frontmatter found');

@@ -140,8 +140,10 @@ export function isWithinTimeRange(
 // ============================================================================
 
 export function sanitizePath(path: string): string {
-  // Remove leading/trailing slashes, normalize
-  return path.replace(/^\/+|\/+$/g, "").toLowerCase();
+  // Bound input then remove leading/trailing slashes. Length cap prevents
+  // CodeQL js/polynomial-redos on huge slash-only inputs.
+  const bounded = path.length > 1024 ? path.slice(0, 1024) : path;
+  return bounded.replace(/^\/+|\/+$/g, "").toLowerCase();
 }
 
 export function extractSlug(filePath: string): string {

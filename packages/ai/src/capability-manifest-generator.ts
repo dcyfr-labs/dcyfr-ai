@@ -502,15 +502,22 @@ function extractSpecializationsFromDescription(description: string): string[] {
   if (!description) return [];
   const specializations: string[] = [];
   const specPatterns = [
-    /specializ(?:es|ing) in\s+(.+?)(?:\.|$)/i,
-    /expert in\s+(.+?)(?:\.|$)/i,
-    /primary:\s+(.+?)(?:\.|secondary|$)/i,
+    // [^.] negated set replaces (.+?) — no backtracking, linear time.
+    // Closes CodeQL js/polynomial-redos at line 511 (input scanned by all 3).
+    /specializ(?:es|ing) in[ \t]+([^.]+)(?:\.|$)/i,
+    /expert in[ \t]+([^.]+)(?:\.|$)/i,
+    /primary:[ \t]+([^.]+?)(?:\.|secondary|$)/i,
   ];
 
+  // Bound the input — descriptions over 4 KiB are not legitimate agent text
+  // and feeding huge strings to regex is the redos vector. Closes the
+  // js/polynomial-redos finding at line 513 (string-split alternation).
+  const safeDescription = description.length > 4096 ? description.slice(0, 4096) : description;
+
   for (const pattern of specPatterns) {
-    const match = description.match(pattern);
+    const match = safeDescription.match(pattern);
     if (match) {
-      const items = match[1].split(/,\s*(?:and\s+)?|\s+and\s+/).map((s: string) => s.trim()).filter(Boolean);
+      const items = match[1].split(/,[ \t]*(?:and[ \t]+)?|[ \t]+and[ \t]+/).map((s: string) => s.trim()).filter(Boolean);
       specializations.push(...items);
     }
   }

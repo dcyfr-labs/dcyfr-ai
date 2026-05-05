@@ -431,7 +431,10 @@ export class TelemetryEngine {
 
   private getPeriodCutoffDate(period: string): Date {
     const now = new Date();
-    const match = period.match(/(\d+)([dhm])/);
+    // Anchored + bounded {1,9} prevents redos on input like '00...0' (no
+    // unit suffix) where the unbounded \d+ would backtrack quadratically.
+    // Closes CodeQL js/polynomial-redos.
+    const match = period.match(/^(\d{1,9})([dhm])$/);
 
     if (!match) return new Date(0); // All time
 
