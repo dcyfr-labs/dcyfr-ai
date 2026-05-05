@@ -16,6 +16,8 @@ import { createHash } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync, writeFileSync, mkdirSync, renameSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { atomicWriteFile } from '../../utils/safe-fs.js';
+
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
 /* ------------------------------------------------------------------ */
@@ -581,7 +583,7 @@ export class MemoryCompaction {
         '',
       ].join('\n');
 
-      writeFileSync(summaryPath, header + summaryContent, 'utf-8');
+      atomicWriteFile(summaryPath, header + summaryContent);
       summaryPaths.push(summaryPath);
 
       // Archive originals
@@ -693,12 +695,12 @@ export class MemoryCompaction {
       })
       .join('');
 
-    writeFileSync(archivePath, archiveHeader + archiveAdditions, 'utf-8');
+    atomicWriteFile(archivePath, archiveHeader + archiveAdditions);
 
     // Rewrite facts.md without archived entries
     const factsHeader = `# Agent Facts\n\nAutomatically maintained fact store.\n\n---\n\n`;
     const remainingContent = keptEntries.map(e => formatEntry(e)).join('');
-    writeFileSync(factsPath, factsHeader + remainingContent, 'utf-8');
+    atomicWriteFile(factsPath, factsHeader + remainingContent);
 
     if (this.debug) {
       console.log(`[MemoryCompaction] Archived ${archivedFacts.length} stale facts`);

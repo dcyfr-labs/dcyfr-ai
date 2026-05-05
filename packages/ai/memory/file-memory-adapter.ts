@@ -31,6 +31,8 @@ import {
 import { join, resolve } from 'node:path';
 import { homedir } from 'node:os';
 
+import { atomicWriteFile, safeCreateFile } from '../utils/safe-fs.js';
+
 import type {
   DCYFRMemory,
   Memory,
@@ -315,20 +317,16 @@ export class FileMemoryAdapter implements DCYFRMemory {
     if (!existsSync(this.conversationsDir)) {
       mkdirSync(this.conversationsDir, { recursive: true });
     }
-    if (!existsSync(this.factsPath)) {
-      writeFileSync(
-        this.factsPath,
-        '# Facts\n\nLearned facts, user preferences, and domain knowledge.\n\n---\n\n',
-        'utf8',
-      );
-    }
-    if (!existsSync(this.tasksPath)) {
-      writeFileSync(
-        this.tasksPath,
-        '# Tasks\n\nActive and completed task state.\n\n---\n\n',
-        'utf8',
-      );
-    }
+    // Atomic create-if-not-exists via flag:'wx'; mode 0o600 restricts to owner.
+    // Closes CodeQL js/insecure-temporary-file + js/file-system-race (TOCTOU).
+    safeCreateFile(
+      this.factsPath,
+      '# Facts\n\nLearned facts, user preferences, and domain knowledge.\n\n---\n\n',
+    );
+    safeCreateFile(
+      this.tasksPath,
+      '# Tasks\n\nActive and completed task state.\n\n---\n\n',
+    );
   }
 
   /* ---- Indexing -------------------------------------------------- */
@@ -590,13 +588,10 @@ export class FileMemoryAdapter implements DCYFRMemory {
       `${new Date().toISOString().split('T')[0]}-${sessionId}.md`,
     );
 
-    if (!existsSync(convPath)) {
-      writeFileSync(
-        convPath,
-        `# Session ${sessionId}\n\n**Started:** ${new Date().toISOString()}\n\n---\n\n`,
-        'utf8',
-      );
-    }
+    safeCreateFile(
+      convPath,
+      `# Session ${sessionId}\n\n**Started:** ${new Date().toISOString()}\n\n---\n\n`,
+    );
 
     const entry: MarkdownEntry = {
       id: randomUUID(),
@@ -650,11 +645,10 @@ export class FileMemoryAdapter implements DCYFRMemory {
 
     if (existsSync(convPath)) {
       this.index.removeSource(convPath);
-      // Reset the file to header only
-      writeFileSync(
+      // Atomic rewrite — closes CodeQL js/insecure-temporary-file.
+      atomicWriteFile(
         convPath,
         `# Session ${sessionId}\n\n**Cleared:** ${new Date().toISOString()}\n\n---\n\n`,
-        'utf8',
       );
     }
 
@@ -761,6 +755,7 @@ export class FileMemoryAdapter implements DCYFRMemory {
     const header = headerMatch ? headerMatch[1] : '';
 
     const newContent = header + remaining.map(formatEntry).join('');
-    writeFileSync(filePath, newContent, 'utf8');
+    // Atomic rewrite — closes CodeQL js/insecure-temporary-file.
+    atomicWriteFile(filePath, newContent);
   }
 }
