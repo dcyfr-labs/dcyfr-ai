@@ -12,6 +12,9 @@
 
 import { FrameworkConfigSchema, DEFAULT_CONFIG, type FrameworkConfig } from './schema.js';
 
+/** Keys whose presence in a config path would mutate Object.prototype. */
+const FORBIDDEN_CONFIG_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+
 /**
  * Check if running in browser environment
  */
@@ -289,24 +292,30 @@ export class ConfigLoader {
    */
   private setNestedValue(obj: Record<string, unknown>, path: string, value: unknown): void {
     const keys = path.split('.');
+    if (keys.length === 0) return;
 
     // Reject any segment that would walk into a prototype-pollution gadget.
-    for (const k of keys) {
-      if (k === '__proto__' || k === 'constructor' || k === 'prototype') {
-        return; // silently drop — caller-controlled path is unsafe
-      }
-    }
+    // Using a Set + .some() + defineProperty for the final write is the
+    // pattern CodeQL recognises as a complete sanitiser for
+    // js/prototype-pollution-utility.
+    if (keys.some((k) => FORBIDDEN_CONFIG_KEYS.has(k))) return;
 
     let current = obj;
     for (let i = 0; i < keys.length - 1; i++) {
       const key = keys[i];
       if (!Object.prototype.hasOwnProperty.call(current, key)) {
-        current[key] = {};
+        current[key] = Object.create(null) as Record<string, unknown>;
       }
       current = current[key] as Record<string, unknown>;
     }
 
-    current[keys[keys.length - 1]] = value;
+    const lastKey = keys[keys.length - 1];
+    Object.defineProperty(current, lastKey, {
+      value,
+      writable: true,
+      enumerable: true,
+      configurable: true,
+    });
   }
 
   /**
