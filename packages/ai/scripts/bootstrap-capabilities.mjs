@@ -15,8 +15,8 @@ import { writeFileSync, mkdirSync, existsSync } from 'fs';
 import {
   generateDcyfrCapabilityManifests,
   validateCapabilityManifest,
-  defaultCapabilityRegistry,
 } from '../src/capability-manifest-generator.js';
+import { defaultCapabilityRegistry } from '../src/capability-registry.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

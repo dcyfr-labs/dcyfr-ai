@@ -330,7 +330,9 @@ export class AgentRouter {
       await agent.onError(error, context);
     }
 
-    const executionTime = Date.now() - Date.now();
+    // Caller did not pass a start time; the error path doesn't measure
+    // duration, so report zero rather than the no-op `Date.now() - Date.now()`.
+    const executionTime = 0;
     return {
       success: false,
       agentName: agent.manifest.name,

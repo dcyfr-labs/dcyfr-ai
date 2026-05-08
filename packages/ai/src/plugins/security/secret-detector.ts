@@ -152,7 +152,7 @@ export async function detectSecrets(
   pluginPath: string,
 ): Promise<SecretDetectionResult> {
   let gitleaksOutput: GitleaksFinding[] = [];
-  let success = true;
+  const success = true;
   let shouldRunFallback = false;
 
   try {
@@ -217,8 +217,8 @@ export async function detectSecrets(
       }
     } catch {
       // Keep graceful behavior: scanner should not hard-fail when fallback
-      // traversal cannot run in constrained environments.
-      success = success && true;
+      // traversal cannot run in constrained environments. No-op: success
+      // already reflects whatever the primary path established.
     }
   }
 
