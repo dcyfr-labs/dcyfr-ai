@@ -150,8 +150,7 @@
     "axios": "1.16.0",
     "express-rate-limit": ">=8.2.2",
     "mem0ai": {
-      "@anthropic-ai/sdk": "^0.74.0",
-      "axios": "1.15.0"
+      "@anthropic-ai/sdk": "^0.74.0"
     },
     "picomatch": "4.0.4",
     "uuid": "^14.0.0",
