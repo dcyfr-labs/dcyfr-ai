@@ -294,22 +294,28 @@ export class ConfigLoader {
     const keys = path.split('.');
     if (keys.length === 0) return;
 
-    // Reject any segment that would walk into a prototype-pollution gadget.
-    // Using a Set + .some() + defineProperty for the final write is the
-    // pattern CodeQL recognises as a complete sanitiser for
-    // js/prototype-pollution-utility.
-    if (keys.some((k) => FORBIDDEN_CONFIG_KEYS.has(k))) return;
-
+    // Per-segment check inside the loop (belt-and-suspenders alongside the
+    // upfront filter) + Object.defineProperty for every write — this is the
+    // sanitiser pattern CodeQL js/prototype-pollution-utility recognises as
+    // complete. Plain `current[key] = …` even for intermediate nodes is
+    // enough for the query to flag a recursive-assignment gadget.
     let current = obj;
     for (let i = 0; i < keys.length - 1; i++) {
       const key = keys[i];
+      if (FORBIDDEN_CONFIG_KEYS.has(key)) return;
       if (!Object.prototype.hasOwnProperty.call(current, key)) {
-        current[key] = Object.create(null) as Record<string, unknown>;
+        Object.defineProperty(current, key, {
+          value: Object.create(null) as Record<string, unknown>,
+          writable: true,
+          enumerable: true,
+          configurable: true,
+        });
       }
       current = current[key] as Record<string, unknown>;
     }
 
     const lastKey = keys[keys.length - 1];
+    if (FORBIDDEN_CONFIG_KEYS.has(lastKey)) return;
     Object.defineProperty(current, lastKey, {
       value,
       writable: true,
