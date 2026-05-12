@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.0.4](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.0.3...v3.0.4) (2026-05-12)
+
+
+### Bug Fixes
+
+* **release:** align release-please tag format with existing v* tags ([#177](https://github.com/dcyfr-labs/dcyfr-ai/issues/177)) ([b373114](https://github.com/dcyfr-labs/dcyfr-ai/commit/b3731141900425606b7646d72cd8a93e0421f354))
+
 ## 3.0.3
 
 ### Patch Changes
