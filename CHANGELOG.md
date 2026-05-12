@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.0.5](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.0.4...v3.0.5) (2026-05-12)
+
+
+### Bug Fixes
+
+* **security:** strengthen prototype-pollution sanitizer in config loader ([#178](https://github.com/dcyfr-labs/dcyfr-ai/issues/178)) ([e0f5c22](https://github.com/dcyfr-labs/dcyfr-ai/commit/e0f5c22607dd77dab5409002832d397c3d5f3f4a))
+
 ## [3.0.4](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.0.3...v3.0.4) (2026-05-12)
 
 
