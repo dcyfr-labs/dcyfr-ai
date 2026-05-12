@@ -70,14 +70,7 @@
     "mcp:dev:content": "npx fastmcp dev packages/ai/mcp/servers/content-manager/index.ts",
     "mcp:dev:promptintel": "npx fastmcp dev packages/ai/mcp/servers/promptintel/index.ts",
     "mcp:dev:delegation": "npx fastmcp dev packages/ai/mcp/servers/delegation-monitor/index.ts",
-    "changeset": "changeset",
-    "changeset:version": "changeset version",
-    "changeset:publish": "changeset publish",
-    "validate:provider-flags": "node scripts/validate-provider-version-flags.mjs",
-    "release": "npm run build && changeset publish",
-    "version:patch": "npm version patch -m 'chore: bump version to %s'",
-    "version:minor": "npm version minor -m 'chore: bump version to %s'",
-    "version:major": "npm version major -m 'chore: bump version to %s'"
+    "validate:provider-flags": "node scripts/validate-provider-version-flags.mjs"
   },
   "keywords": [
     "ai",
@@ -129,8 +122,6 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@changesets/changelog-github": "^0.7.0",
-    "@changesets/cli": "^2.29.8",
     "@types/better-sqlite3": "^7.6.12",
     "@types/glob": "^9.0.0",
     "@types/node": "^25.5.0",

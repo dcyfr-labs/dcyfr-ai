@@ -211,54 +211,51 @@ The `validate-examples` CI workflow will catch any regressions on every PR.
 
 ## Release Process
 
-**IMPORTANT:** @dcyfr/ai uses [Changesets](https://github.com/changesets/changesets) for automated versioning and publishing. **NEVER manually run `npm publish` or update version numbers.**
+**IMPORTANT:** @dcyfr/ai uses [release-please](https://github.com/googleapis/release-please) for automated versioning and publishing. Version bumps are derived from your PR titles — **NEVER manually run `npm publish` or update version numbers.**
 
 ### For Contributors
 
-When adding a feature or fix:
+Your PR title is the only release artifact. Make it a [conventional commit](https://www.conventionalcommits.org/):
 
-1. **Create a changeset** describing your changes:
-   ```bash
-   npx changeset
-   # Follow prompts to select package and version bump type (major/minor/patch)
-   ```
+```
+<type>(<optional-scope>): <subject>
+```
 
-2. **Commit the changeset file** (`.changeset/*.md`) with your code:
-   ```bash
-   git add .changeset/my-feature.md
-   git commit -m "feat: my feature description"
-   ```
+| Type | Bump | Example |
+|---|---|---|
+| `fix:` | patch | `fix(memory): correct mem0 client retry semantics` |
+| `deps:` | patch | `deps: bump @anthropic-ai/sdk to 0.95.2` |
+| `perf:` | patch | `perf(provider-registry): cache provider capabilities lookup` |
+| `feat:` | minor | `feat(provider-registry): add GitHub Models provider` |
+| `feat!:` or footer `BREAKING CHANGE:` | major | `feat!: drop CommonJS export surface` |
+| `chore:`, `docs:`, `test:`, `ci:`, `build:`, `style:`, `refactor:` | no release | n/a |
 
-3. **Push to GitHub** - the changeset goes through normal PR review
+Squash-merge is required so the PR title becomes the single commit message on `main` — which is what release-please reads.
 
 ### For Maintainers
 
-After merging PRs with changesets:
+1. **Merge feature PRs** to `main`. Each merge triggers `.github/workflows/release.yml`.
 
-1. **Changesets bot creates "Version Packages" PR** automatically:
-   - Updates `package.json` version
-   - Updates `CHANGELOG.md`
-   - Consumes changeset files
+2. **release-please opens a "Release PR"** automatically when there are unreleased commits:
+   - Updates `package.json` version (based on commit types since last release)
+   - Updates `CHANGELOG.md` (grouped by `feat` / `fix` / `deps` / `perf` / `refactor`)
+   - Updates `.release-please-manifest.json`
 
-2. **Review and merge the Version Packages PR**
-
-3. **GitHub Actions publishes automatically:**
-   - `.github/workflows/release.yml` detects the version change
-   - Builds the package
-   - Publishes to npm using `NPM_TOKEN` secret
-   - Creates GitHub release with changelog
+3. **Review and merge the Release PR.** On merge:
+   - GitHub Release is created with the changelog
+   - npm publish runs via OIDC Trusted Publishing (no `NPM_TOKEN` secret needed)
+   - Provenance attestation is generated
 
 **Configuration:**
-- Changesets config: `.changeset/config.json`
+- Release-please config: `.release-please-config.json`
+- Version manifest: `.release-please-manifest.json`
 - Release workflow: `.github/workflows/release.yml`
-- Uses npm provenance for supply chain security
 
-**Why this workflow?**
-- Prevents manual version conflicts
-- Ensures CHANGELOG is always current
-- Automates npm authentication (no local tokens)
-- Creates audit trail via PRs
-- Enables npm provenance signatures
+**Why release-please instead of changesets?**
+- Single source of truth — the PR title *is* the release artifact, nothing to forget
+- Works for Dependabot and agent-authored PRs without extra coordination
+- Same Release-PR-as-human-gate model preserved
+- Trusted Publishing via OIDC (no stored npm token)
 
 ## Questions?
 

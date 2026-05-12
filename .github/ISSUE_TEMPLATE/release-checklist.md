@@ -9,7 +9,7 @@ assignees: ''
 ## Pre-Release Checklist
 
 - [ ] All CI checks passing on main
-- [ ] Release PR created by changesets bot
+- [ ] Release PR opened by release-please (`release-please--branches--main` head)
 - [ ] CHANGELOG.md reviewed and accurate
 - [ ] Version number appropriate (patch/minor/major)
 - [ ] No unintended changes in package.json
