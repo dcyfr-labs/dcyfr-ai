@@ -105,7 +105,6 @@
     "@azure/search-documents": "^13.0.0",
     "@google/genai": "^2.0.1",
     "@langchain/core": "^1.1.24",
-    "@mistralai/mistralai": "^2.1.2",
     "@qdrant/js-client-rest": "^1.16.2",
     "@supabase/supabase-js": "^2.49.1",
     "@upstash/redis": "^1.34.3",
