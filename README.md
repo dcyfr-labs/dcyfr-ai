@@ -752,24 +752,23 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for contribution guidelines.
 
 ### Release Process
 
-We use [Changesets](https://github.com/changesets/changesets) for automated versioning and publishing.
+We use [release-please](https://github.com/googleapis/release-please) for automated versioning and publishing. Version bumps are derived from PR titles using [conventional commits](https://www.conventionalcommits.org/).
 
 **For contributors:**
 
-```bash
-# Add a changeset describing your changes
-npm run changeset
+Make your PR title a conventional commit (`feat:` minor, `fix:`/`deps:`/`perf:` patch, `feat!:` major). Squash-merge is required so the PR title becomes the commit on `main`.
 
-# Commit the changeset with your PR
-git add .changeset/*.md
-git commit -m "feat: your feature"
+```
+fix(memory): correct mem0 client retry semantics
+feat(provider-registry): add GitHub Models provider
+deps: bump @anthropic-ai/sdk to 0.95.2
 ```
 
 **For maintainers:**
 
-- Changesets automatically creates Release PRs
-- Merging a Release PR publishes to npm
-- See [Release Management](./docs/RELEASE_MANAGEMENT.md) for full details
+- release-please opens a Release PR aggregating unreleased commits
+- Merging the Release PR publishes to npm via OIDC Trusted Publishing
+- See [CONTRIBUTING.md](./CONTRIBUTING.md#release-process) for the full release flow
 
 [⬆️ Back to top](#dcyfr-ai)
 
@@ -929,7 +928,7 @@ Telemetry tracks: API calls, token usage, costs, latency, quality scores.
 
 **Q: Is this harness production-ready?**
 
-A: Yes! @dcyfr/ai is used in production at dcyfr-labs and other projects. It has comprehensive test coverage, semantic versioning, automated releases via Changesets, and follows best practices for package publishing.
+A: Yes! @dcyfr/ai is used in production at dcyfr-labs and other projects. It has comprehensive test coverage, semantic versioning, automated releases via release-please, and follows best practices for package publishing.
 
 [⬆️ Back to top](#dcyfr-ai)
 

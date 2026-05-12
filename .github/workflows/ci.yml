@@ -9,7 +9,6 @@ on:
       - main
     paths-ignore:
       - '**.md'
-      - '.changeset/**'
 
 permissions: {}
 
@@ -68,24 +67,25 @@ jobs:
         # ~0.7% and fail the gate).
         run: npm run test -- packages/ai/__tests__/integrations/linear/ --coverage --coverage.include='src/integrations/linear/**' --coverage.thresholds.lines=80
 
-      - name: Check Changeset (PR only)
+      - name: Check Conventional Commit (PR only)
         if: github.event_name == 'pull_request'
         env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
           HEAD_REF: ${{ github.head_ref }}
         run: |
-          # Skip for release PRs created by changesets
-          if [[ "$HEAD_REF" == "changeset-release/main" ]]; then
-            echo "✅ This is a release PR, skipping changeset check"
+          # Skip for release PRs created by release-please
+          if [[ "$HEAD_REF" == release-please--* ]]; then
+            echo "✅ This is a release-please PR, skipping conventional-commit check"
             exit 0
           fi
-          
-          # Check if there are changesets in this PR
-          CHANGESETS=$(find .changeset -name '*.md' ! -name 'README.md' 2>/dev/null | wc -l)
-          
-          if [ "$CHANGESETS" -eq 0 ]; then
-            echo "::warning title=Missing Changeset::No changeset found. If this PR includes user-facing changes, run 'npm run changeset' to add one."
+
+          # Validate the PR title matches conventional commits.
+          # release-please derives version bumps from these, so a non-conforming
+          # title means the change won't trigger a release.
+          if echo "$PR_TITLE" | grep -qE '^(feat|fix|perf|deps|revert|refactor|docs|test|ci|build|chore|style)(\([a-z0-9_-]+\))?!?: .+'; then
+            echo "✅ PR title is a valid conventional commit: $PR_TITLE"
           else
-            echo "✅ Found $CHANGESETS changeset(s)"
+            echo "::warning title=Non-conventional PR title::PR title '$PR_TITLE' does not match conventional commits. release-please needs 'type(scope): subject' to trigger a version bump. See CONTRIBUTING.md."
           fi
 
       - name: Create Summary

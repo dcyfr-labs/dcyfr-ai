@@ -19,18 +19,39 @@ env:
   NPM_CONFIG_PROVENANCE: true
 
 jobs:
-  release:
-    name: Release
+  release-please:
+    name: Release Please
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+      version: ${{ steps.release.outputs.version }}
+    steps:
+      - name: Run release-please
+        id: release
+        uses: googleapis/release-please-action@v4
+        with:
+          config-file: .release-please-config.json
+          manifest-file: .release-please-manifest.json
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  publish:
+    name: Publish to npm
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true'
     environment: production
+    permissions:
+      contents: read
+      id-token: write
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -38,6 +59,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
           cache-dependency-path: '**/package.json'
+          registry-url: 'https://registry.npmjs.org'
 
       - name: Upgrade npm for Trusted Publishing
         run: npm install -g npm@latest
@@ -53,7 +75,6 @@ jobs:
             exit 1
           fi
           echo "✅ npm $NPM_VERSION supports Trusted Publishing"
-          echo "OIDC environment variables:"
           env | grep ACTIONS_ID_TOKEN || echo "⚠️ No OIDC tokens found"
 
       - name: Install Dependencies
@@ -68,59 +89,14 @@ jobs:
       - name: Run Tests
         run: npm run test
 
-      - name: Create Release Pull Request or Publish
-        id: changesets
-        uses: changesets/action@v1
-        with:
-          publish: npm run release
-          version: npm run changeset:version
-          title: 'chore(release): version packages'
-          commit: 'chore(release): version packages'
-          createGithubReleases: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Add Copilot as Reviewer
-        if: steps.changesets.outputs.pullRequestNumber
-        uses: actions/github-script@v9
-        with:
-          script: |
-            const pr_number = ${{ steps.changesets.outputs.pullRequestNumber }};
-            try {
-              await github.rest.pulls.requestReviewers({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                pull_number: pr_number,
-                reviewers: ['copilot']
-              });
-              console.log('✅ Added Copilot as reviewer to PR #' + pr_number);
-            } catch (error) {
-              console.log('⚠️ Could not add Copilot as reviewer:', error.message);
-            }
-
-      - name: Log Release Status
-        if: always()
-        run: |
-          echo "=== Release Status ==="
-          if [ "${{ steps.changesets.outputs.published }}" == "true" ]; then
-            echo "✅ Successfully published packages to npm"
-            echo "📦 Published packages:"
-            echo '${{ steps.changesets.outputs.publishedPackages }}' | jq '.' 2>/dev/null || echo "Unable to parse packages"
-          elif [ "${{ steps.changesets.outputs.hasChangesets }}" == "true" ]; then
-            echo "📝 Release PR created/updated - merge it to publish"
-            if [ -n "${{ steps.changesets.outputs.pullRequestNumber }}" ]; then
-              echo "📋 PR #${{ steps.changesets.outputs.pullRequestNumber }}"
-            fi
-          else
-            echo "ℹ️ No changesets found and no pending release"
-          fi
+      - name: Publish to npm
+        run: npm publish --provenance --access public
 
       - name: Create Summary
-        if: steps.changesets.outputs.published == 'true'
         run: |
           echo "## 🚀 Release Published" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Published packages:" >> $GITHUB_STEP_SUMMARY
-          echo '```json' >> $GITHUB_STEP_SUMMARY
-          echo '${{ steps.changesets.outputs.publishedPackages }}' >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "- **Package:** \`@dcyfr/ai\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version:** \`${{ needs.release-please.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Tag:** \`${{ needs.release-please.outputs.tag_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Provenance:** ✅ via OIDC Trusted Publishing" >> $GITHUB_STEP_SUMMARY

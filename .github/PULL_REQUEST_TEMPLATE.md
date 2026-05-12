@@ -4,31 +4,28 @@
 
 ## Type of Change
 
-<!-- Mark relevant options with an "x" -->
+<!-- Releases are driven by your PR title, not a checklist. Make it a
+     conventional commit so release-please can bump the right version. -->
 
-- [ ] Bug fix (patch)
-- [ ] New feature (minor)
-- [ ] Breaking change (major)
-- [ ] Documentation update
-- [ ] Internal refactor (no user impact)
+- [ ] `fix:` — bug fix (patch bump)
+- [ ] `feat:` — new feature (minor bump)
+- [ ] `feat!:` or `BREAKING CHANGE:` footer — breaking change (major bump)
+- [ ] `deps:` / `perf:` / `refactor:` — patch bump
+- [ ] `docs:` / `test:` / `ci:` / `chore:` / `build:` / `style:` — no release
 
-## Changeset
+### PR title format
 
-<!-- For changes that affect users, add a changeset -->
-
-- [ ] I have added a changeset (`npm run changeset`)
-- [ ] No changeset needed (docs/tests/internal only)
-
-### If you added a changeset:
-
-```bash
-npm run changeset
-# Follow the prompts, then commit the .changeset/*.md file
+```
+<type>(<optional-scope>): <subject>
 ```
 
-## Testing
+Examples:
+- `fix(memory): correct mem0 client retry semantics`
+- `feat(provider-registry): add GitHub Models provider`
+- `deps: bump @anthropic-ai/sdk to 0.95.2`
+- `feat!: drop CommonJS export surface`
 
-<!-- Describe how you tested your changes -->
+## Testing
 
 - [ ] Tests pass locally (`npm test`)
 - [ ] Build succeeds (`npm run build`)
@@ -38,7 +35,6 @@ npm run changeset
 ## Documentation
 
 - [ ] Updated relevant documentation
-- [ ] Updated CHANGELOG.md (if doing manual release)
 - [ ] Updated examples if API changed
 
 ## Additional Notes
