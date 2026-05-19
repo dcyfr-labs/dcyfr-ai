@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.0.7](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.0.6...v3.0.7) (2026-05-19)
+
+
+### Dependencies
+
+* bump groq-sdk from 1.1.2 to 1.2.0 ([#193](https://github.com/dcyfr-labs/dcyfr-ai/issues/193)) ([5f738e1](https://github.com/dcyfr-labs/dcyfr-ai/commit/5f738e15c27948f13f76d5a71598e2cc741333cc))
+
 ## [3.0.6](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.0.5...v3.0.6) (2026-05-19)
 
 
