@@ -34,7 +34,11 @@ jobs:
         with:
           config-file: .release-please-config.json
           manifest-file: .release-please-manifest.json
-          token: ${{ secrets.GITHUB_TOKEN }}
+          # PAT with `workflow` scope when available — GITHUB_TOKEN cannot push
+          # tags on commits that touch .github/workflows/* (server-side reject).
+          # Falls back to GITHUB_TOKEN; degraded mode no-ops the tag push for
+          # workflow-touching releases (2026-05-12 missing-v3.0.3 fingerprint).
+          token: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
 
   publish:
     name: Publish to npm
