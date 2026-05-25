@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.0.9](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.0.8...v3.0.9) (2026-05-25)
+
+
+### Bug Fixes
+
+* **release:** use PAT with workflow scope for release-please ([#217](https://github.com/dcyfr-labs/dcyfr-ai/issues/217)) ([52da39f](https://github.com/dcyfr-labs/dcyfr-ai/commit/52da39f2b46a4ab0c421b568cfaca749fe13b822))
+
 ## [3.0.8](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.0.7...v3.0.8) (2026-05-25)
 
 
