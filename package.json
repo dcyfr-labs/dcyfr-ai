@@ -125,11 +125,11 @@
     "@types/better-sqlite3": "^7.6.12",
     "@types/glob": "^9.0.0",
     "@types/node": "^25.5.0",
-    "@vitest/coverage-v8": "4.1.5",
+    "@vitest/coverage-v8": "^4.1.7",
     "eslint": "^10.0.3",
     "globals": "^17.5.0",
     "typescript": "^6.0.2",
-    "typescript-eslint": "^8.56.0",
+    "typescript-eslint": "^8.59.4",
     "vitest": "^4.0.18"
   },
   "peerDependencies": {
