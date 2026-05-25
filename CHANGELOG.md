@@ -1,5 +1,19 @@
 # Changelog
 
+## [3.0.8](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.0.7...v3.0.8) (2026-05-25)
+
+
+### Dependencies
+
+* batch runtime bumps (anthropic, google/genai, langchain, inquirer) ([#215](https://github.com/dcyfr-labs/dcyfr-ai/issues/215)) ([05218b4](https://github.com/dcyfr-labs/dcyfr-ai/commit/05218b47c84b675ad17a59818c44a40e513850e3))
+* batch toolchain bumps (typescript-eslint, vitest coverage) ([#214](https://github.com/dcyfr-labs/dcyfr-ai/issues/214)) ([42d9818](https://github.com/dcyfr-labs/dcyfr-ai/commit/42d981829fbc52da59d411cedeb6b461aee83db3))
+* bump @supabase/supabase-js from 2.105.4 to 2.106.1 ([#205](https://github.com/dcyfr-labs/dcyfr-ai/issues/205)) ([d09fefb](https://github.com/dcyfr-labs/dcyfr-ai/commit/d09fefb8f31ed5b68372f624aea20dfde486d65e))
+* bump cloudflare from 6.2.0 to 6.3.0 ([#212](https://github.com/dcyfr-labs/dcyfr-ai/issues/212)) ([a6e681f](https://github.com/dcyfr-labs/dcyfr-ai/commit/a6e681f83a1ca249bf9f610618870fde59f83942))
+* bump openai from 6.38.0 to 6.39.0 ([#213](https://github.com/dcyfr-labs/dcyfr-ai/issues/213)) ([551f7da](https://github.com/dcyfr-labs/dcyfr-ai/commit/551f7da24135619a6efd974bd7909fdc1f380226))
+* bump pg from 8.11.3 to 8.21.0 ([#203](https://github.com/dcyfr-labs/dcyfr-ai/issues/203)) ([1d53730](https://github.com/dcyfr-labs/dcyfr-ai/commit/1d5373092f9dd89361c9974c124622712921750d))
+* bump qs in the npm_and_yarn group across 1 directory ([#200](https://github.com/dcyfr-labs/dcyfr-ai/issues/200)) ([66c424d](https://github.com/dcyfr-labs/dcyfr-ai/commit/66c424de7f55d0a596ae99cb1ef2e4b2bc2b02e5))
+* bump yaml from 2.8.4 to 2.9.0 ([#206](https://github.com/dcyfr-labs/dcyfr-ai/issues/206)) ([aed01d5](https://github.com/dcyfr-labs/dcyfr-ai/commit/aed01d53197609ec07d938add155b9f16f975ca8))
+
 ## [3.0.7](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.0.6...v3.0.7) (2026-05-19)
 
 
