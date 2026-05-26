@@ -28,6 +28,19 @@ jobs:
       tag_name: ${{ steps.release.outputs.tag_name }}
       version: ${{ steps.release.outputs.version }}
     steps:
+      - name: Mint GitHub App token
+        id: app-token
+        # Only mint when org-level RELEASE_APP_ID is set. `continue-on-error`
+        # makes the workflow degrade-safe: if the App isn't installed on this
+        # repo yet, or secrets are missing, mint fails non-fatally and the
+        # fallback chain picks up RELEASE_TOKEN.
+        if: ${{ vars.RELEASE_APP_ID != '' }}
+        continue-on-error: true
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+
       - name: Run release-please
         id: release
         uses: googleapis/release-please-action@v5
@@ -38,7 +51,7 @@ jobs:
           # tags on commits that touch .github/workflows/* (server-side reject).
           # Falls back to GITHUB_TOKEN; degraded mode no-ops the tag push for
           # workflow-touching releases (2026-05-12 missing-v3.0.3 fingerprint).
-          token: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token || secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
 
   publish:
     name: Publish to npm
