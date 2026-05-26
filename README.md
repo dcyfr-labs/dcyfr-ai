@@ -13,6 +13,7 @@
 -->
 
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/dcyfr/dcyfr-ai)
+[![Featured on Peerlist](https://img.shields.io/badge/Featured%20on-Peerlist-00AA45?logo=peerlist&logoColor=white)](https://peerlist.io/dcyfr/project/dcyfr-ai)
 
 [![npm](https://img.shields.io/npm/v/@dcyfr/ai?logo=npm&logoColor=white)](https://www.npmjs.com/package/@dcyfr/ai)
 [![Downloads](https://img.shields.io/npm/dm/@dcyfr/ai?logo=npm&logoColor=white)](https://www.npmjs.com/package/@dcyfr/ai)
@@ -30,6 +31,7 @@ Portable AI agent harness with plugin architecture for managing multiple AI prov
 - Primary domain: [www.dcyfr.ai](https://www.dcyfr.ai)
 - Trademark guidance: [../TRADEMARK.md](../TRADEMARK.md)
 - Licensing details: [LICENSE](./LICENSE)
+- Peerlist project: [peerlist.io/dcyfr/project/dcyfr-ai](https://peerlist.io/dcyfr/project/dcyfr-ai)
 
 ## 🔍 @dcyfr/ai vs. Alternatives
 
