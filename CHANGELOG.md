@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.1.0](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.0.9...v3.1.0) (2026-05-26)
+
+
+### Features
+
+* **release:** mint tokens via dcyfr-labs-release GitHub App ([#220](https://github.com/dcyfr-labs/dcyfr-ai/issues/220)) ([b667da3](https://github.com/dcyfr-labs/dcyfr-ai/commit/b667da3dff2234946ccfbe543e4c7ac69d137535))
+
 ## [3.0.9](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.0.8...v3.0.9) (2026-05-25)
 
 
