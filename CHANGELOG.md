@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.2.0](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.1.0...v3.2.0) (2026-06-01)
+
+
+### Features
+
+* **mcp:** authenticated Streamable HTTP transport for FastMCP servers ([#222](https://github.com/dcyfr-labs/dcyfr-ai/issues/222)) ([60f3e99](https://github.com/dcyfr-labs/dcyfr-ai/commit/60f3e995659f2112f8e7378eae392ac7b4b1b8c6))
+
 ## [3.1.0](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.0.9...v3.1.0) (2026-05-26)
 
 
