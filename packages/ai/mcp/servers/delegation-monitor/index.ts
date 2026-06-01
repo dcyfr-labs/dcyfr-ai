@@ -34,6 +34,12 @@ import {
   MCPToolError,
   measurePerformance,
 } from '../shared/utils.js';
+import {
+  buildBearerAuthenticator,
+  resolveTransportConfig,
+  assertRemoteAuthConfigured,
+  describeTransport,
+} from '../shared/transport.js';
 
 // ============================================================================
 // Authentication
@@ -196,6 +202,9 @@ const server = new FastMCP({
   version: '1.0.0',
   instructions:
     'Provides delegation monitoring and management tools for tracking contracts, reputation, events, and escalations. Use these tools to monitor delegation chains, query agent performance, and trigger manual reviews when needed.',
+  // HTTP-layer bearer gate for remote (httpStream) transport; inert under stdio.
+  // Complements the existing app-level DELEGATION_MCP_WRITE_TOKEN write gate.
+  authenticate: buildBearerAuthenticator(),
 });
 
 // Initialize delegation infrastructure
@@ -870,8 +879,10 @@ server.addResource({
 // Start Server
 // ============================================================================
 
-server.start({
-  transportType: 'stdio',
-});
+// Transport is env-selected (default stdio); fail-closed without MCP_BEARER_TOKEN
+// over httpStream. See ../shared/transport.ts + ../promptintel/REMOTE.md.
+const transport = resolveTransportConfig();
+assertRemoteAuthConfigured('dcyfr-delegation-monitor', transport);
+server.start(transport);
 
-console.warn('✅ Delegation Monitor MCP Server started (stdio mode)');
+console.warn(describeTransport('dcyfr-delegation-monitor', transport));

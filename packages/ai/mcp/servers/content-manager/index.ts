@@ -13,6 +13,7 @@ import { FastMCP } from 'fastmcp';
 import { z } from 'zod';
 import { SimpleCache } from '../shared/cache.js';
 import { emitDelegationEvent } from '../shared/utils.js';
+import { buildBearerAuthenticator } from '../shared/transport.js';
 import type { ContentProvider, ContentItem } from './content-provider.js';
 
 /**
@@ -25,6 +26,10 @@ export function createContentManagerServer(provider: ContentProvider) {
     version: '1.0.0',
     instructions:
       'Query and analyze MDX blog posts and project content. Use these tools to discover content, analyze topics, and find related articles.',
+    // Bearer gate active when a startup script serves this factory over
+    // httpStream; inert under stdio. Transport selection is the embedder's
+    // choice (see ../shared/transport.ts + ../promptintel/REMOTE.md).
+    authenticate: buildBearerAuthenticator(),
   });
 
   // Cache for content queries (5 minutes)
