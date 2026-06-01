@@ -27,6 +27,12 @@ import {
   emitDelegationEvent,
 } from '../shared/utils.js';
 import { SimpleCache } from '../shared/cache.js';
+import {
+  buildBearerAuthenticator,
+  resolveTransportConfig,
+  assertRemoteAuthConfigured,
+  describeTransport,
+} from '../shared/transport.js';
 
 // ============================================================================
 // Server Configuration
@@ -37,6 +43,10 @@ const server = new FastMCP({
   version: '1.0.0',
   instructions:
     'Provides access to PromptIntel threat intelligence platform. Use these tools to search IoPC (Indicators of Prompt Compromise), analyze attack patterns, and submit security findings. All data is from collaborative threat intelligence community.',
+  // Bearer-token gate for remote (httpStream) transport. Never invoked under
+  // stdio (no HTTP request). Enforced because this server exposes a write tool
+  // (promptintel:submitReport) and must not be reachable unauthenticated.
+  authenticate: buildBearerAuthenticator(),
 });
 
 // ============================================================================
@@ -450,8 +460,10 @@ server.addResource({
 // Start Server
 // ============================================================================
 
-server.start({
-  transportType: 'stdio',
-});
+// Transport is env-selected (default stdio). For httpStream, fail closed
+// unless MCP_BEARER_TOKEN is configured — see ../shared/transport.ts + REMOTE.md.
+const transport = resolveTransportConfig();
+assertRemoteAuthConfigured('dcyfr-promptintel', transport);
+server.start(transport);
 
-console.warn('✅ PromptIntel MCP Server started (stdio mode)');
+console.warn(describeTransport('dcyfr-promptintel', transport));

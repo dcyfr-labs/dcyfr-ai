@@ -15,6 +15,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { SimpleCache } from '../shared/cache.js';
 import { emitDelegationEvent } from '../shared/utils.js';
+import { buildBearerAuthenticator } from '../shared/transport.js';
 import type {
   TokenProvider,
   TokenViolation,
@@ -32,6 +33,10 @@ export function createDesignTokenServer(provider: TokenProvider) {
     version: '1.0.0',
     instructions:
       'Real-time design token validation and compliance checking. Use these tools to validate code against design tokens and get suggestions.',
+    // Bearer gate active when a startup script serves this factory over
+    // httpStream; inert under stdio. Transport selection is the embedder's
+    // choice (see ../shared/transport.ts + ../promptintel/REMOTE.md).
+    authenticate: buildBearerAuthenticator(),
   });
 
   // Cache for validation results (2 minutes)

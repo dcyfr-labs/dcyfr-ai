@@ -39,6 +39,12 @@ import type {
   Milestone,
   AnalyticsSummary,
 } from '../shared/types.js';
+import {
+  buildBearerAuthenticator,
+  resolveTransportConfig,
+  assertRemoteAuthConfigured,
+  describeTransport,
+} from '../shared/transport.js';
 
 // ============================================================================
 // Server Configuration
@@ -49,6 +55,8 @@ const server = new FastMCP({
   version: '1.0.0',
   instructions:
     'Provides access to dcyfr-labs analytics data from Redis. Use these tools to query page views, trending content, engagement metrics, and milestones. All data is environment-aware (filters test data in production).',
+  // Bearer-token gate for remote (httpStream) transport; inert under stdio.
+  authenticate: buildBearerAuthenticator(),
 });
 
 // ============================================================================
@@ -781,8 +789,10 @@ server.addResource({
 // Start Server
 // ============================================================================
 
-server.start({
-  transportType: 'stdio',
-});
+// Transport is env-selected (default stdio); fail-closed without MCP_BEARER_TOKEN
+// over httpStream. See ../shared/transport.ts + ../promptintel/REMOTE.md.
+const transport = resolveTransportConfig();
+assertRemoteAuthConfigured('dcyfr-analytics', transport);
+server.start(transport);
 
-console.warn('✅ Analytics MCP Server started (stdio mode)');
+console.warn(describeTransport('dcyfr-analytics', transport));
