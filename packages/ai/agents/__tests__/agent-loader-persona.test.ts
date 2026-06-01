@@ -1,32 +1,16 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { AgentLoader } from '../agent-loader.js';
-import type { DCYFRMemory } from '../../memory/types.js';
-import type { TelemetryEngine } from '../../core/telemetry-engine.js';
 import * as fs from 'node:fs/promises';
 
 // Mock fs
 vi.mock('node:fs/promises');
 const mockFs = vi.mocked(fs);
 
-// Mock modules
-vi.mock('../../memory/types.js');
-vi.mock('../../core/telemetry-engine.js');
-
 describe('AgentLoader Persona Parsing (Task 2.7)', () => {
   let loader: AgentLoader;
-  let mockMemory: DCYFRMemory;
-  let mockTelemetry: TelemetryEngine;
 
   beforeEach(() => {
-    mockMemory = {
-      addAgentMemory: vi.fn().mockResolvedValue('mem-123'),
-    } as unknown as DCYFRMemory;
-
-    mockTelemetry = {
-      agentLoadEvent: vi.fn(),
-    } as unknown as TelemetryEngine;
-
-    loader = new AgentLoader(mockMemory, mockTelemetry);
+    loader = new AgentLoader();
   });
 
   describe('parseAgentFromMarkdown with persona frontmatter', () => {

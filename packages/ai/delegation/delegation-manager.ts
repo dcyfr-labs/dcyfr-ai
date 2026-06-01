@@ -686,7 +686,7 @@ export class DelegationManager {
 
     const allFiles = [...new Set([...relevantFiles, ...scopedFiles])].slice(0, MEMORY_QUERY_LIMIT);
 
-    let rewrittenPrompt = task.originalPrompt;
+    let rewrittenPrompt: string;
 
     if (allFiles.length > 0) {
       const fileList = allFiles.map(f => `- ${f}`).join('\n');
@@ -724,7 +724,7 @@ export class DelegationManager {
 
     appliedContext.push(`wrong_direction: queried memory for customer quotes (found ${memResults.length})`);
 
-    let rewrittenPrompt = task.originalPrompt;
+    let rewrittenPrompt: string;
 
     if (memResults.length > 0) {
       const quotes = memResults
@@ -774,7 +774,7 @@ export class DelegationManager {
 
     appliedContext.push(`missing_requirements: queried memory for type definitions (found ${memResults.length})`);
 
-    let rewrittenPrompt = task.originalPrompt;
+    let rewrittenPrompt: string;
 
     if (memResults.length > 0) {
       const typeDefs = memResults
