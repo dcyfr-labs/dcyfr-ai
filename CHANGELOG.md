@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.2.1](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.2.0...v3.2.1) (2026-06-01)
+
+
+### Refactoring
+
+* clear 4 CodeQL warnings (dead stores + stale test ctor) ([#224](https://github.com/dcyfr-labs/dcyfr-ai/issues/224)) ([a0c6b1c](https://github.com/dcyfr-labs/dcyfr-ai/commit/a0c6b1c60e5b500b0cda2f26237ac11818cf1032))
+
 ## [3.2.0](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.1.0...v3.2.0) (2026-06-01)
 
 
