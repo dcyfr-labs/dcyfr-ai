@@ -46,7 +46,7 @@
   "bin": {
     "dcyfr-ai": "./bin/dcyfr-ai.js",
     "dcyfr-ai-tui": "./bin/tui.js",
-    "dcyfr": "./dist/ai/cli/telemetry-dashboard.js"
+    "dcyfr": "./dist/ai/src/cli/telemetry-dashboard.js"
   },
   "scripts": {
     "build": "tsc && node scripts/fix-esm-imports.mjs",

@@ -15,8 +15,9 @@
 
 import { Command } from 'commander';
 import { promises as fs } from 'fs';
-import { join } from 'path';
+import { join, resolve } from 'path';
 import { homedir } from 'os';
+import { fileURLToPath } from 'url';
 import { ProviderRegistry } from '../../core/provider-registry.js';
 import type { ProviderType } from '../../types/index.js';
 
@@ -678,8 +679,12 @@ async function main() {
   program.parse();
 }
 
-// Run CLI if executed directly
-if (import.meta.url === `file://${process.argv[1]}` || import.meta.url.endsWith(process.argv[1])) {
+// Run CLI if executed directly. Normalize file paths so npm Windows shims work.
+const isDirectRun = process.argv[1]
+  ? fileURLToPath(import.meta.url) === resolve(process.argv[1])
+  : false;
+
+if (isDirectRun) {
   main().catch((error) => {
     console.error('❌ Unexpected error:', error);
     process.exit(1);
