@@ -156,7 +156,7 @@ async function initConfig(options) {
   console.log(`✅ Created ${configPath}`);
   console.log('\nNext steps:');
   console.log('  1. Edit the configuration file to match your project');
-  console.log('  2. Run `npx @dcyfr/ai config:validate` to verify');
+  console.log('  2. Run `npx dcyfr-ai config:validate` to verify');
   console.log('  3. Start using DCYFR AI Framework in your project\n');
 
   process.exit(0);
@@ -170,7 +170,7 @@ function showHelp() {
 DCYFR AI Framework CLI
 
 Usage:
-  npx @dcyfr/ai <command> [options]
+  npx dcyfr-ai <command> [options]
 
 Commands:
   config:validate         Validate configuration file
@@ -190,19 +190,19 @@ Options:
 
 Examples:
   # Validate current project configuration
-  npx @dcyfr/ai config:validate
+  npx dcyfr-ai config:validate
 
   # Validate with custom config file
-  npx @dcyfr/ai config:validate --config custom.yaml
+  npx dcyfr-ai config:validate --config custom.yaml
 
   # Initialize new YAML configuration
-  npx @dcyfr/ai config:init
+  npx dcyfr-ai config:init
 
   # Initialize minimal JSON configuration
-  npx @dcyfr/ai config:init --format json --minimal
+  npx dcyfr-ai config:init --format json --minimal
 
   # Show full configuration with validation
-  npx @dcyfr/ai config:validate --verbose
+  npx dcyfr-ai config:validate --verbose
 
 Documentation:
   https://github.com/dcyfr/dcyfr-ai
@@ -237,7 +237,7 @@ async function main() {
     case 'tui':
       // Delegate to TUI CLI
       console.log('🎨 Launching interactive TUI...\n');
-      console.log('Use: npx @dcyfr/ai-tui ' + options.command.replace('tui:', ''));
+      console.log('Use: npx dcyfr-ai-tui ' + options.command.replace('tui:', ''));
       console.log('Or run: node bin/tui.js ' + options.command.replace('tui:', ''));
       process.exit(0);
       break;

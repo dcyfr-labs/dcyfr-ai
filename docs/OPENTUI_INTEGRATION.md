@@ -130,7 +130,7 @@ Full TUI integration documentation:
 npm run tui dashboard
 
 # Using npx
-npx @dcyfr/ai-tui dashboard
+npx dcyfr-ai-tui dashboard
 
 # Direct execution
 node bin/tui.js dashboard

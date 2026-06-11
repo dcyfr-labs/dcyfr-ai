@@ -152,7 +152,7 @@ async function createConfigFile(state, projectRoot) {
   console.log(chalk.green(`\n✅ Created ${configPath}`));
   console.log(chalk.cyan('\nNext steps:'));
   console.log('  1. Review and customize the configuration');
-  console.log('  2. Run ' + chalk.bold('npx @dcyfr/ai tui:dashboard') + ' to test');
+  console.log('  2. Run ' + chalk.bold('npx dcyfr-ai-tui dashboard') + ' to test');
   console.log('  3. Integrate into your CI/CD pipeline\n');
 }
 
@@ -164,7 +164,7 @@ function showHelp() {
 DCYFR AI Framework - Interactive TUI
 
 Usage:
-  npx @dcyfr/ai tui:<command> [options]
+  npx dcyfr-ai-tui <command> [options]
 
 Commands:
   tui:dashboard           Interactive validation dashboard
@@ -178,13 +178,13 @@ Options:
 
 Examples:
   # Run interactive validation dashboard
-  npx @dcyfr/ai tui:dashboard
+  npx dcyfr-ai-tui dashboard
 
   # Run configuration wizard
-  npx @dcyfr/ai tui:wizard
+  npx dcyfr-ai-tui wizard
 
   # Dashboard with custom config
-  npx @dcyfr/ai tui:dashboard --config custom.yaml
+  npx dcyfr-ai-tui dashboard --config custom.yaml
 
 Keyboard Shortcuts:
   Q           Quit

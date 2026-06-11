@@ -216,7 +216,7 @@ Press Q to quit, R to refresh, V for verbose mode
 npm run tui dashboard
 
 # Using npx
-npx @dcyfr/ai-tui dashboard
+npx dcyfr-ai-tui dashboard
 
 # Using node
 node bin/tui.js dashboard

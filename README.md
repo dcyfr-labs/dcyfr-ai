@@ -111,12 +111,14 @@ Portable AI agent harness with plugin architecture for managing multiple AI prov
 npm install @dcyfr/ai
 ```
 
+> **CLI command name:** the package is `@dcyfr/ai`, but its command-line tool is invoked as **`dcyfr-ai`** — not `@dcyfr/ai`. After installing, run `npx dcyfr-ai <command>` (or, without installing first, `npx -p @dcyfr/ai dcyfr-ai <command>`). Running `npx @dcyfr/ai …` fails with *"could not determine executable to run"* because the package ships several binaries.
+
 ## Quick Start
 
 ### 1. Initialize Configuration
 
 ```bash
-npx @dcyfr/ai config:init
+npx dcyfr-ai config:init
 ```
 
 This creates a `.dcyfr.yaml` configuration file:
@@ -166,10 +168,10 @@ console.log(`Validation: ${report.valid ? "PASS" : "FAIL"}`);
 
 ```bash
 # Validate current project config
-npx @dcyfr/ai config:validate
+npx dcyfr-ai config:validate
 
 # Show full configuration
-npx @dcyfr/ai config:validate --verbose
+npx dcyfr-ai config:validate --verbose
 ```
 
 ---
@@ -424,22 +426,22 @@ console.log(`Memory hit rate: ${(hitRate * 100).toFixed(1)}%`);
 
 ```bash
 # View telemetry dashboard
-npx @dcyfr/ai telemetry
+npx dcyfr telemetry
 
 # Show recent activity
-npx @dcyfr/ai telemetry --recent 20
+npx dcyfr telemetry --recent 20
 
 # Cost analysis
-npx @dcyfr/ai telemetry --costs
+npx dcyfr telemetry --costs
 
 # Provider summary
-npx @dcyfr/ai telemetry --providers
+npx dcyfr telemetry --providers
 
 # Runtime validation
-npx @dcyfr/ai validate-runtime
+npx dcyfr validate-runtime
 
 # Export data
-npx @dcyfr/ai telemetry --export usage_data.csv
+npx dcyfr telemetry --export usage_data.csv
 ```
 
 ### 9. Provider Setup
@@ -699,20 +701,20 @@ await loader.loadPlugin(customPlugin);
 
 ```bash
 # Initialize configuration
-npx @dcyfr/ai config:init
-npx @dcyfr/ai config:init --format json
-npx @dcyfr/ai config:init --minimal
+npx dcyfr-ai config:init
+npx dcyfr-ai config:init --format json
+npx dcyfr-ai config:init --minimal
 
 # Validate configuration
-npx @dcyfr/ai config:validate
-npx @dcyfr/ai config:validate --verbose
-npx @dcyfr/ai config:validate --config custom.yaml
+npx dcyfr-ai config:validate
+npx dcyfr-ai config:validate --verbose
+npx dcyfr-ai config:validate --config custom.yaml
 
 # Show schema
-npx @dcyfr/ai config:schema
+npx dcyfr-ai config:schema
 
 # Help
-npx @dcyfr/ai help
+npx dcyfr-ai help
 ```
 
 [⬆️ Back to top](#dcyfr-ai)
@@ -799,7 +801,7 @@ deps: bump @anthropic-ai/sdk to 0.95.2
 - **Cause:** File in wrong location or invalid YAML syntax
 - **Solution:**
   1. Place `.dcyfr.yaml` in project root (same directory as package.json)
-  2. Validate YAML syntax with `npx @dcyfr/ai config:validate`
+  2. Validate YAML syntax with `npx dcyfr-ai config:validate`
   3. Check for tabs (use spaces), missing colons, incorrect indentation
 - **Alternative:** Use `.dcyfr.json` or add `dcyfr` key to `package.json`
 
@@ -807,7 +809,7 @@ deps: bump @anthropic-ai/sdk to 0.95.2
 
 - **Cause:** Missing required fields or incorrect types
 - **Solution:**
-  1. Run `npx @dcyfr/ai config:schema` to see full schema
+  1. Run `npx dcyfr-ai config:schema` to see full schema
   2. Ensure required fields present: `version`, `projectName`
   3. Check types match (strings in quotes, booleans without quotes, arrays with brackets)
 - **Example:** Valid config minimum:
@@ -849,19 +851,19 @@ await loader.runValidation();
 
 ### CLI Issues
 
-**Issue: `npx @dcyfr/ai` command not found**
+**Issue: `npx @dcyfr/ai config:init` fails with "could not determine executable to run"**
 
-- **Cause:** Package not installed or PATH issue
-- **Solution:**
-  - Local: Add to devDependencies: `npm install --save-dev @dcyfr/ai`
-  - Global: `npm install -g @dcyfr/ai`
-  - npx: Use full package name: `npx @dcyfr/ai@latest`
+- **Cause:** The CLI binary is named `dcyfr-ai`, not `@dcyfr/ai`. The package ships several binaries (`dcyfr-ai`, `dcyfr-ai-tui`, `dcyfr`), so `npx` cannot infer which one `npx @dcyfr/ai …` should run.
+- **Solution:** Invoke the binary by name:
+  - After `npm install @dcyfr/ai`: `npx dcyfr-ai config:init`
+  - Without installing first: `npx -p @dcyfr/ai dcyfr-ai config:init`
+  - Global: `npm install -g @dcyfr/ai`, then `dcyfr-ai config:init`
 
 **Issue: CLI commands hang or timeout**
 
 - **Cause:** Large project or slow file system operations
 - **Solution:**
-  1. Use `--files` flag to target specific files: `npx @dcyfr/ai validate --files "src/**/*.ts"`
+  1. Use `--files` flag to target specific files: `npx dcyfr-ai validate --files "src/**/*.ts"`
   2. Increase timeout in config: `timeout: 60000` (60 seconds)
   3. Check for infinite loops in custom plugins
 
