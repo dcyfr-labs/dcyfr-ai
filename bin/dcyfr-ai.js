@@ -274,6 +274,8 @@ COMMANDS:
   validate         Run validation checks
   test             Alias for validate
   report           Generate telemetry report
+  telemetry        View telemetry data, costs, and model usage
+  validate-runtime Validate runtime environment and provider config
   help             Show this help message
 
 INIT OPTIONS:
@@ -309,6 +311,10 @@ EXAMPLES:
   dcyfr-ai plugin:create --name my-validator
   dcyfr-ai validate --files "src/**/*.{ts,tsx}"
   dcyfr-ai report --period 7d --agent claude
+  dcyfr-ai telemetry --period week --agent claude
+  dcyfr-ai telemetry --breakdown models
+  dcyfr-ai validate-runtime
+  dcyfr-ai telemetry --help   # full telemetry / validate-runtime options
 
 For more information, visit: https://github.com/dcyfr/dcyfr-ai
   `);
@@ -356,6 +362,15 @@ async function main() {
         console.log('ℹ️  Use TelemetryEngine API to generate reports');
         console.log('See: https://github.com/dcyfr/dcyfr-ai/blob/main/examples/standalone-nextjs/scripts/telemetry-report.js\n');
         break;
+      case 'telemetry':
+      case 'validate-runtime': {
+        // Folded-in telemetry CLI (commander-based). Delegate by importing the
+        // built module and letting it re-parse process.argv, where argv[2] is
+        // already the subcommand name ('telemetry' | 'validate-runtime').
+        const { main: runTelemetryCli } = await import('../dist/ai/src/cli/telemetry-dashboard.js');
+        await runTelemetryCli();
+        break;
+      }
       case 'help':
       case '--help':
       case '-h':

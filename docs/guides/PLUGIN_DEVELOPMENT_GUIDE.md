@@ -303,7 +303,7 @@ Start with defaults, then profile actual usage:
 
 ```bash
 # Run with resource metrics collection
-DCYFR_SANDBOX_METRICS=true npx dcyfr plugin run --plugin ./
+DCYFR_SANDBOX_METRICS=true npx dcyfr-ai plugin run --plugin ./
 
 # Check reported peak usage
 cat .dcyfr/run-metrics.json

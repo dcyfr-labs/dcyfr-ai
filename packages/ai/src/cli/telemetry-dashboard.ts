@@ -8,27 +8,38 @@
  * cost summaries, and model usage breakdowns.
  * 
  * Usage:
- *   npx dcyfr telemetry --agent <name> --period today
- *   npx dcyfr telemetry --breakdown models
- *   npx dcyfr telemetry --export data.csv
+ *   npx dcyfr-ai telemetry --agent <name> --period today
+ *   npx dcyfr-ai telemetry --breakdown models
+ *   npx dcyfr-ai telemetry --export data.csv
  */
 
 import { Command } from 'commander';
-import { promises as fs } from 'fs';
+import { existsSync, promises as fs } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
 import { ProviderRegistry } from '../../core/provider-registry.js';
 import type { ProviderType } from '../../types/index.js';
 
-interface DatabaseInstance {
-  all(query: string, callback: (err: Error | null, rows: any[]) => void): void;
-  close(callback: (err: Error | null) => void): void;
+/**
+ * Minimal structural view of the better-sqlite3 surface this CLI uses.
+ * Declared locally so the (native) module stays lazily imported — the
+ * dashboard only touches it when a query actually runs, which keeps
+ * `--help` and `validate-runtime` working even if the native addon is
+ * unavailable.
+ */
+interface SqliteStatement {
+  all(...params: unknown[]): unknown[];
 }
-
-type DatabaseConstructor = new (
-  path: string,
-  callback: (err: Error | null) => void
-) => DatabaseInstance;
+interface SqliteDatabase {
+  prepare(sql: string): SqliteStatement;
+  close(): void;
+}
+interface SqliteDatabaseConstructor {
+  new (
+    path: string,
+    options?: { readonly?: boolean; fileMustExist?: boolean }
+  ): SqliteDatabase;
+}
 
 // Types for telemetry data
 interface TelemetryRecord {
@@ -259,22 +270,27 @@ export class TelemetryDashboard {
   }
 
   /**
-   * Load sqlite3.Database constructor lazily so sqlite3 remains optional
+   * Open the telemetry database (read-only) using better-sqlite3, imported
+   * lazily so the native addon is only required when a query actually runs.
    */
-  private async loadDatabaseConstructor(): Promise<DatabaseConstructor> {
+  private async loadDatabase(): Promise<SqliteDatabase> {
+    let Database: SqliteDatabaseConstructor;
     try {
-      const sqlite3Module = await import('sqlite3');
-      const sqlite3 = (sqlite3Module as any).default ?? sqlite3Module;
-
-      if (!sqlite3?.Database) {
-        throw new Error('sqlite3 module does not export Database');
-      }
-
-      return sqlite3.Database as DatabaseConstructor;
+      const mod = (await import('better-sqlite3')) as any;
+      Database = (mod.default ?? mod) as SqliteDatabaseConstructor;
     } catch (error) {
       throw new Error(
-        'sqlite3 package not installed. Run: npm install sqlite3\n' +
+        'better-sqlite3 is not available — its native addon may have failed to ' +
+        'build. Reinstall dependencies so the addon compiles.\n' +
         `Original error: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+
+    try {
+      return new Database(this.dbPath, { readonly: true, fileMustExist: true });
+    } catch (error) {
+      throw new Error(
+        `Failed to open telemetry database at ${this.dbPath}: ${error instanceof Error ? error.message : String(error)}`
       );
     }
   }
@@ -284,38 +300,6 @@ export class TelemetryDashboard {
    */
   setDatabasePath(path: string): void {
     this.dbPath = path;
-  }
-
-  /**
-   * Connect to SQLite telemetry database
-   */
-  private async connectDatabase(): Promise<DatabaseInstance> {
-    const Database = await this.loadDatabaseConstructor();
-
-    return new Promise((resolve, reject) => {
-      const db = new Database(this.dbPath, (err: Error | null) => {
-        if (err) {
-          reject(new Error(`Failed to connect to telemetry database at ${this.dbPath}: ${err.message}`));
-        } else {
-          resolve(db);
-        }
-      });
-    });
-  }
-
-  /**
-   * Close database connection
-   */
-  private async closeDatabase(db: DatabaseInstance): Promise<void> {
-    return new Promise((resolve, reject) => {
-      db.close((err: Error | null) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve();
-        }
-      });
-    });
   }
 
   /**
@@ -351,23 +335,26 @@ export class TelemetryDashboard {
    * Get telemetry records for specific agent and period
    */
   async getAgentTelemetry(agentName?: string, period?: string): Promise<TelemetryRecord[]> {
-    const db = await this.connectDatabase();
+    if (!existsSync(this.dbPath)) {
+      return [];
+    }
+
+    const db = await this.loadDatabase();
     
     try {
-      let whereClause = '';
       const conditions: string[] = [];
+      const params: string[] = [];
       
       if (agentName) {
-        conditions.push(`agent_type = '${agentName}'`);
+        conditions.push('agent_type = ?');
+        params.push(agentName);
       }
       
       if (period) {
         conditions.push(this.getDateFilter(period));
       }
       
-      if (conditions.length > 0) {
-        whereClause = `WHERE ${conditions.join(' AND ')}`;
-      }
+      const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
       const query = `
         SELECT 
@@ -388,17 +375,9 @@ export class TelemetryDashboard {
         ORDER BY start_time DESC
       `;
 
-      return new Promise((resolve, reject) => {
-        db.all(query, (err: Error | null, rows: any[]) => {
-          if (err) {
-            reject(err);
-          } else {
-            resolve(rows as TelemetryRecord[]);
-          }
-        });
-      });
+      return db.prepare(query).all(...params) as TelemetryRecord[];
     } finally {
-      await this.closeDatabase(db);
+      db.close();
     }
   }
 
@@ -432,7 +411,11 @@ export class TelemetryDashboard {
    * Get model usage breakdown
    */
   async getModelBreakdown(): Promise<ModelBreakdown[]> {
-    const db = await this.connectDatabase();
+    if (!existsSync(this.dbPath)) {
+      return [];
+    }
+
+    const db = await this.loadDatabase();
     
     try {
       const query = `
@@ -447,17 +430,9 @@ export class TelemetryDashboard {
         ORDER BY totalCost DESC
       `;
 
-      return new Promise((resolve, reject) => {
-        db.all(query, (err: Error | null, rows: any[]) => {
-          if (err) {
-            reject(err);
-          } else {
-            resolve(rows as ModelBreakdown[]);
-          }
-        });
-      });
+      return db.prepare(query).all() as ModelBreakdown[];
     } finally {
-      await this.closeDatabase(db);
+      db.close();
     }
   }
 
@@ -607,13 +582,13 @@ export class TelemetryDashboard {
 /**
  * Main CLI program
  */
-async function main() {
+export async function main() {
   const program = new Command();
   const dashboard = new TelemetryDashboard();
   const validator = new RuntimeValidator();
 
   program
-    .name('dcyfr')
+    .name('dcyfr-ai')
     .description('DCYFR Telemetry Dashboard - View agent performance metrics')
     .version('1.0.0');
 
@@ -674,8 +649,9 @@ async function main() {
       }
     });
 
-  // Parse command line arguments
-  program.parse();
+  // Parse command line arguments (async so subcommand actions are awaited,
+  // which lets `dcyfr-ai` delegate here and wait for completion).
+  await program.parseAsync();
 }
 
 // Run CLI if executed directly
