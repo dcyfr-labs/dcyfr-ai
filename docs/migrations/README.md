@@ -67,19 +67,6 @@ const response = await agent.chat('Hello world');
 
 ## Migration Support
 
-### Automated Migration Tools
-
-```bash
-# Scan existing codebase for migration opportunities
-npx @dcyfr/ai migrate:scan
-
-# Generate migration plan
-npx @dcyfr/ai migrate:plan --from langchain
-
-# Apply automated migrations (safe transforms only)
-npx @dcyfr/ai migrate:apply --dry-run
-```
-
 ### Manual Migration Checklist
 
 - [ ] **Provider Configuration** - Update API keys and endpoints

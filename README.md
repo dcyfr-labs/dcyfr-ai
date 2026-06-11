@@ -425,23 +425,23 @@ console.log(`Memory hit rate: ${(hitRate * 100).toFixed(1)}%`);
 ### 8. CLI Dashboard Commands
 
 ```bash
-# View telemetry dashboard
-npx dcyfr telemetry
+# View telemetry dashboard (cost summary + recent activity)
+npx dcyfr-ai telemetry
 
-# Show recent activity
-npx dcyfr telemetry --recent 20
+# Filter by agent
+npx dcyfr-ai telemetry --agent claude
 
-# Cost analysis
-npx dcyfr telemetry --costs
+# Scope to a time period (today, yesterday, week, month)
+npx dcyfr-ai telemetry --period today
 
-# Provider summary
-npx dcyfr telemetry --providers
+# Model usage breakdown
+npx dcyfr-ai telemetry --breakdown models
 
-# Runtime validation
-npx dcyfr validate-runtime
+# Runtime / provider validation
+npx dcyfr-ai validate-runtime
 
-# Export data
-npx dcyfr telemetry --export usage_data.csv
+# Export data to CSV
+npx dcyfr-ai telemetry --export usage_data.csv
 ```
 
 ### 9. Provider Setup
@@ -853,7 +853,7 @@ await loader.runValidation();
 
 **Issue: `npx @dcyfr/ai config:init` fails with "could not determine executable to run"**
 
-- **Cause:** The CLI binary is named `dcyfr-ai`, not `@dcyfr/ai`. The package ships several binaries (`dcyfr-ai`, `dcyfr-ai-tui`, `dcyfr`), so `npx` cannot infer which one `npx @dcyfr/ai …` should run.
+- **Cause:** The CLI binary is named `dcyfr-ai`, not `@dcyfr/ai`. The package ships two binaries (`dcyfr-ai`, `dcyfr-ai-tui`), so `npx` cannot infer which one `npx @dcyfr/ai …` should run.
 - **Solution:** Invoke the binary by name:
   - After `npm install @dcyfr/ai`: `npx dcyfr-ai config:init`
   - Without installing first: `npx -p @dcyfr/ai dcyfr-ai config:init`

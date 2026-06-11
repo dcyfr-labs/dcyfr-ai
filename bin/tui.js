@@ -9,7 +9,7 @@ import chalk from 'chalk';
 import ora from 'ora';
 import readline from 'readline';
 import { ConfigLoader } from '../dist/ai/config/loader.js';
-import { ValidationFramework } from '../dist/ai/validation/framework.js';
+import { ValidationFramework } from '../dist/ai/validation/validation-framework.js';
 import { renderValidationDashboard } from './tui/validation-dashboard.js';
 import { runConfigWizard } from './tui/config-wizard.js';
 import { existsSync } from 'fs';

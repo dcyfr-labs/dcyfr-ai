@@ -45,14 +45,14 @@
   },
   "bin": {
     "dcyfr-ai": "./bin/dcyfr-ai.js",
-    "dcyfr-ai-tui": "./bin/tui.js",
-    "dcyfr": "./dist/ai/cli/telemetry-dashboard.js"
+    "dcyfr-ai-tui": "./bin/tui.js"
   },
   "scripts": {
     "build": "tsc && node scripts/fix-esm-imports.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "smoke:bins": "node scripts/smoke-test-bins.mjs",
     "typecheck": "tsc --noEmit",
     "examples:check": "tsc -p tsconfig.examples.json",
     "lint": "eslint packages/",
