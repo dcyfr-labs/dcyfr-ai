@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.2.3](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.2.2...v3.2.3) (2026-06-11)
+
+
+### Dependencies
+
+* bump neo4j-driver from 5.28.3 to 6.1.0 ([#244](https://github.com/dcyfr-labs/dcyfr-ai/issues/244)) ([9fa8cd2](https://github.com/dcyfr-labs/dcyfr-ai/commit/9fa8cd21d6e2360d9b8811844208ce5f4214e25d))
+* bump redis from 5.12.1 to 6.0.0 ([#245](https://github.com/dcyfr-labs/dcyfr-ai/issues/245)) ([cf56322](https://github.com/dcyfr-labs/dcyfr-ai/commit/cf5632213182363f3e31f6f03c1cbc4d151fa64b))
+
 ## [3.2.2](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.2.1...v3.2.2) (2026-06-11)
 
 
