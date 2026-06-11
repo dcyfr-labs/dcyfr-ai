@@ -43,7 +43,7 @@ Fresh Install Test:
 - Location: /tmp/test-dcyfr-ai
 - Command: npm install @dcyfr/ai
 - Result: ✅ added 4 packages in 852ms
-- CLI: ✅ npx @dcyfr/ai --help works
+- CLI: ✅ npx dcyfr-ai --help works
 ```
 
 ### 4. Verify dcyfr-labs Integration
@@ -184,7 +184,7 @@ npm install @dcyfr/ai
 | npm publish | ✅ | Package live at npmjs.com |
 | Git tags | ✅ | v1.0.0 on both repos |
 | Fresh install | ✅ | Tested in /tmp |
-| CLI works | ✅ | npx @dcyfr/ai --help |
+| CLI works | ✅ | npx dcyfr-ai --help |
 | Integration | ✅ | 11/11 tests pass |
 | Badges | ✅ | README updated |
 | Docs | ✅ | 3 new files created |
@@ -214,10 +214,10 @@ The package is now:
 npm install @dcyfr/ai
 
 # Use CLI
-npx @dcyfr/ai init --name my-app
+npx dcyfr-ai init --name my-app
 
 # Create plugin
-npx @dcyfr/ai plugin:create --name my-validator
+npx dcyfr-ai plugin:create --name my-validator
 ```
 
 ### Quick Links

@@ -183,20 +183,20 @@ async function cliExample() {
   console.log('Available CLI commands:\n');
 
   console.log('1️⃣  Initialize configuration:');
-  console.log('   $ npx @dcyfr/ai config:init');
-  console.log('   $ npx @dcyfr/ai config:init --format json');
-  console.log('   $ npx @dcyfr/ai config:init --minimal\n');
+  console.log('   $ npx dcyfr-ai config:init');
+  console.log('   $ npx dcyfr-ai config:init --format json');
+  console.log('   $ npx dcyfr-ai config:init --minimal\n');
 
   console.log('2️⃣  Validate configuration:');
-  console.log('   $ npx @dcyfr/ai config:validate');
-  console.log('   $ npx @dcyfr/ai config:validate --verbose');
-  console.log('   $ npx @dcyfr/ai config:validate --config custom.yaml\n');
+  console.log('   $ npx dcyfr-ai config:validate');
+  console.log('   $ npx dcyfr-ai config:validate --verbose');
+  console.log('   $ npx dcyfr-ai config:validate --config custom.yaml\n');
 
   console.log('3️⃣  Show schema:');
-  console.log('   $ npx @dcyfr/ai config:schema\n');
+  console.log('   $ npx dcyfr-ai config:schema\n');
 
   console.log('4️⃣  Get help:');
-  console.log('   $ npx @dcyfr/ai help\n');
+  console.log('   $ npx dcyfr-ai help\n');
 }
 
 async function integrationExample() {

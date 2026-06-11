@@ -204,12 +204,12 @@ jobs:
         run: npm install
       
       - name: Run validation (text mode)
-        run: npx @dcyfr/ai config:validate
+        run: npx dcyfr-ai config:validate
       
       - name: Run TUI dashboard (CI mode)
         run: |
           # TUI requires TTY, so we use script command
-          script -q -c "npx @dcyfr/ai-tui dashboard --ci"
+          script -q -c "npx dcyfr-ai-tui dashboard --ci"
 ```
 
 ---

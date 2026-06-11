@@ -36,7 +36,7 @@ npm install @dcyfr/ai @dcyfr/agents
 Create a configuration file in your project root:
 
 ```bash
-npx @dcyfr/ai config:init
+npx dcyfr-ai config:init
 ```
 
 This creates `.dcyfr.yaml`:
@@ -532,33 +532,33 @@ See the [examples/](../examples/) directory for complete examples:
 
 ```bash
 # Create default .dcyfr.yaml
-npx @dcyfr/ai config:init
+npx dcyfr-ai config:init
 
 # Create JSON format
-npx @dcyfr/ai config:init --format json
+npx dcyfr-ai config:init --format json
 
 # Create minimal config
-npx @dcyfr/ai config:init --minimal
+npx dcyfr-ai config:init --minimal
 ```
 
 ### Validate Configuration
 
 ```bash
 # Validate current config
-npx @dcyfr/ai config:validate
+npx dcyfr-ai config:validate
 
 # Show full configuration
-npx @dcyfr/ai config:validate --verbose
+npx dcyfr-ai config:validate --verbose
 
 # Use custom config file
-npx @dcyfr/ai config:validate --config custom.yaml
+npx dcyfr-ai config:validate --config custom.yaml
 ```
 
 ### View Schema
 
 ```bash
 # Show configuration schema
-npx @dcyfr/ai config:schema
+npx dcyfr-ai config:schema
 ```
 
 ## Next Steps

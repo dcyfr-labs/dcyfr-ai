@@ -30,7 +30,7 @@ Run the validation dashboard with real-time updates:
 npm run tui dashboard
 
 # Using npx
-npx @dcyfr/ai-tui dashboard
+npx dcyfr-ai-tui dashboard
 
 # Direct execution
 node bin/tui.js dashboard
@@ -51,7 +51,7 @@ Create configuration files interactively:
 npm run tui wizard
 
 # Using npx
-npx @dcyfr/ai-tui wizard
+npx dcyfr-ai-tui wizard
 
 # Direct execution
 node bin/tui.js wizard
