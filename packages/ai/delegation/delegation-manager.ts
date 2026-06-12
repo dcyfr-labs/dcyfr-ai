@@ -953,7 +953,10 @@ export class DelegationManager {
     if (highConfidence.length === 0) return null;
 
     // Return the pattern with the highest successCount
-    return highConfidence.reduce((best, p) => p.successCount > best.successCount ? p : best);
+    return highConfidence.reduce(
+      (best, p) => (p.successCount > best.successCount ? p : best),
+      highConfidence[0],
+    );
   }
 
   // ------------------------------------------------------------------

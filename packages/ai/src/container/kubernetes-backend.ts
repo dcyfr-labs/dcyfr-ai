@@ -39,7 +39,9 @@ export class KubernetesBackend implements ContainerExecutionBackend {
     throw new Error(NOT_IMPLEMENTED_MSG);
   }
 
-  async *streamLogs(_handle: ContainerHandle): AsyncIterable<ContainerLogEntry> {
+  // Not a generator: the stub throws at call time instead of on first
+  // iteration, which `yield*` in BackendFactory surfaces identically.
+  streamLogs(_handle: ContainerHandle): AsyncIterable<ContainerLogEntry> {
     throw new Error(NOT_IMPLEMENTED_MSG);
   }
 
