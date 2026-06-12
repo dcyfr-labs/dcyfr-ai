@@ -1,5 +1,26 @@
 # Changelog
 
+## [3.2.4](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.2.3...v3.2.4) (2026-06-12)
+
+
+### Bug Fixes
+
+* resolve 8 SonarCloud new-code reliability bugs ([#270](https://github.com/dcyfr-labs/dcyfr-ai/issues/270)) ([8608ba4](https://github.com/dcyfr-labs/dcyfr-ai/commit/8608ba44091117663cd9b0f83ee2d5712b09834d))
+
+
+### Dependencies
+
+* bump @anthropic-ai/sdk from 0.102.0 to 0.104.1 ([#263](https://github.com/dcyfr-labs/dcyfr-ai/issues/263)) ([251ffd6](https://github.com/dcyfr-labs/dcyfr-ai/commit/251ffd64a069e698388f434daed058eb839bdd92))
+* bump @supabase/supabase-js from 2.107.0 to 2.108.1 ([#264](https://github.com/dcyfr-labs/dcyfr-ai/issues/264)) ([e806aa1](https://github.com/dcyfr-labs/dcyfr-ai/commit/e806aa1ed2979988256a03ee933f118c40b589b5))
+* bump @types/node from 25.9.2 to 25.9.3 ([#260](https://github.com/dcyfr-labs/dcyfr-ai/issues/260)) ([ebf5d3f](https://github.com/dcyfr-labs/dcyfr-ai/commit/ebf5d3f4b26a4f44cf2460c800b4dab311c13a30))
+* bump @vitest/coverage-v8 from 4.1.7 to 4.1.8 ([#265](https://github.com/dcyfr-labs/dcyfr-ai/issues/265)) ([d5ce391](https://github.com/dcyfr-labs/dcyfr-ai/commit/d5ce3917bda992b7121b38587637d5081a31a075))
+* bump cloudflare from 6.3.0 to 6.4.0 ([#259](https://github.com/dcyfr-labs/dcyfr-ai/issues/259)) ([93fb6b7](https://github.com/dcyfr-labs/dcyfr-ai/commit/93fb6b72b4568739c02885ea6bf8497de53a52d9))
+* bump fastmcp from 4.0.2 to 4.1.0 ([#266](https://github.com/dcyfr-labs/dcyfr-ai/issues/266)) ([54bf404](https://github.com/dcyfr-labs/dcyfr-ai/commit/54bf404d67f32611df6395d5dc34bbcecc7d73e2))
+* bump groq-sdk from 1.2.0 to 1.2.1 ([#267](https://github.com/dcyfr-labs/dcyfr-ai/issues/267)) ([3991460](https://github.com/dcyfr-labs/dcyfr-ai/commit/399146015f65fba9ca35c5fadbdefa212b0aab7b))
+* bump mem0ai from 3.0.6 to 3.0.7 ([#268](https://github.com/dcyfr-labs/dcyfr-ai/issues/268)) ([d06cabb](https://github.com/dcyfr-labs/dcyfr-ai/commit/d06cabb97f59e4e8bbf8ca7542d9267d96e331d3))
+* bump openai from 6.39.1 to 6.42.0 ([#262](https://github.com/dcyfr-labs/dcyfr-ai/issues/262)) ([5c2c613](https://github.com/dcyfr-labs/dcyfr-ai/commit/5c2c613f594618f51a813d252ee436e9897a0bec))
+* bump typescript-eslint from 8.60.1 to 8.61.0 ([#261](https://github.com/dcyfr-labs/dcyfr-ai/issues/261)) ([d68c286](https://github.com/dcyfr-labs/dcyfr-ai/commit/d68c2861bced87a05ba9fdfc370626baa90401af))
+
 ## [3.2.3](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.2.2...v3.2.3) (2026-06-11)
 
 
