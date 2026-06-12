@@ -103,6 +103,14 @@ jobs:
       - name: Build Package
         run: npm run build
 
+      - name: Packaging Smoke Test (bins)
+        # Packs the tarball and installs it into a throwaway consumer to assert
+        # every declared bin links and runs --help — the last gate against the
+        # stale-bin-target regression class shipped in 2.1.0–3.2.1 (issue #253).
+        # The consumer install runs --ignore-scripts internally, so the unbuilt
+        # better-sqlite3 binding is fine for the --help-only paths.
+        run: npm run smoke:bins
+
       - name: Run Tests
         run: npm run test
 

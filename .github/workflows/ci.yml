@@ -55,6 +55,13 @@ jobs:
         id: build
         run: npm run build
 
+      - name: Packaging Smoke Test (bins)
+        id: smoke_bins
+        # Packs the tarball and installs it into a throwaway consumer to assert
+        # every declared bin links and runs --help (guards the 2.1.0–3.2.1
+        # stale-bin-target regression class, issue #253).
+        run: npm run smoke:bins
+
       - name: Test
         id: test
         run: npm run test
@@ -97,4 +104,5 @@ jobs:
           echo "| --- | --- |" >> $GITHUB_STEP_SUMMARY
           echo "| TypeScript | ${{ steps.typecheck.outcome == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Build | ${{ steps.build.outcome == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Bin packaging smoke | ${{ steps.smoke_bins.outcome == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Tests | ${{ steps.test.outcome == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
