@@ -5,9 +5,10 @@
  * Extended tool for initialization, validation, and management
  */
 
-import { ConfigLoader } from '../dist/ai/config/loader.js';
-import { FrameworkConfigSchema, DEFAULT_CONFIG } from '../dist/ai/config/schema.js';
-import { existsSync, writeFileSync, mkdirSync } from 'fs';
+// dist/ imports stay lazy (inside the commands that need them) so that
+// version/help keep working on a broken or partially-installed package —
+// exactly the support-triage flow where `dcyfr-ai --version` matters (#253).
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -120,7 +121,6 @@ async function initConfig(options) {
   const templatePath = join(templateDir, templateFile);
   
   try {
-    const { readFileSync } = await import('fs');
     const template = readFileSync(templatePath, 'utf-8');
     writeFileSync(outputPath, template);
     console.log(`✅ Created ${outputPath}`);
@@ -140,6 +140,9 @@ async function validateConfig(options) {
   const configFile = options.flags.config;
 
   try {
+    const { ConfigLoader } = await import('../dist/ai/config/loader.js');
+    const { FrameworkConfigSchema } = await import('../dist/ai/config/schema.js');
+
     const loader = new ConfigLoader({
       projectRoot,
       configFile,
@@ -179,7 +182,8 @@ async function validateConfig(options) {
 /**
  * Show configuration schema
  */
-function showSchema() {
+async function showSchema() {
+  const { DEFAULT_CONFIG } = await import('../dist/ai/config/schema.js');
   console.log('📋 DCYFR Configuration Schema\n');
   console.log(JSON.stringify(DEFAULT_CONFIG, null, 2));
 }
@@ -261,6 +265,14 @@ export const ${toCamelCase(name)}: Plugin = {
 }
 
 /**
+ * Print the package version (read from the package's own package.json)
+ */
+function showVersion() {
+  const pkg = JSON.parse(readFileSync(join(__dirname, '..', 'package.json'), 'utf-8'));
+  console.log(pkg.version);
+}
+
+/**
  * Show help
  */
 function showHelp() {
@@ -281,6 +293,7 @@ COMMANDS:
   report           Generate telemetry report
   telemetry        View telemetry data, costs, and model usage
   validate-runtime Validate runtime environment and provider config
+  version          Print the CLI version (also: --version, -v)
   help             Show this help message
 
 INIT OPTIONS:
@@ -351,7 +364,7 @@ async function main() {
         await validateConfig(options);
         break;
       case 'config:schema':
-        showSchema();
+        await showSchema();
         break;
       case 'plugin:create':
         await createPlugin(options);
@@ -376,6 +389,11 @@ async function main() {
         await runTelemetryCli();
         break;
       }
+      case 'version':
+      case '--version':
+      case '-v':
+        showVersion();
+        break;
       case 'help':
       case '--help':
       case '-h':

@@ -5,7 +5,8 @@
  * Builds + packs the package, installs the resulting tarball into a throwaway
  * consumer project (exactly as a user would), then asserts that every declared
  * `bin` is actually linked by npm and runs `--help` with exit code 0 — including
- * the `telemetry` and `validate-runtime` subcommands now folded into `dcyfr-ai`.
+ * the `telemetry` and `validate-runtime` subcommands now folded into `dcyfr-ai` —
+ * and that `version` / `--version` / `-v` print the packaged version.
  *
  * This guards the bin-layout regressions shipped in 3.2.1:
  *   - a bin whose target file is missing from the tarball never gets linked
@@ -33,6 +34,7 @@ import { fileURLToPath } from 'node:url';
 
 const repoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const NODE = process.execPath;
+const pkgVersion = JSON.parse(readFileSync(join(repoRoot, 'package.json'), 'utf8')).version;
 
 const EXPECTED_BINS = ['dcyfr-ai', 'dcyfr-ai-tui'];
 const REMOVED_BINS = ['dcyfr'];
@@ -41,6 +43,9 @@ const HELP_CHECKS = [
   { argv: ['dcyfr-ai-tui', '--help'], contains: 'TUI' },
   { argv: ['dcyfr-ai', 'telemetry', '--help'], contains: 'telemetry' },
   { argv: ['dcyfr-ai', 'validate-runtime', '--help'], contains: 'Validate' },
+  { argv: ['dcyfr-ai', 'version'], contains: pkgVersion },
+  { argv: ['dcyfr-ai', '--version'], contains: pkgVersion },
+  { argv: ['dcyfr-ai', '-v'], contains: pkgVersion },
 ];
 
 const failures = [];
@@ -109,7 +114,7 @@ try {
     }
   }
 
-  console.log('• Running --help on each bin / subcommand…');
+  console.log('• Running --help / version checks on each bin / subcommand…');
   for (const { argv, contains } of HELP_CHECKS) {
     const [name, ...rest] = argv;
     try {

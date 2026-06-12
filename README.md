@@ -713,6 +713,9 @@ npx dcyfr-ai config:validate --config custom.yaml
 # Show schema
 npx dcyfr-ai config:schema
 
+# Version
+npx dcyfr-ai --version
+
 # Help
 npx dcyfr-ai help
 ```
