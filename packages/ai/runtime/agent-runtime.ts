@@ -794,7 +794,10 @@ export class AgentRuntime {
    *   Thought: <reasoning>
    *   Final Answer: <response>
    */
-  private parseTextDecision(text: string): Decision {
+  private parseTextDecision(rawText: string): Decision {
+    // Cap the parsed window: the lazy-quantifier extractions below backtrack
+    // quadratically, and a single decision never legitimately needs more.
+    const text = rawText.length > 16384 ? rawText.slice(0, 16384) : rawText;
     // Extract thought
     const thoughtMatch = text.match(/Thought:\s*(.+?)(?=\n(?:Action|Final Answer)|$)/s);
     const thought = thoughtMatch ? thoughtMatch[1].trim() : 'Thinking...';

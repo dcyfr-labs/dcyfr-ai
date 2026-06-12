@@ -62,9 +62,16 @@ interface LicenseCheckerEntry {
 // Helpers
 // ---------------------------------------------------------------------------
 
+/**
+ * SPDX expressions are tiny; the cap bounds the split-regex backtracking on
+ * a hostile third-party `licenses` string.
+ */
+const MAX_SPDX_LENGTH = 1024;
+
 function normaliseSpdx(raw: string): string[] {
   // Handle compound: "MIT AND Apache-2.0" or "(MIT OR Apache-2.0)"
   return raw
+    .slice(0, MAX_SPDX_LENGTH)
     .replaceAll(/[()]/g, '')
     .split(/\s+(?:AND|OR)\s+/)
     .map((s) => s.trim())

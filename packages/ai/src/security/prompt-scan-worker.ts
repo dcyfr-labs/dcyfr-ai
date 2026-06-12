@@ -78,12 +78,9 @@ const LOCAL_PATTERNS: Array<{
     severity: 'medium',
     confidence: 0.8,
   },
-  {
-    pattern: /```[\s\S]*(?:exec|eval|require|import)[\s\S]*```/i,
-    category: 'code-injection',
-    severity: 'critical',
-    confidence: 0.95,
-  },
+  // code-injection (fenced block containing exec/eval/require/import) is
+  // checked in code — see hasCodeFenceInjection(). The natural regex form
+  // (```[\s\S]*keyword[\s\S]*```) is quadratic on untrusted prompts.
   {
     // [^>]* (was \s*) catches whitespace + arbitrary attribute soup after
     // </script — e.g. '</script\t\n bar>' (CodeQL js/bad-tag-filter v2,
@@ -109,12 +106,33 @@ const LOCAL_PATTERNS: Array<{
 
 // ─── Core Analysis ────────────────────────────────────────────────────────────
 
+/**
+ * Linear-time equivalent of /```[\s\S]*(?:exec|eval|require|import)[\s\S]*```/i:
+ * a keyword sits between some pair of fences iff it sits between the first
+ * and last fence.
+ */
+function hasCodeFenceInjection(prompt: string): boolean {
+  const first = prompt.indexOf('```');
+  const last = prompt.lastIndexOf('```');
+  if (first === -1 || last <= first) return false;
+  return /exec|eval|require|import/i.test(prompt.slice(first + 3, last));
+}
+
 function checkLocalPatterns(prompt: string): ThreatMatch[] {
   const matches: ThreatMatch[] = [];
   for (const { pattern, category, severity, confidence } of LOCAL_PATTERNS) {
     if (pattern.test(prompt)) {
       matches.push({ pattern: pattern.source, category, severity, confidence, source: 'pattern' });
     }
+  }
+  if (hasCodeFenceInjection(prompt)) {
+    matches.push({
+      pattern: '```[\\s\\S]*(?:exec|eval|require|import)[\\s\\S]*```',
+      category: 'code-injection',
+      severity: 'critical',
+      confidence: 0.95,
+      source: 'pattern',
+    });
   }
   return matches;
 }
