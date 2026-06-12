@@ -1,0 +1,36 @@
+{
+  "name": "dcyfr-ai",
+  "version": "3.2.4",
+  "description": "Official npx launcher for the @dcyfr/ai CLI — forwards `npx dcyfr-ai <command>` to the dcyfr-ai bin shipped by @dcyfr/ai.",
+  "type": "commonjs",
+  "bin": {
+    "dcyfr-ai": "bin/forward.js"
+  },
+  "files": [
+    "bin"
+  ],
+  "dependencies": {
+    "@dcyfr/ai": "^3.2.4"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "keywords": [
+    "dcyfr",
+    "ai",
+    "agent",
+    "cli",
+    "launcher"
+  ],
+  "author": "DCYFR Labs",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dcyfr-labs/dcyfr-ai.git",
+    "directory": "launcher"
+  },
+  "bugs": {
+    "url": "https://github.com/dcyfr-labs/dcyfr-ai/issues"
+  },
+  "homepage": "https://github.com/dcyfr-labs/dcyfr-ai#readme"
+}
