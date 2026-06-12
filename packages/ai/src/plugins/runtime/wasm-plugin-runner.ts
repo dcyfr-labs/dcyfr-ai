@@ -265,7 +265,9 @@ export class WasmPluginRunner {
     const startTime = performance.now();
     let timedOut = false;
     let exitCode: number | null = null;
-    const stdoutChunks: string[] = [];
+    // WASI writes plugin stdout to the host process by default; capturing it
+    // requires overriding fd_write in the imports. Until that lands, stdout
+    // is reported as empty rather than collected.
     const stderrChunks: string[] = [];
 
     try {
@@ -361,7 +363,7 @@ export class WasmPluginRunner {
 
     return {
       exitCode,
-      stdout: stdoutChunks.join(''),
+      stdout: '',
       stderr: stderrChunks.join(''),
       timedOut,
       containerName: `wasm-${Date.now()}`, // Not a real container, but kept for API consistency

@@ -290,6 +290,8 @@ export function listWorkingMemoryFiles(rootDir: string, agentId: string): string
 
   return readdirSync(workingDir)
     .filter(f => f.endsWith('.md'))
-    .sort()
+    // Code-unit comparator: locale-independent, so ordering is stable across
+    // hosts (filenames are ASCII timestamps).
+    .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))
     .map(f => join(workingDir, f));
 }

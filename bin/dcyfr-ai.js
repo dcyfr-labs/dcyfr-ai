@@ -27,10 +27,15 @@ function parseArgs() {
     const arg = args[i];
     
     if (arg.startsWith('--')) {
-      const [key, value] = arg.substring(2).split('=');
-      flags[key] = value !== undefined ? value : args[i + 1];
-      if (value === undefined && args[i + 1] && !args[i + 1].startsWith('-')) {
-        i++; // Skip next arg if it was used as value
+      const parts = arg.substring(2).split('=');
+      const key = parts[0];
+      if (parts.length > 1) {
+        flags[key] = parts[1];
+      } else {
+        flags[key] = args[i + 1];
+        if (args[i + 1] && !args[i + 1].startsWith('-')) {
+          i++; // Skip next arg if it was used as value
+        }
       }
     } else if (arg.startsWith('-')) {
       flags[arg.substring(1)] = true;

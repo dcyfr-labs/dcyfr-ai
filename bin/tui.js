@@ -210,9 +210,10 @@ function parseArgs() {
     const arg = args[i];
 
     if (arg.startsWith('--')) {
-      const [key, value] = arg.substring(2).split('=');
-      if (value !== undefined) {
-        flags[key] = value;
+      const parts = arg.substring(2).split('=');
+      const key = parts[0];
+      if (parts.length > 1) {
+        flags[key] = parts[1];
       } else {
         flags[key] = args[i + 1]?.startsWith('--') ? true : args[++i] || true;
       }

@@ -329,9 +329,8 @@ export class DelegationContractManager extends EventEmitter {
     // Forward watchdog timeout events and update contract status
     this.watchdog.on('contract_timeout', (ev) => {
       this.emit('contract_timeout', ev);
-      try {
-        void this.updateContract({ contract_id: ev.contract_id, status: 'timeout' as DelegationContractStatus });
-      } catch { /* contract may have already completed/been removed */ }
+      this.updateContract({ contract_id: ev.contract_id, status: 'timeout' as DelegationContractStatus })
+        .catch(() => { /* contract may have already completed/been removed */ });
     });
 
     // Forward circuit breaker open → circuit_breaker_tripped (8.4)
