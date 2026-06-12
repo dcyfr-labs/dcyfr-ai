@@ -209,11 +209,11 @@ export class AgentLoader {
    * Discover agents from a single pattern
    */
   private async discoverFromPattern(pattern: string, discovered: AgentManifest[]): Promise<void> {
-    const { glob: globCallback } = await import('glob');
-    const { promisify } = await import('util');
-    const glob = promisify(globCallback) as (pattern: string, options?: any) => Promise<string[]>;
-
-    const files = await glob(pattern, { absolute: true });
+    // glob >= v9 is promise-based; wrapping it in promisify() appends a
+    // callback the library ignores, so the wrapped call never settles and
+    // discoverAgents() hangs forever.
+    const { glob } = await import('glob');
+    const files = (await glob(pattern, { absolute: true })) as string[];
 
     for (const file of files) {
       try {
