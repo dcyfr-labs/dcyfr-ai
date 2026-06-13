@@ -91,7 +91,7 @@ If both options above are insufficient, roll back to the last stable release tag
 
 ```bash
 # List all release tags
-cd /Users/drew/DCYFR/code/dcyfr-workspace/dcyfr-ai
+cd /path/to/dcyfr-ai
 git tag -l "v*" | sort -V
 
 # Roll back to last stable release (typically v1.0.4 or latest v1.x.x)
@@ -126,11 +126,7 @@ console.log('execution_modes enabled:', isExecutionModesEnabled());
 
 ## Related Documentation
 
-- [Execution Modes User Guide](./delegation-execution-modes.md)
-- [Execution Modes Migration Guide](./delegation-execution-modes-migration.md)
-- [Execution Modes API Reference](../api-reference/execution-modes.md)
 - [Security Middleware Guide](./delegation-security-middleware.md)
-- [OpenSpec Change](../../openspec/changes/delegation-execution-modes/) — full implementation spec
 
 ---
 

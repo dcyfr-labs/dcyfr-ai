@@ -874,8 +874,6 @@ export class BootstrapCache {
 
 **Next Steps:**
 - Implement specific integration patterns in your project
-- Review [Capability Validation API](./capability-validation-api.md)
-- Explore [Agent Factory Documentation](./agent-factory-api.md)
 - Set up monitoring and analytics integration
 
 **Support:**

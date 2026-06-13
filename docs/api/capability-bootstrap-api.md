@@ -529,11 +529,6 @@ trackCapabilityMetrics(result.agentId, result.manifest.capabilities);
 
 ---
 
-**Next Steps:**
-- Review [Capability Validation API](./capability-validation-api.md)
-- See [Agent Factory Documentation](./agent-factory-api.md)  
-- Explore [MCP Integration Guide](../guides/mcp-integration.md)
-
 **Support:**
 - Issues: [GitHub Issues](https://github.com/dcyfr-labs/dcyfr-ai/issues)
 - Discussions: [GitHub Discussions](https://github.com/orgs/dcyfr-labs/discussions)

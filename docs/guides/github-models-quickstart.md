@@ -232,8 +232,6 @@ export LLM_MODEL=gpt-4o-mini
 ## Next Steps
 
 - **Full Documentation**: [PROVIDER_INTEGRATIONS.md](../PROVIDER_INTEGRATIONS.md)
-- **Provider Registry**: [Provider Registry API](../api/provider-registry.md)
-- **Agent Runtime**: [Agent Runtime Guide](../guides/agent-runtime.md)
 
 ---
 

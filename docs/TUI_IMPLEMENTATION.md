@@ -22,7 +22,7 @@ Initial implementation used OpenTUI but encountered ES module compatibility issu
 
 ```
 TypeError [ERR_UNKNOWN_FILE_EXTENSION]: Unknown file extension ".scm" for 
-/Users/drew/DCYFR/code/node_modules/@opentui/core/assets/javascript/highlights.scm
+/path/to/node_modules/@opentui/core/assets/javascript/highlights.scm
 ```
 
 **Problem:** OpenTUI's tree-sitter integration attempts to load `.scm` grammar files as ES modules, which Node.js doesn't support without special configuration.
@@ -33,7 +33,7 @@ TypeError [ERR_UNKNOWN_FILE_EXTENSION]: Unknown file extension ".scm" for
 
 ### 1. Validation Dashboard
 
-**File:** [bin/tui/validation-dashboard.js](bin/tui/validation-dashboard.js)
+**File:** [bin/tui/validation-dashboard.js](../bin/tui/validation-dashboard.js)
 
 ```javascript
 import chalk from 'chalk';
@@ -66,7 +66,7 @@ export function renderValidationDashboard(config, report) {
 
 ### 2. Configuration Wizard
 
-**File:** [bin/tui/config-wizard.js](bin/tui/config-wizard.js)
+**File:** [bin/tui/config-wizard.js](../bin/tui/config-wizard.js)
 
 ```javascript
 import inquirer from 'inquirer';
@@ -93,7 +93,7 @@ export async function runConfigWizard() {
 
 ### 3. Main TUI CLI
 
-**File:** [bin/tui.js](bin/tui.js)
+**File:** [bin/tui.js](../bin/tui.js)
 
 ```javascript
 import chalk from 'chalk';
@@ -132,10 +132,10 @@ async function runDashboard(options) {
 ## Demo Files
 
 ### Dashboard Demo
-[examples/tui/demo-dashboard.js](examples/tui/demo-dashboard.js)
+[examples/tui/demo-dashboard.js](../examples/tui/demo-dashboard.js)
 
 ```bash
-node /Users/drew/DCYFR/code/dcyfr-ai/examples/tui/demo-dashboard.js
+node examples/tui/demo-dashboard.js
 ```
 
 **Output:**
