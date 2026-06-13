@@ -203,7 +203,7 @@ For privately reported vulnerabilities:
 
 To report a security vulnerability in a DCYFR plugin:
 
-1. **Preferred:** [DCYFR Security Advisories](https://github.com/dcyfr/dcyfr-ai/security/advisories/new)
+1. **Preferred:** [DCYFR Security Advisories](https://github.com/dcyfr-labs/dcyfr-ai/security/advisories/new)
 2. **Email:** <security@dcyfr.ai> (PGP key available at <https://www.dcyfr.ai/security/pgp-key.asc>)
 3. **Do not** open a public GitHub issue for security vulnerabilities
 

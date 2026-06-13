@@ -101,4 +101,4 @@ npm install @dcyfr/ai@beta
 
 - **Full Documentation:** [RELEASE_MANAGEMENT.md](./RELEASE_MANAGEMENT.md)
 - **npm Package:** https://www.npmjs.com/package/@dcyfr/ai
-- **GitHub:** https://github.com/dcyfr/dcyfr-ai
+- **GitHub:** https://github.com/dcyfr-labs/dcyfr-ai

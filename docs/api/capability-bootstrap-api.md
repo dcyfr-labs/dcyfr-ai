@@ -535,6 +535,6 @@ trackCapabilityMetrics(result.agentId, result.manifest.capabilities);
 - Explore [MCP Integration Guide](../guides/mcp-integration.md)
 
 **Support:**
-- Issues: [GitHub Issues](https://github.com/dcyfr/dcyfr-ai/issues)
-- Discussions: [GitHub Discussions](https://github.com/dcyfr/dcyfr-ai/discussions)
+- Issues: [GitHub Issues](https://github.com/dcyfr-labs/dcyfr-ai/issues)
+- Discussions: [GitHub Discussions](https://github.com/orgs/dcyfr-labs/discussions)
 - Documentation: [DCYFR AI Documentation](https://docs.dcyfr.ai)
