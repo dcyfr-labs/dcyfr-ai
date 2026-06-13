@@ -163,7 +163,7 @@ Actions → Publish Canary → Run workflow → Select tag
 ### 1. Create a Test Changeset
 
 ```bash
-cd /Users/drew/DCYFR/code/dcyfr-ai
+cd /path/to/dcyfr-ai
 npm run changeset
 ```
 
@@ -242,8 +242,8 @@ Within a few minutes, the Changesets bot should:
 
 ## Documentation Links
 
-- **Full Guide:** [docs/RELEASE_MANAGEMENT.md](docs/RELEASE_MANAGEMENT.md)
-- **Quick Start:** [docs/RELEASE_QUICK_START.md](docs/RELEASE_QUICK_START.md)
+- **Full Guide:** [docs/RELEASE_MANAGEMENT.md](./RELEASE_MANAGEMENT.md)
+- **Quick Start:** [docs/RELEASE_QUICK_START.md](./RELEASE_QUICK_START.md)
 - **Changesets Docs:** https://github.com/changesets/changesets
 - **npm Package:** https://www.npmjs.com/package/@dcyfr/ai
 

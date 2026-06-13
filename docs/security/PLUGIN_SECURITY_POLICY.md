@@ -240,7 +240,4 @@ All plugin permission violations are logged to Axiom (`dcyfr-agents` dataset) wi
 ## Related Documentation
 
 - [Plugin Development Guide](../guides/PLUGIN_DEVELOPMENT_GUIDE.md) — How to build compliant plugins
-- [Plugin Runtime Isolation Spec](../../openspec/changes/plugin-marketplace-security/specs/plugin-runtime-isolation/spec.md)
-- [Plugin Permission Model Spec](../../openspec/changes/plugin-marketplace-security/specs/plugin-permission-model/spec.md)
-- [Plugin Incident Response Spec](../../openspec/changes/plugin-marketplace-security/specs/plugin-incident-response/spec.md)
 - [DCYFR SECURITY.md](../../SECURITY.md) — Vulnerability reporting for the DCYFR framework itself

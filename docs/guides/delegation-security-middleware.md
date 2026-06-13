@@ -358,5 +358,3 @@ npx vitest run --reporter=verbose packages/ai/__tests__/delegation/contract-mana
 
 - [Agent Capability Development Guide](agent-capability-development-guide.md) — how to author agent manifests
 - [Capability Bootstrap Integration](capability-bootstrap-integration.md) — loading manifests at startup
-- [Delegation Framework User Guide](../../docs/guides/delegation-framework-user-guide.md) — end-user delegation guide
-- [Execution Modes Guide](../../docs/guides/delegation-execution-modes.md) — background/async/interactive modes

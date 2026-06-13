@@ -2,17 +2,6 @@
 
 This directory contains migration guides to help you transition from other AI frameworks to @dcyfr/ai.
 
-## Available Migrations
-
-### From LangChain
-- **[LangChain to @dcyfr/ai](./from-langchain.md)** - Complete migration guide with code examples
-
-### From Vercel AI SDK  
-- **[Vercel AI SDK to @dcyfr/ai](./from-vercel-ai-sdk.md)** - Step-by-step migration process
-
-### From OpenAI SDK
-- **[OpenAI SDK to @dcyfr/ai](./from-openai-sdk.md)** - Direct integration upgrade
-
 ## Migration Overview
 
 | Framework | Complexity | Time Estimate | Key Benefits |

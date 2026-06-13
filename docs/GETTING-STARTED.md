@@ -580,13 +580,11 @@ npx dcyfr-ai config:schema
 ### Advanced Topics
 - [Plugin Development Guide](./PLUGINS.md)
 - [API Reference](./API.md)
-- [Architecture Overview](./ARCHITECTURE.md)
-- [Migration Guide](./MIGRATION.md)
-- [Performance Tuning](./PERFORMANCE.md)
+- [Migration Guide](./migrations/README.md)
 
 ## Support
 
-- 📚 [Documentation](./README.md)
+- 📚 [Documentation](../README.md)
 - 💬 [GitHub Issues](https://github.com/dcyfr/dcyfr-ai/issues)
 - 🔗 [Examples](../examples/)
 

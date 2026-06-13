@@ -301,8 +301,8 @@ render(<Dashboard />);
 
 - [OpenTUI Official Docs](https://opentui.com/docs)
 - [OpenTUI GitHub](https://github.com/anomalyco/opentui)
-- [Examples Directory](./examples/tui/)
-- [DCYFR AI Framework Docs](./docs/API.md)
+- [Examples Directory](../examples/tui/)
+- [DCYFR AI Framework Docs](./API.md)
 
 ## License
 

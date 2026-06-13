@@ -197,7 +197,6 @@ Bot:  📝 Generating professional blog post...
 - [Slack Bolt Framework](https://slack.dev/bolt-js/)
 - [Slack Events API](https://api.slack.com/apis/events-api)
 - [@dcyfr/ai Documentation](../API.md)
-- [DCYFR Agent Catalog](../../.ai/agents/CATALOG.md)
 
 ---
 

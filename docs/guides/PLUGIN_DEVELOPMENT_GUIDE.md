@@ -412,6 +412,3 @@ Before opening a submission PR, verify all items:
 ## Related Documentation
 
 - [Plugin Security Policy](../security/PLUGIN_SECURITY_POLICY.md)
-- [Security Scanning Pipeline](../../packages/ai/src/plugins/security/README.md)
-- [Permission Model API](../../packages/ai/src/plugins/permissions/README.md)
-- [Docker Sandbox Runner](../../packages/ai/src/plugins/runtime/README.md)

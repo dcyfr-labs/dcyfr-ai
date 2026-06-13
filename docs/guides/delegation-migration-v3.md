@@ -282,6 +282,4 @@ processed the contract and whether it read `requires_confirmation`.
 ## See Also
 
 - [Delegation Security Middleware Guide](./delegation-security-middleware.md)
-- [Delegation Framework User Guide](./delegation-framework-user-guide.md)
-- [Execution Modes Guide](./delegation-execution-modes.md)
 - [AGENTS.md — Prompt Injection Security](../../AGENTS.md)

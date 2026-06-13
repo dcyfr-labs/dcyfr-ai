@@ -1288,8 +1288,6 @@ This guide covered:
 - **Advanced patterns** - Hierarchical, conditional, collaborative, learning capabilities
 
 For additional resources:
-- **User Guide**: [`/docs/guides/delegation-framework-user-guide.md`](../../docs/guides/delegation-framework-user-guide.md)
-- **Migration Guide**: [`/docs/guides/openspec-delegation-migration-guide.md`](./openspec-delegation-migration-guide.md)
 - **Type Reference**: [`packages/ai/types/agent-capabilities.ts`](../../packages/ai/types/agent-capabilities.ts)
 - **Bootstrap Script**: [`packages/ai/scripts/bootstrap-agent-capabilities.mjs`](../../packages/ai/scripts/bootstrap-agent-capabilities.mjs)
 

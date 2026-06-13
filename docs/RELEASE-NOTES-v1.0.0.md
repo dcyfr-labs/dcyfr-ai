@@ -74,10 +74,10 @@ session.complete({ success: true });
 
 ## 📚 Documentation
 
-- [Getting Started Guide](./docs/GETTING-STARTED.md) - Complete tutorial (450 lines)
-- [API Reference](./docs/API.md) - Full API documentation (550 lines)
-- [Plugin Development](./docs/PLUGINS.md) - Plugin creation guide (620 lines)
-- [Standalone Example](./examples/standalone-nextjs/) - Working Next.js app
+- [Getting Started Guide](./GETTING-STARTED.md) - Complete tutorial (450 lines)
+- [API Reference](./API.md) - Full API documentation (550 lines)
+- [Plugin Development](./PLUGINS.md) - Plugin creation guide (620 lines)
+- [Standalone Example](../examples/standalone-nextjs/) - Working Next.js app
 
 ## 🎯 What's Included
 
@@ -143,7 +143,7 @@ session.complete({ success: true });
 
 ## 🤝 Contributing
 
-Contributions are welcome! See [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
+Contributions are welcome! See [CONTRIBUTING.md](../CONTRIBUTING.md) for guidelines.
 
 ## 📝 License
 
@@ -153,8 +153,8 @@ MIT © DCYFR Labs
 
 - **npm:** https://www.npmjs.com/package/@dcyfr/ai
 - **GitHub:** https://github.com/dcyfr/dcyfr-ai
-- **Documentation:** [docs/](./docs/)
-- **Examples:** [examples/](./examples/)
+- **Documentation:** [docs/](./)
+- **Examples:** [examples/](../examples/)
 - **Issues:** https://github.com/dcyfr/dcyfr-ai/issues
 
 ## 🙏 Acknowledgments
