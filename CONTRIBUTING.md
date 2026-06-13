@@ -62,7 +62,7 @@ If you're contributing while working for a company using @dcyfr/ai commercially,
 
 ```bash
 # Clone repository
-git clone https://github.com/dcyfr/dcyfr-ai.git
+git clone https://github.com/dcyfr-labs/dcyfr-ai.git
 cd dcyfr-ai
 
 # Install dependencies

@@ -785,7 +785,7 @@ deps: bump @anthropic-ai/sdk to 0.95.2
 **Issue: `npm install @dcyfr/ai` fails with 404**
 
 - **Cause:** Package may not be published yet or npm registry issue
-- **Solution:** Verify package exists: `npm view @dcyfr/ai`, or install from GitHub: `npm install git+https://github.com/dcyfr/dcyfr-ai.git`
+- **Solution:** Verify package exists: `npm view @dcyfr/ai`, or install from GitHub: `npm install git+https://github.com/dcyfr-labs/dcyfr-ai.git`
 - **Check:** Visit https://www.npmjs.com/package/@dcyfr/ai to confirm publication status
 
 **Issue: "Cannot find module '@dcyfr/ai'"**
@@ -970,7 +970,7 @@ A: Yes! @dcyfr/ai is used in production at dcyfr-labs and other projects. It has
 
 Found a security issue? Report it privately:
 
-- **GitHub Security Advisories:** [dcyfr-ai/security](https://github.com/dcyfr/dcyfr-ai/security/advisories/new)
+- **GitHub Security Advisories:** [dcyfr-ai/security](https://github.com/dcyfr-labs/dcyfr-ai/security/advisories/new)
 - **Expected Response:** Within 48 hours
 
 ### Security Considerations
@@ -1018,7 +1018,7 @@ Found a security issue? Report it privately:
 - [ ] Enhanced provider feature parity (streaming, function calling, vision)
 - [ ] CommonJS compatibility mode (for legacy projects)
 
-See [GitHub Issues](https://github.com/dcyfr/dcyfr-ai/issues) for tracked feature requests and bugs.
+See [GitHub Issues](https://github.com/dcyfr-labs/dcyfr-ai/issues) for tracked feature requests and bugs.
 
 [⬆️ Back to top](#dcyfr-ai)
 

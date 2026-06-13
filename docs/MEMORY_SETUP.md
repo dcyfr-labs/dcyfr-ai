@@ -320,4 +320,4 @@ Ensure `tsconfig.json` includes memory module:
 
 ---
 
-**Support:** For questions or issues, open an issue at [dcyfr-ai GitHub](https://github.com/dcyfr/dcyfr-ai/issues)
+**Support:** For questions or issues, open an issue at [dcyfr-ai GitHub](https://github.com/dcyfr-labs/dcyfr-ai/issues)

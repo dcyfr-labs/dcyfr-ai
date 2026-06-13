@@ -269,7 +269,7 @@ npm list @opentui/core
 ## Resources
 
 - [OpenTUI Documentation](https://opentui.com/docs)
-- [DCYFR AI Framework Docs](https://github.com/dcyfr/dcyfr-ai/blob/main/docs/)
+- [DCYFR AI Framework Docs](https://github.com/dcyfr-labs/dcyfr-ai/blob/main/docs/)
 - [Examples Source Code](./examples/tui/)
 
 ---

@@ -193,7 +193,7 @@ Keyboard Shortcuts:
   Ctrl+C      Exit
 
 Documentation:
-  https://github.com/dcyfr/dcyfr-ai/blob/main/docs/TUI.md
+  https://github.com/dcyfr-labs/dcyfr-ai/blob/main/docs/TUI.md
 `);
   process.exit(0);
 }

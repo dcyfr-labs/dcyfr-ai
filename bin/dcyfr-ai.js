@@ -321,7 +321,7 @@ EXAMPLES:
   dcyfr-ai validate-runtime
   dcyfr-ai telemetry --help   # full telemetry / validate-runtime options
 
-For more information, visit: https://github.com/dcyfr/dcyfr-ai
+For more information, visit: https://github.com/dcyfr-labs/dcyfr-ai
   `);
 }
 
@@ -360,12 +360,12 @@ async function main() {
       case 'test':
         console.log('🔍 Validation runner');
         console.log('ℹ️  Use PluginLoader and ValidationFramework in your code');
-        console.log('See: https://github.com/dcyfr/dcyfr-ai/blob/main/docs/GETTING-STARTED.md\n');
+        console.log('See: https://github.com/dcyfr-labs/dcyfr-ai/blob/main/docs/GETTING-STARTED.md\n');
         break;
       case 'report':
         console.log('📊 Telemetry report generator');
         console.log('ℹ️  Use TelemetryEngine API to generate reports');
-        console.log('See: https://github.com/dcyfr/dcyfr-ai/blob/main/examples/standalone-nextjs/scripts/telemetry-report.js\n');
+        console.log('See: https://github.com/dcyfr-labs/dcyfr-ai/blob/main/examples/standalone-nextjs/scripts/telemetry-report.js\n');
         break;
       case 'telemetry':
       case 'validate-runtime': {
