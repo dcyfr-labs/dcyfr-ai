@@ -426,7 +426,7 @@ async function checkMemoryHealth() {
 - [mem0 Documentation](https://docs.mem0.ai/)
 - [Qdrant Documentation](https://qdrant.tech/documentation/)
 - [OpenAI API Reference](https://platform.openai.com/docs/api-reference)
-- [DCYFR AI Framework](https://github.com/dcyfr/dcyfr-ai)
+- [DCYFR AI Framework](https://github.com/dcyfr-labs/dcyfr-ai)
 
 ---
 

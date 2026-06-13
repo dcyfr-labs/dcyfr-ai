@@ -48,17 +48,17 @@ export default function Home() {
             <h2 className="text-2xl font-bold mb-3">Documentation</h2>
             <ul className="list-disc list-inside space-y-2">
               <li>
-                <a href="https://github.com/dcyfr/dcyfr-ai/blob/main/docs/GETTING-STARTED.md" className="text-blue-600 hover:underline">
+                <a href="https://github.com/dcyfr-labs/dcyfr-ai/blob/main/docs/GETTING-STARTED.md" className="text-blue-600 hover:underline">
                   Getting Started Guide
                 </a>
               </li>
               <li>
-                <a href="https://github.com/dcyfr/dcyfr-ai/blob/main/docs/API.md" className="text-blue-600 hover:underline">
+                <a href="https://github.com/dcyfr-labs/dcyfr-ai/blob/main/docs/API.md" className="text-blue-600 hover:underline">
                   API Reference
                 </a>
               </li>
               <li>
-                <a href="https://github.com/dcyfr/dcyfr-ai/blob/main/examples" className="text-blue-600 hover:underline">
+                <a href="https://github.com/dcyfr-labs/dcyfr-ai/blob/main/examples" className="text-blue-600 hover:underline">
                   More Examples
                 </a>
               </li>

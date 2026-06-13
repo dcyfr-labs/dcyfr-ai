@@ -114,7 +114,7 @@ async function showSchema() {
   console.log('The configuration supports the following structure:\n');
   console.log(FrameworkConfigSchema.description || 'Framework configuration schema');
   console.log('\nFor detailed documentation, visit:');
-  console.log('https://github.com/dcyfr/dcyfr-ai/blob/main/docs/configuration.md');
+  console.log('https://github.com/dcyfr-labs/dcyfr-ai/blob/main/docs/GETTING-STARTED.md#configuration');
   process.exit(0);
 }
 
@@ -205,7 +205,7 @@ Examples:
   npx dcyfr-ai config:validate --verbose
 
 Documentation:
-  https://github.com/dcyfr/dcyfr-ai
+  https://github.com/dcyfr-labs/dcyfr-ai
 `);
   process.exit(0);
 }

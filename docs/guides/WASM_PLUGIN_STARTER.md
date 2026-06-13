@@ -338,7 +338,7 @@ See full examples at:
 
 - **Documentation:** https://www.dcyfr.ai/docs/plugins/wasm
 - **Discord:** https://discord.gg/dcyfr
-- **GitHub Issues:** https://github.com/dcyfr/dcyfr-ai/issues
+- **GitHub Issues:** https://github.com/dcyfr-labs/dcyfr-ai/issues
 
 ---
 
