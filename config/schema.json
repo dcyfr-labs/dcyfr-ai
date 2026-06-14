@@ -1,0 +1,818 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "version": {
+      "default": "1.0.0",
+      "type": "string"
+    },
+    "projectName": {
+      "type": "string"
+    },
+    "telemetry": {
+      "default": {
+        "enabled": true,
+        "storage": "file",
+        "storagePath": ".dcyfr/telemetry",
+        "retentionDays": 30,
+        "sampling": 1
+      },
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "default": true,
+          "type": "boolean"
+        },
+        "storage": {
+          "default": "file",
+          "type": "string",
+          "enum": [
+            "memory",
+            "file",
+            "redis",
+            "database"
+          ]
+        },
+        "storagePath": {
+          "default": ".dcyfr/telemetry",
+          "type": "string"
+        },
+        "retentionDays": {
+          "default": 30,
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "sampling": {
+          "default": 1,
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      },
+      "required": [
+        "enabled",
+        "storage",
+        "storagePath",
+        "retentionDays",
+        "sampling"
+      ],
+      "additionalProperties": false
+    },
+    "providers": {
+      "default": {
+        "enabled": true,
+        "primary": "claude",
+        "fallback": [
+          "copilot",
+          "github-models",
+          "groq",
+          "msty",
+          "ollama"
+        ],
+        "timeout": 30000,
+        "retries": 3,
+        "providers": {}
+      },
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "default": true,
+          "type": "boolean"
+        },
+        "primary": {
+          "default": "claude",
+          "type": "string"
+        },
+        "fallback": {
+          "default": [
+            "copilot",
+            "github-models",
+            "groq",
+            "msty",
+            "ollama"
+          ],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "timeout": {
+          "default": 30000,
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "retries": {
+          "default": 3,
+          "type": "number",
+          "minimum": 0
+        },
+        "providers": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "enabled": {
+                "default": true,
+                "type": "boolean"
+              },
+              "apiKey": {
+                "type": "string"
+              },
+              "baseUrl": {
+                "type": "string"
+              },
+              "model": {
+                "type": "string"
+              },
+              "maxTokens": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              }
+            },
+            "required": [
+              "enabled"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "enabled",
+        "primary",
+        "fallback",
+        "timeout",
+        "retries"
+      ],
+      "additionalProperties": false
+    },
+    "validation": {
+      "default": {
+        "enabled": true,
+        "parallel": true,
+        "failFast": false,
+        "gates": []
+      },
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "default": true,
+          "type": "boolean"
+        },
+        "parallel": {
+          "default": true,
+          "type": "boolean"
+        },
+        "failFast": {
+          "default": false,
+          "type": "boolean"
+        },
+        "gates": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "plugins": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "required": {
+                "default": true,
+                "type": "boolean"
+              },
+              "failureMode": {
+                "default": "error",
+                "type": "string",
+                "enum": [
+                  "error",
+                  "warn",
+                  "skip"
+                ]
+              },
+              "parallel": {
+                "default": false,
+                "type": "boolean"
+              },
+              "timeout": {
+                "default": 60000,
+                "type": "number",
+                "exclusiveMinimum": 0
+              }
+            },
+            "required": [
+              "name",
+              "plugins",
+              "required",
+              "failureMode",
+              "parallel",
+              "timeout"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "enabled",
+        "parallel",
+        "failFast",
+        "gates"
+      ],
+      "additionalProperties": false
+    },
+    "plugins": {
+      "default": [],
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "enabled": {
+            "default": true,
+            "type": "boolean"
+          },
+          "timeout": {
+            "default": 30000,
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "failureMode": {
+            "default": "warn",
+            "type": "string",
+            "enum": [
+              "error",
+              "warn",
+              "skip"
+            ]
+          },
+          "config": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "name",
+          "enabled",
+          "timeout",
+          "failureMode"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "agents": {
+      "default": {
+        "designTokens": {
+          "enabled": true,
+          "tokenFile": "src/lib/design-tokens.ts",
+          "compliance": 0.9,
+          "autofix": false,
+          "strictMode": true
+        },
+        "barrelExports": {
+          "enabled": true,
+          "barrelPaths": [
+            "@/components",
+            "@/lib",
+            "@/utils"
+          ],
+          "allowRelativeWithin": false,
+          "strictMode": true,
+          "exceptions": [
+            "src/app/**/layout.tsx",
+            "src/app/**/page.tsx"
+          ]
+        },
+        "pageLayout": {
+          "enabled": true,
+          "targetUsage": 0.9,
+          "pagePattern": "src/app/**/page.tsx",
+          "exceptions": [
+            "ArticleLayout",
+            "ArchiveLayout",
+            "ErrorLayout"
+          ],
+          "strictMode": true
+        },
+        "testData": {
+          "enabled": true,
+          "testPattern": "**/*.{test,spec}.{ts,tsx,js,jsx}",
+          "allowedPrefixes": [
+            "MOCK_",
+            "TEST_",
+            "FAKE_",
+            "FIXTURE_"
+          ]
+        }
+      },
+      "type": "object",
+      "properties": {
+        "designTokens": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "default": true,
+              "type": "boolean"
+            },
+            "tokenFile": {
+              "default": "src/lib/design-tokens.ts",
+              "type": "string"
+            },
+            "compliance": {
+              "default": 0.9,
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "autofix": {
+              "default": false,
+              "type": "boolean"
+            },
+            "strictMode": {
+              "default": true,
+              "type": "boolean"
+            },
+            "patterns": {
+              "type": "object",
+              "properties": {
+                "spacing": {
+                  "default": [
+                    "SPACING.XS",
+                    "SPACING.SM",
+                    "SPACING.MD",
+                    "SPACING.LG",
+                    "SPACING.XL"
+                  ],
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "typography": {
+                  "default": [
+                    "TYPOGRAPHY.H1",
+                    "TYPOGRAPHY.H2",
+                    "TYPOGRAPHY.BODY"
+                  ],
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "colors": {
+                  "default": [
+                    "SEMANTIC_COLORS.primary",
+                    "SEMANTIC_COLORS.success"
+                  ],
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "spacing",
+                "typography",
+                "colors"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "enabled",
+            "tokenFile",
+            "compliance",
+            "autofix",
+            "strictMode"
+          ],
+          "additionalProperties": false
+        },
+        "barrelExports": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "default": true,
+              "type": "boolean"
+            },
+            "barrelPaths": {
+              "default": [
+                "@/components",
+                "@/lib",
+                "@/utils"
+              ],
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "allowRelativeWithin": {
+              "default": false,
+              "type": "boolean"
+            },
+            "strictMode": {
+              "default": true,
+              "type": "boolean"
+            },
+            "exceptions": {
+              "default": [
+                "src/app/**/layout.tsx",
+                "src/app/**/page.tsx"
+              ],
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "enabled",
+            "barrelPaths",
+            "allowRelativeWithin",
+            "strictMode",
+            "exceptions"
+          ],
+          "additionalProperties": false
+        },
+        "pageLayout": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "default": true,
+              "type": "boolean"
+            },
+            "targetUsage": {
+              "default": 0.9,
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "pagePattern": {
+              "default": "src/app/**/page.tsx",
+              "type": "string"
+            },
+            "exceptions": {
+              "default": [
+                "ArticleLayout",
+                "ArchiveLayout",
+                "ErrorLayout"
+              ],
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "strictMode": {
+              "default": true,
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "enabled",
+            "targetUsage",
+            "pagePattern",
+            "exceptions",
+            "strictMode"
+          ],
+          "additionalProperties": false
+        },
+        "testData": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "default": true,
+              "type": "boolean"
+            },
+            "testPattern": {
+              "default": "**/*.{test,spec}.{ts,tsx,js,jsx}",
+              "type": "string"
+            },
+            "sensitivePatterns": {
+              "type": "object",
+              "properties": {
+                "apiKeys": {
+                  "default": true,
+                  "type": "boolean"
+                },
+                "passwords": {
+                  "default": true,
+                  "type": "boolean"
+                },
+                "secrets": {
+                  "default": true,
+                  "type": "boolean"
+                },
+                "tokens": {
+                  "default": true,
+                  "type": "boolean"
+                },
+                "emails": {
+                  "default": true,
+                  "type": "boolean"
+                },
+                "urls": {
+                  "default": true,
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "apiKeys",
+                "passwords",
+                "secrets",
+                "tokens",
+                "emails",
+                "urls"
+              ],
+              "additionalProperties": false
+            },
+            "allowedPrefixes": {
+              "default": [
+                "MOCK_",
+                "TEST_",
+                "FAKE_",
+                "FIXTURE_"
+              ],
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "enabled",
+            "testPattern",
+            "allowedPrefixes"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "project": {
+      "default": {
+        "root": ".",
+        "include": [
+          "src/**/*.{ts,tsx,js,jsx}"
+        ],
+        "exclude": [
+          "node_modules/**",
+          "dist/**",
+          "build/**",
+          ".next/**"
+        ]
+      },
+      "type": "object",
+      "properties": {
+        "root": {
+          "default": ".",
+          "type": "string"
+        },
+        "include": {
+          "default": [
+            "src/**/*.{ts,tsx,js,jsx}"
+          ],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "exclude": {
+          "default": [
+            "node_modules/**",
+            "dist/**",
+            "build/**",
+            ".next/**"
+          ],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "root",
+        "include",
+        "exclude"
+      ],
+      "additionalProperties": false
+    },
+    "agentRegistry": {
+      "type": "object",
+      "properties": {
+        "autoDiscover": {
+          "default": false,
+          "type": "boolean"
+        },
+        "projectPaths": {
+          "default": [
+            ".claude/agents",
+            ".github/agents"
+          ],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "public": {
+          "default": {
+            "enabled": true,
+            "source": "@dcyfr/ai/agents-builtin"
+          },
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "default": true,
+              "type": "boolean"
+            },
+            "source": {
+              "type": "string"
+            },
+            "paths": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "enabled"
+          ],
+          "additionalProperties": false
+        },
+        "private": {
+          "default": {
+            "enabled": false
+          },
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "default": true,
+              "type": "boolean"
+            },
+            "source": {
+              "type": "string"
+            },
+            "paths": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "enabled"
+          ],
+          "additionalProperties": false
+        },
+        "project": {
+          "default": {
+            "enabled": true,
+            "paths": [
+              ".claude/agents",
+              ".github/agents"
+            ]
+          },
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "default": true,
+              "type": "boolean"
+            },
+            "source": {
+              "type": "string"
+            },
+            "paths": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "enabled"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "autoDiscover",
+        "projectPaths",
+        "public",
+        "private",
+        "project"
+      ],
+      "additionalProperties": false
+    },
+    "agentRouter": {
+      "type": "object",
+      "properties": {
+        "defaultAgent": {
+          "default": "fullstack-developer",
+          "type": "string"
+        },
+        "routingRules": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "pattern": {
+                "type": "string"
+              },
+              "agent": {
+                "type": "string"
+              },
+              "priority": {
+                "default": 50,
+                "type": "number"
+              }
+            },
+            "required": [
+              "pattern",
+              "agent",
+              "priority"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "delegationEnabled": {
+          "default": true,
+          "type": "boolean"
+        },
+        "maxDelegationDepth": {
+          "default": 3,
+          "type": "number",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "defaultAgent",
+        "routingRules",
+        "delegationEnabled",
+        "maxDelegationDepth"
+      ],
+      "additionalProperties": false
+    },
+    "mcpRegistry": {
+      "type": "object",
+      "properties": {
+        "autoDiscover": {
+          "default": false,
+          "type": "boolean"
+        },
+        "searchPaths": {
+          "default": [
+            ".mcp.json",
+            ".vscode/mcp.json"
+          ],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "configFileName": {
+          "default": ".mcp.json",
+          "type": "string"
+        },
+        "healthCheckInterval": {
+          "default": 60000,
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "healthMonitoring": {
+          "default": false,
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "autoDiscover",
+        "searchPaths",
+        "configFileName",
+        "healthCheckInterval",
+        "healthMonitoring"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "version",
+    "telemetry",
+    "providers",
+    "validation",
+    "plugins",
+    "agents",
+    "project"
+  ],
+  "additionalProperties": false,
+  "$id": "https://dcyfr.ai/schema/config.json"
+}

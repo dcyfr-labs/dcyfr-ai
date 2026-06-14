@@ -1,0 +1,112 @@
+name: Doc Parity
+
+# Standalone, NON-REQUIRED doc-parity gate. Kept out of ci.yml (the required
+# `Validate` job) so a docs/codegen failure never blocks a code-only PR. The
+# paths filter lives INSIDE the job (never on the `on:` trigger) so the job
+# always reports a status -- safe to promote to required later via the ruleset.
+#
+# Ordering matters: the no-build checks (version/exports/env) run against the
+# COMMITTED tree BEFORE `build`, because `build`'s prebuild regenerates
+# packages/ai/generated/version.ts and would otherwise mask a stale commit. We
+# never run `docs:gen` in CI -- the checks regenerate in-memory and compare to
+# the committed artifacts.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '24.13.0'
+
+jobs:
+  doc-parity:
+    name: Doc Parity
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Detect parity-relevant changes
+        id: changed
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            parity:
+              - 'packages/ai/**'
+              - 'config/**'
+              - '.env.example'
+              - 'docs/**'
+              - '*.md'
+              - 'bin/**'
+              - 'package.json'
+              - 'scripts/gen-version.mjs'
+              - 'scripts/doc-parity/**'
+              - '.github/workflows/doc-parity.yml'
+
+      - name: Setup Node.js
+        if: steps.changed.outputs.parity == 'true'
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: '**/package.json'
+
+      - name: Install Dependencies
+        if: steps.changed.outputs.parity == 'true'
+        run: npm install --ignore-scripts
+
+      # No-build checks run on the committed tree BEFORE build (prebuild would
+      # regenerate version.ts and mask a stale commit).
+      - name: Check version parity
+        if: steps.changed.outputs.parity == 'true'
+        run: npm run check:version
+
+      - name: Check export parity
+        if: steps.changed.outputs.parity == 'true'
+        env:
+          DOC_PARITY_EXPORTS: warn
+        run: npm run check:exports
+
+      - name: Check env parity
+        if: steps.changed.outputs.parity == 'true'
+        run: npm run check:env
+
+      - name: Rebuild native modules
+        if: steps.changed.outputs.parity == 'true'
+        run: npm rebuild better-sqlite3
+
+      - name: Build (required for config parity)
+        if: steps.changed.outputs.parity == 'true'
+        run: npm run build
+
+      - name: Check config parity
+        if: steps.changed.outputs.parity == 'true'
+        run: npm run check:config
+
+      # markdownlint scope is docs/ + SECURITY.md (the repo's existing check:docs
+      # contract). All markdown -- incl. root + .github -- is LINK-checked by lychee
+      # below; widening rule-linting to root/.github markdown is deferred to a follow-up
+      # (pre-existing README/CHANGELOG lint debt, out of scope for this PR).
+      - name: Lint docs (markdownlint)
+        if: steps.changed.outputs.parity == 'true'
+        run: npm run check:docs
+
+      - name: Link check
+        if: steps.changed.outputs.parity == 'true'
+        continue-on-error: true
+        uses: lycheeverse/lychee-action@v2
+        with:
+          args: "--no-progress --max-concurrency 4 './docs/**/*.md' './*.md' './.github/**/*.md'"
+          fail: true
+
+      - name: No parity-relevant changes
+        if: steps.changed.outputs.parity != 'true'
+        run: echo "No parity-relevant files changed -- doc-parity satisfied."

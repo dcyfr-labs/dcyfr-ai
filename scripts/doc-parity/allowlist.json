@@ -1,0 +1,70 @@
+{
+  "_comment": "Allowlists for the doc-parity gates. See scripts/doc-parity/README is the proposal dcyfr-ai-doc-automation. Keep entries justified.",
+  "exports": {
+    "intentionallyUndocumented": [
+      "debugger",
+      "VERSION"
+    ],
+    "neverExported": [
+      "generateDcyfrCapabilityManifests"
+    ],
+    "staleDocsToFix": [
+      "MemoryStorage",
+      "FileStorage",
+      "DEFAULT_PROVIDERS",
+      "DEFAULT_TIMEOUT",
+      "DEFAULT_PLUGIN_TIMEOUT",
+      "DEFAULT_RETENTION_DAYS"
+    ]
+  },
+  "env": {
+    "testOnly": [
+      "DCYFR_PROVIDERS_PRIMARY",
+      "DCYFR_TELEMETRY_ENABLED",
+      "LINEAR_API_KEY_TEST",
+      "DCYFR_RUN_E2E_INTEGRATION",
+      "LOCAL_DOCKER_INTEGRATION",
+      "REMOTE_DOCKER_INTEGRATION"
+    ],
+    "_dynamicProviderKeysNote": "Read via dynamic key tables (env[providerKeys[...]]) in packages/ai/memory/config.ts; structurally invisible to the extractor, so unioned into the code-read set by check-env/gen-env-example.",
+    "dynamicProviderKeys": [
+      "OPENAI_API_KEY",
+      "OPENAI_API_BASE",
+      "ANTHROPIC_API_KEY",
+      "ANTHROPIC_API_BASE",
+      "GROQ_API_KEY",
+      "GOOGLE_API_KEY",
+      "MISTRAL_API_KEY",
+      "AZURE_OPENAI_API_KEY"
+    ],
+    "platformProvided": [
+      "CI",
+      "HOSTNAME",
+      "VERCEL_ENV",
+      "GITHUB_REPOSITORY"
+    ],
+    "secrets": [
+      "OPENAI_API_KEY",
+      "ANTHROPIC_API_KEY",
+      "GITHUB_TOKEN",
+      "LLM_API_KEY",
+      "LLM_EMBEDDING_API_KEY",
+      "GROQ_API_KEY",
+      "GOOGLE_API_KEY",
+      "MISTRAL_API_KEY",
+      "AZURE_OPENAI_API_KEY",
+      "VECTOR_DB_API_KEY",
+      "UPSTASH_REDIS_REST_TOKEN",
+      "UPSTASH_REDIS_REST_TOKEN_PREVIEW",
+      "MCP_BEARER_TOKEN",
+      "DELEGATION_MCP_WRITE_TOKEN",
+      "LINEAR_API_KEY",
+      "SONARCLOUD_TOKEN",
+      "PROMPTINTEL_API_KEY",
+      "AXIOM_TOKEN",
+      "MEM0_API_KEY",
+      "PILOT_STRIPE_SECRET_KEY",
+      "TELEGRAM_BOT_TOKEN"
+    ]
+  }
+}
