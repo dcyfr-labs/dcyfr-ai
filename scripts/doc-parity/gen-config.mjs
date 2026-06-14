@@ -48,7 +48,10 @@ function defaultOf(p) {
   if (d === null) return '`null`';
   if (Array.isArray(d)) return d.length ? '`[...]`' : '`[]`';
   if (typeof d === 'object') return '`{...}`';
-  return '`' + String(JSON.stringify(d)).replace(/\|/g, '\\|') + '`';
+  // Escape backslashes BEFORE pipes so the escaping is complete (CodeQL
+  // js/incomplete-sanitization): otherwise a value containing `\` could combine
+  // with the inserted `\|` ambiguously. Backtick code-span in a GFM table cell.
+  return '`' + String(JSON.stringify(d)).replace(/\\/g, '\\\\').replace(/\|/g, '\\|') + '`';
 }
 
 export function buildArtifacts() {
