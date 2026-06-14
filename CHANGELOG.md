@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.3.0](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.2.4...v3.3.0) (2026-06-14)
+
+
+### Features
+
+* **ci:** add documentation-parity gates and fix stale VERSION export ([#277](https://github.com/dcyfr-labs/dcyfr-ai/issues/277)) ([1c21a08](https://github.com/dcyfr-labs/dcyfr-ai/commit/1c21a085a4dbfed435a1b827cbd3fbfa0b7bc8fb))
+
 ## [3.2.4](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.2.3...v3.2.4) (2026-06-12)
 
 
