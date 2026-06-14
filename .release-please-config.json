@@ -8,6 +8,9 @@
       "package-name": "@dcyfr/ai",
       "release-type": "node",
       "changelog-path": "CHANGELOG.md",
+      "extra-files": [
+        { "type": "generic", "path": "packages/ai/generated/version.ts" }
+      ],
       "draft": false,
       "prerelease": false,
       "include-v-in-tag": true,
