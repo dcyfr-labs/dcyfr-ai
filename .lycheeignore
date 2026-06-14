@@ -1,0 +1,9 @@
+# Patterns (regex) for links lychee should not check.
+# The config $schema URL is an identifier, not a resolvable page (yet).
+https://dcyfr\.ai/schema/config\.json
+# 1Password references in .env.example are not URLs.
+^op://
+# Local/dev endpoints used as config examples.
+localhost
+127\.0\.0\.1
+example\.com

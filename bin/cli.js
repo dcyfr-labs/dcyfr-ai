@@ -6,8 +6,7 @@
  */
 
 import { ConfigLoader } from '../dist/ai/config/loader.js';
-import { FrameworkConfigSchema } from '../dist/ai/config/schema.js';
-import { existsSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -111,10 +110,15 @@ async function validateConfig(options) {
  */
 async function showSchema() {
   console.log('📋 DCYFR Configuration Schema\n');
-  console.log('The configuration supports the following structure:\n');
-  console.log(FrameworkConfigSchema.description || 'Framework configuration schema');
-  console.log('\nFor detailed documentation, visit:');
-  console.log('https://github.com/dcyfr-labs/dcyfr-ai/blob/main/docs/GETTING-STARTED.md#configuration');
+  const schemaPath = join(__dirname, '../config/schema.json');
+  if (existsSync(schemaPath)) {
+    console.log(readFileSync(schemaPath, 'utf8'));
+  } else {
+    console.log('Generated JSON Schema not found.');
+    console.log('Run `npm run build && npm run docs:gen:config` to produce config/schema.json.');
+  }
+  console.log('\nFor the documented key reference, see:');
+  console.log('https://github.com/dcyfr-labs/dcyfr-ai/blob/main/docs/CONFIG_REFERENCE.md');
   process.exit(0);
 }
 

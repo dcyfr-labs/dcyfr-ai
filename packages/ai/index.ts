@@ -443,5 +443,5 @@ export {
   type ContainerBackendType,
 } from './src/container/index.js';
 
-// Version
-export const VERSION = '1.0.0';
+// Version (generated from package.json by scripts/gen-version.mjs -- never hardcode)
+export { VERSION } from './generated/version.js';
