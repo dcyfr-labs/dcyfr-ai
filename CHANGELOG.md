@@ -1,5 +1,22 @@
 # Changelog
 
+## [3.3.1](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.3.0...v3.3.1) (2026-06-15)
+
+
+### Bug Fixes
+
+* **doc-parity:** sync version.ts to 3.3.0 + complete gen-config escaping (CodeQL HIGH) ([#279](https://github.com/dcyfr-labs/dcyfr-ai/issues/279)) ([8935c3c](https://github.com/dcyfr-labs/dcyfr-ai/commit/8935c3c5d8b897bbc3f825a6f58be66785c7758d))
+
+
+### Dependencies
+
+* bump @langchain/core from 1.1.48 to 1.1.49 ([#287](https://github.com/dcyfr-labs/dcyfr-ai/issues/287)) ([ae18739](https://github.com/dcyfr-labs/dcyfr-ai/commit/ae18739a1f15d26a6f7f7cd2db9e943ea95d6082))
+* bump axios from 1.17.0 to 1.18.0 ([#284](https://github.com/dcyfr-labs/dcyfr-ai/issues/284)) ([50ac96c](https://github.com/dcyfr-labs/dcyfr-ai/commit/50ac96c28eec78fe2bb0de88af14250b06105ff0))
+* bump better-sqlite3 from 12.10.0 to 12.10.1 ([#283](https://github.com/dcyfr-labs/dcyfr-ai/issues/283)) ([cfd03b8](https://github.com/dcyfr-labs/dcyfr-ai/commit/cfd03b8e901d5b6688a318521d9d6066bfa19d1e))
+* bump eslint from 10.4.1 to 10.5.0 ([#286](https://github.com/dcyfr-labs/dcyfr-ai/issues/286)) ([2336edb](https://github.com/dcyfr-labs/dcyfr-ai/commit/2336edb8b6180ffd1ffd8d163ff111271df776f1))
+* bump fastmcp from 4.1.0 to 4.2.0 ([#285](https://github.com/dcyfr-labs/dcyfr-ai/issues/285)) ([7f3cb12](https://github.com/dcyfr-labs/dcyfr-ai/commit/7f3cb126a32b0dd9e95923cd294a8e46df7be9e5))
+* bump mem0ai from 3.0.7 to 3.0.8 ([#288](https://github.com/dcyfr-labs/dcyfr-ai/issues/288)) ([23b65d8](https://github.com/dcyfr-labs/dcyfr-ai/commit/23b65d8ebd344bc6bccd8d476de8a36229bea367))
+
 ## [3.3.0](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.2.4...v3.3.0) (2026-06-14)
 
 
