@@ -154,7 +154,9 @@
     },
     "picomatch": "4.0.4",
     "uuid": "^14.0.0",
-    "postcss": "^8.5.10"
+    "postcss": "^8.5.10",
+    "protobufjs": "^7.6.3",
+    "js-yaml": "^4.2.0"
   },
   "engines": {
     "node": ">=20.0.0",
