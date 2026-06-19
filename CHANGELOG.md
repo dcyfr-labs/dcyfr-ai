@@ -1,5 +1,18 @@
 # Changelog
 
+## [3.3.2](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.3.1...v3.3.2) (2026-06-19)
+
+
+### Bug Fixes
+
+* **security:** bump transitive CVEs to patched versions ([#292](https://github.com/dcyfr-labs/dcyfr-ai/issues/292)) ([84f8a43](https://github.com/dcyfr-labs/dcyfr-ai/commit/84f8a43d77921d23451d9bb702b72fb3ed306b4d))
+
+
+### Dependencies
+
+* bump the npm_and_yarn group across 1 directory with 2 updates ([#291](https://github.com/dcyfr-labs/dcyfr-ai/issues/291)) ([b98d3b1](https://github.com/dcyfr-labs/dcyfr-ai/commit/b98d3b16826396cd6d259cf49b1131d120188ae3))
+* bump vite in the npm_and_yarn group across 1 directory ([#289](https://github.com/dcyfr-labs/dcyfr-ai/issues/289)) ([8ee41f5](https://github.com/dcyfr-labs/dcyfr-ai/commit/8ee41f58d12870a3671ab6e136c08f9e0999ca42))
+
 ## [3.3.1](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.3.0...v3.3.1) (2026-06-15)
 
 
