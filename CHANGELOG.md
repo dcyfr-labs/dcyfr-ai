@@ -1,5 +1,14 @@
 # Changelog
 
+## [3.3.3](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.3.2...v3.3.3) (2026-06-19)
+
+
+### Bug Fixes
+
+* **examples:** make standalone-nextjs example build ([#299](https://github.com/dcyfr-labs/dcyfr-ai/issues/299)) ([c626242](https://github.com/dcyfr-labs/dcyfr-ai/commit/c6262429cf2e5338a3ca31478a98d813966d7b6f))
+* **security:** bump standalone-nextjs example undici override to ^7.28.0 ([#297](https://github.com/dcyfr-labs/dcyfr-ai/issues/297)) ([66572bd](https://github.com/dcyfr-labs/dcyfr-ai/commit/66572bdc49da165d44d2a7e921615d907b84a301))
+* **security:** clear undici HIGH+MEDIUM CVE on main before 3.3.2 ([#296](https://github.com/dcyfr-labs/dcyfr-ai/issues/296)) ([4991c68](https://github.com/dcyfr-labs/dcyfr-ai/commit/4991c684b4cebbabcff2b408624d2db6d7b33df5))
+
 ## [3.3.2](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.3.1...v3.3.2) (2026-06-19)
 
 
