@@ -1,6 +1,6 @@
 {
   "name": "@dcyfr/ai",
-  "version": "3.3.3",
+  "version": "3.3.4",
   "description": "Portable AI agent harness with plugin architecture",
   "main": "./dist/ai/index.js",
   "types": "./dist/ai/index.d.ts",
