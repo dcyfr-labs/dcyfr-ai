@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.3.4](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.3.3...v3.3.4) (2026-06-24)
+
+
+### Bug Fixes
+
+* **security:** floor transitive undici@6.x (qdrant) to &gt;=6.27.0 ([#311](https://github.com/dcyfr-labs/dcyfr-ai/issues/311)) ([80e849b](https://github.com/dcyfr-labs/dcyfr-ai/commit/80e849b0f59c2cdc03f09311db94b5ec44b2c963))
+
 ## [3.3.3](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.3.2...v3.3.3) (2026-06-19)
 
 
