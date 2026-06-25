@@ -1,0 +1,33 @@
+{
+  // markdownlint-cli2 config for the repo's markdown lint gate ("check:docs"),
+  // which now covers docs/**, root *.md, and .github/** (Wave 1 task 1.5).
+  //
+  // Rules below are disabled because they are noise for THIS content mix
+  // (generated CHANGELOG + GitHub templates + a banner README), not because the
+  // content is wrong. Each concession is justified inline so it isn't "fixed"
+  // back on later -- doing so would red the gate on the next release-please run.
+
+  // --- Inherent to the release-please-generated CHANGELOG.md ---
+  "MD004": false, // ul-style: release-please emits `*` bullets on every release; not hand-fixable
+  "MD012": false, // no-multiple-blanks: release-please section spacing produces consecutive blank lines
+  "MD024": false, // no-duplicate-heading: each release repeats "Bug Fixes" / "Features" headings
+
+  // --- First-line-heading: these files legitimately don't open with an H1 ---
+  "MD041": false, // README opens with a centered <div> banner; PR/issue templates open with front-matter or "## "
+
+  // --- Pre-existing relaxations (carried over verbatim from .markdownlint.json) ---
+  "MD013": false, // line-length
+  "MD022": false, // blanks-around-headings
+  "MD025": false, // single-title / single-h1
+  "MD026": false, // trailing-punctuation-in-heading
+  "MD031": false, // blanks-around-fences
+  "MD032": false, // blanks-around-lists
+  "MD033": false, // inline-html (badges, <div align="center">)
+  "MD034": false, // bare-urls
+  "MD036": false, // emphasis-used-instead-of-heading
+  "MD040": false, // fenced-code-language
+  "MD047": false, // single-trailing-newline
+  "MD051": false, // link-fragments
+  "MD058": false, // blanks-around-tables
+  "MD060": false  // table-column-style
+}

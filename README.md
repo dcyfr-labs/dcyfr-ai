@@ -41,7 +41,7 @@ Portable AI agent harness with plugin architecture for managing multiple AI prov
 | Plugin System  | ✅ Custom                      | ✅ Complex | ❌            | ❌      |
 | Telemetry      | ✅ Built-in                    | ❌         | ❌            | ❌      |
 | Zero Config    | ✅                             | ❌         | ✅            | ❌      |
-| Bundle Size    | [![](https://img.shields.io/bundlephobia/minzip/@dcyfr/ai)](https://bundlephobia.com/package/@dcyfr/ai) | ~2.3MB     | ~450KB        | N/A     |
+| Bundle Size    | [![Bundle size](https://img.shields.io/bundlephobia/minzip/@dcyfr/ai)](https://bundlephobia.com/package/@dcyfr/ai) | ~2.3MB     | ~450KB        | N/A     |
 | TypeScript     | ✅ Strict                      | Partial    | ✅            | ❌      |
 | Quality Gates  | ✅                             | ❌         | ❌            | ❌      |
 | Config System  | YAML/JSON/package              | Code-only  | Code-only     | JSON    |
