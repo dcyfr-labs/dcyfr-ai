@@ -72,7 +72,10 @@ jobs:
       - name: Check export parity
         if: steps.changed.outputs.parity == 'true'
         env:
-          DOC_PARITY_EXPORTS: warn
+          # Wave 1: the generated API reference (docs/api/*.md) now documents
+          # every public value export across the root + subpath barrels, so the
+          # forward under-documented check is promoted to a hard failure.
+          DOC_PARITY_EXPORTS: strict
         run: npm run check:exports
 
       - name: Check env parity
@@ -86,6 +89,15 @@ jobs:
       - name: Build (required for config parity)
         if: steps.changed.outputs.parity == 'true'
         run: npm run build
+
+      - name: Generated API reference is current
+        if: steps.changed.outputs.parity == 'true'
+        run: |
+          npm run docs:gen:api
+          git diff --exit-code -- docs/api || {
+            echo "::error::docs/api is out of date -- run 'npm run docs:gen:api' and commit the result.";
+            exit 1;
+          }
 
       - name: Check config parity
         if: steps.changed.outputs.parity == 'true'

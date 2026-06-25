@@ -16,6 +16,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { extractExports } from './extract-exports.mjs';
+import { barrelsFromExports } from './gen-api-reference.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(here, '..', '..');
@@ -48,9 +49,33 @@ const mentioned = (name) => new RegExp(`\\b${name.replace(/[.*+?^${}()|[\]\\]/g,
 
 const intentionally = new Set(allow.intentionallyUndocumented);
 const stale = new Set(allow.staleDocsToFix);
-// Phantom + never-exported checks compare against the FULL export surface
-// (value + type); only the forward under-documented check is value-only.
+
+// Full public surface = the union of EVERY declared barrel's exports (root +
+// subpaths). The generated reference (gen-api-reference.mjs) documents subpath
+// barrels too, so the phantom + never-exported checks must recognise subpath
+// symbols — otherwise an @dcyfr/ai/mcp export documented in docs/api/mcp.md
+// would be mis-flagged as a phantom against the root barrel alone. Source-based
+// (no build) — subpath barrels are pure named re-export barrels. The forward
+// under-documented check below stays root-only, where regex and the TS compiler
+// agree exactly (134 value exports); new subpath exports are instead caught by
+// the generator drift check.
 const exported = new Set([...values, ...types]);
+try {
+  const pkg = JSON.parse(readFileSync(join(repoRoot, 'package.json'), 'utf8'));
+  for (const b of barrelsFromExports(pkg.exports, { packageName: pkg.name, repoRoot })) {
+    if (b.subpath === '.') continue;
+    let text;
+    try {
+      text = readFileSync(b.src, 'utf8');
+    } catch {
+      continue; // barrel source absent — skip rather than fail the gate
+    }
+    const ex = extractExports(text);
+    for (const name of [...ex.values, ...ex.types]) exported.add(name);
+  }
+} catch {
+  /* package.json unreadable — fall back to the root-barrel surface */
+}
 
 const documented = values.filter(mentioned);
 const undocumented = values.filter((v) => !mentioned(v) && !intentionally.has(v));

@@ -61,6 +61,7 @@
     "docs:gen": "node scripts/doc-parity/gen-env-example.mjs && node scripts/doc-parity/gen-config.mjs",
     "docs:gen:env": "node scripts/doc-parity/gen-env-example.mjs",
     "docs:gen:config": "node scripts/doc-parity/gen-config.mjs",
+    "docs:gen:api": "node scripts/doc-parity/gen-api-reference.mjs",
     "check:version": "node scripts/doc-parity/check-version.mjs",
     "check:exports": "node scripts/doc-parity/check-exports.mjs",
     "check:env": "node scripts/doc-parity/check-env.mjs",
