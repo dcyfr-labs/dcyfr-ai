@@ -26,17 +26,7 @@
       "LOCAL_DOCKER_INTEGRATION",
       "REMOTE_DOCKER_INTEGRATION"
     ],
-    "_dynamicProviderKeysNote": "Read via dynamic key tables (env[providerKeys[...]]) in packages/ai/memory/config.ts; structurally invisible to the extractor, so unioned into the code-read set by check-env/gen-env-example.",
-    "dynamicProviderKeys": [
-      "OPENAI_API_KEY",
-      "OPENAI_API_BASE",
-      "ANTHROPIC_API_KEY",
-      "ANTHROPIC_API_BASE",
-      "GROQ_API_KEY",
-      "GOOGLE_API_KEY",
-      "MISTRAL_API_KEY",
-      "AZURE_OPENAI_API_KEY"
-    ],
+    "_providerEnvKeysNote": "Provider keys read via dynamic env[providerEnvKeys[...]] lookups in packages/ai/memory/config.ts are no longer hand-listed here (they silently drifted). They are now derived structurally by scripts/doc-parity/extract-provider-env-keys.mjs and materialized in provider-env-keys.json; check-env + gen-env-example consume that.",
     "platformProvided": [
       "CI",
       "HOSTNAME",
