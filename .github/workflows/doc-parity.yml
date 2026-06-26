@@ -72,7 +72,10 @@ jobs:
       - name: Check export parity
         if: steps.changed.outputs.parity == 'true'
         env:
-          DOC_PARITY_EXPORTS: warn
+          # Wave 1: the generated API reference (docs/api/*.md) now documents
+          # every public value export across the root + subpath barrels, so the
+          # forward under-documented check is promoted to a hard failure.
+          DOC_PARITY_EXPORTS: strict
         run: npm run check:exports
 
       - name: Check env parity
@@ -87,24 +90,46 @@ jobs:
         if: steps.changed.outputs.parity == 'true'
         run: npm run build
 
+      - name: Generated API reference is current
+        if: steps.changed.outputs.parity == 'true'
+        run: |
+          npm run docs:gen:api
+          git diff --exit-code -- docs/api || {
+            echo "::error::docs/api is out of date -- run 'npm run docs:gen:api' and commit the result.";
+            exit 1;
+          }
+
       - name: Check config parity
         if: steps.changed.outputs.parity == 'true'
         run: npm run check:config
 
-      # markdownlint scope is docs/ + SECURITY.md (the repo's existing check:docs
-      # contract). All markdown -- incl. root + .github -- is LINK-checked by lychee
-      # below; widening rule-linting to root/.github markdown is deferred to a follow-up
-      # (pre-existing README/CHANGELOG lint debt, out of scope for this PR).
+      # markdownlint (check:docs) rule-lints docs/**, root *.md, and .github/**
+      # -- the same scope lychee link-checks below (Wave 1 task 1.5). The
+      # release-please CHANGELOG + GitHub templates get justified rule
+      # concessions in .markdownlint.jsonc.
       - name: Lint docs (markdownlint)
         if: steps.changed.outputs.parity == 'true'
         run: npm run check:docs
 
+      # Wave 1 (task 1.2): link-check is now a HARD gate (continue-on-error
+      # removed). Resilience flags keep it from flaking on transient external
+      # network conditions -- validated against the full tree before the flip:
+      #   - GITHUB_TOKEN raises the github.com API rate limit (60->5000/hr/IP).
+      #     The docs link ~250 github.com URLs, so an unauthenticated shared
+      #     runner would 429 and red the gate -- the dominant flakiness source.
+      #   - --max-retries / --retry-wait-time absorb transient 5xx + timeouts.
+      #   - --accept 429 treats rate-limited-but-alive as OK. Transient timeouts
+      #     are absorbed by the retries above; a link still failing after retries
+      #     (DNS/refused/4xx) genuinely fails. Placeholder URLs live in code
+      #     fences and are not extracted. (--accept-timeouts is unsupported by
+      #     the lychee bundled with lychee-action@v2.)
       - name: Link check
         if: steps.changed.outputs.parity == 'true'
-        continue-on-error: true
         uses: lycheeverse/lychee-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          args: "--no-progress --max-concurrency 4 './docs/**/*.md' './*.md' './.github/**/*.md'"
+          args: "--no-progress --max-concurrency 4 --max-retries 3 --retry-wait-time 2 --accept 200,206,429 './docs/**/*.md' './*.md' './.github/**/*.md'"
           fail: true
 
       - name: No parity-relevant changes

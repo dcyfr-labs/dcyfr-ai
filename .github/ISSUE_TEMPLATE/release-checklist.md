@@ -41,4 +41,4 @@ Add any special notes or breaking changes here:
 ---
 
 **Automated publish workflow:** Merge Release PR → GitHub Action → npm publish
-**Manual publish (emergency only):** See [RELEASE_MANAGEMENT.md](../docs/RELEASE_MANAGEMENT.md#manual-version-bumps)
+**Manual publish (emergency only):** See [RELEASE_MANAGEMENT.md](../../docs/RELEASE_MANAGEMENT.md#manual-version-bumps)

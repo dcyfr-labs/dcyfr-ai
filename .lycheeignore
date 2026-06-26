@@ -7,3 +7,10 @@ https://dcyfr\.ai/schema/config\.json
 localhost
 127\.0\.0\.1
 example\.com
+# Valid links that 403 automated checkers via bot protection (fine in a browser).
+npmjs\.com
+platform\.openai\.com
+# 3rd-party doc host that intermittently 500s (transient server errors that
+# survive --max-retries 3 and would flake this hard gate). The page is valid;
+# we don't control its uptime.
+docs\.msty\.studio

@@ -18,7 +18,7 @@ By contributing to @dcyfr/ai, you agree that:
 
 ### Trademark
 
-Do not use "DCYFR" trademarks in ways that imply endorsement without permission. See [TRADEMARK.md](../TRADEMARK.md) for usage guidelines.
+Do not use "DCYFR" trademarks in ways that imply endorsement without permission.
 
 ### Commercial Contributors
 

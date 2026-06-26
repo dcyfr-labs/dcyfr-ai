@@ -877,5 +877,5 @@ export class BootstrapCache {
 - Set up monitoring and analytics integration
 
 **Support:**
-- Integration questions: [GitHub Discussions](https://github.com/orgs/dcyfr-labs/discussions)
+- Integration questions: [GitHub Issues](https://github.com/dcyfr-labs/dcyfr-ai/issues)
 - Bug reports: [GitHub Issues](https://github.com/dcyfr-labs/dcyfr-ai/issues)

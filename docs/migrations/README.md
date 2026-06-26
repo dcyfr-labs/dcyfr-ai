@@ -119,10 +119,8 @@ const agent = createAgent({
 
 ## Getting Help
 
-- **Documentation**: [docs.dcyfr.ai/migration](https://docs.dcyfr.ai/migration)
 - **Community**: [@dcyfr/ai Discord](https://discord.gg/dcyfr-ai)  
 - **Support**: [migration@dcyfr.ai](mailto:migration@dcyfr.ai)
-- **1:1 Migration Assistance**: [Book consultation](https://cal.com/dcyfr/migration)
 
 ---
 
