@@ -415,7 +415,7 @@ After publishing:
 ## Support
 
 **Issues:** https://github.com/dcyfr-labs/dcyfr-ai/issues
-**Discussions:** https://github.com/orgs/dcyfr-labs/discussions
+**Discussions:** https://github.com/dcyfr-labs/dcyfr-ai/issues
 
 ---
 

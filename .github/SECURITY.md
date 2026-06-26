@@ -22,7 +22,7 @@ framework and the plugin marketplace.
 Vulnerabilities in the core `@dcyfr/ai` framework, delegation system, or permission
 enforcement:
 
-1. Go to the [Security Advisories](../../security/advisories/new) page
+1. Go to the [Security Advisories](https://github.com/dcyfr-labs/dcyfr-ai/security/advisories/new) page
 2. Click **Report a vulnerability**
 3. Fill in the private advisory form
 

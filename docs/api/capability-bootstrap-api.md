@@ -531,5 +531,5 @@ trackCapabilityMetrics(result.agentId, result.manifest.capabilities);
 
 **Support:**
 - Issues: [GitHub Issues](https://github.com/dcyfr-labs/dcyfr-ai/issues)
-- Discussions: [GitHub Discussions](https://github.com/orgs/dcyfr-labs/discussions)
-- Documentation: [DCYFR AI Documentation](https://docs.dcyfr.ai)
+- Discussions: [GitHub Issues](https://github.com/dcyfr-labs/dcyfr-ai/issues)
+- Documentation: [DCYFR AI Documentation](https://github.com/dcyfr-labs/dcyfr-ai/tree/main/docs)

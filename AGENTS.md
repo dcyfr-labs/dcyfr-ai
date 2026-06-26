@@ -346,7 +346,7 @@ npm publish --access public
 ## 📄 Documentation
 
 - [API.md](docs/API.md) - Complete API reference
-- [EXAMPLES.md](docs/EXAMPLES.md) - Usage examples
+- [examples/](examples/) - Usage examples
 - [CONTRIBUTING.md](CONTRIBUTING.md) - Contribution guidelines
 - [examples/](examples/) - Code examples
 

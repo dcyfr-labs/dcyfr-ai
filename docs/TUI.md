@@ -299,7 +299,7 @@ render(<Dashboard />);
 
 ## Resources
 
-- [OpenTUI Official Docs](https://opentui.com/docs)
+- [OpenTUI Official Docs](https://opentui.com/docs/getting-started)
 - [OpenTUI GitHub](https://github.com/anomalyco/opentui)
 - [Examples Directory](../examples/tui/)
 - [DCYFR AI Framework Docs](./API.md)

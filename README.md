@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://raw.githubusercontent.com/dcyfr-labs/dcyfr-labs/main/public/images/dcyfr-avatar.svg" alt="DCYFR Logo" width="120" height="120" />
+  <img src="https://www.dcyfr.ai/images/dcyfr-avatar.svg" alt="DCYFR Logo" width="120" height="120" />
   <h1>@dcyfr/ai</h1>
   <p><em>Portable AI agent harness with plugin architecture for multi-provider integration, telemetry tracking, and quality validation.</em></p>
 </div>
@@ -29,7 +29,6 @@ Portable AI agent harness with plugin architecture for managing multiple AI prov
 
 - **DCYFR** is a registered trademark of DCYFR Labs.
 - Primary domain: [www.dcyfr.ai](https://www.dcyfr.ai)
-- Trademark guidance: [../TRADEMARK.md](../TRADEMARK.md)
 - Licensing details: [LICENSE](./LICENSE)
 - Peerlist project: [peerlist.io/dcyfr/project/dcyfr-ai](https://peerlist.io/dcyfr/project/dcyfr-ai)
 
@@ -509,7 +508,7 @@ const prodConfig = {
 
 ### 11. Real-World Example
 
-See our comprehensive example: **[Autonomous Research Agent](../dcyfr-ai-agents/examples/autonomous-research-agent/)**
+See our comprehensive example: **[Autonomous Research Agent](https://github.com/dcyfr-labs/dcyfr-ai-agents/tree/main/examples/autonomous-research-agent)**
 
 ```bash
 cd dcyfr-ai-agents/examples/autonomous-research-agent
@@ -744,9 +743,6 @@ See [examples/](./examples/) directory:
 
 ### Plugin Marketplace Security
 
-- [GVISOR_SETUP.md](./docs/guides/GVISOR_SETUP.md) - gVisor runtime sandboxing for untrusted plugins
-- [BEHAVIORAL_ANOMALY_DETECTION.md](./docs/guides/BEHAVIORAL_ANOMALY_DETECTION.md) - Behavioral anomaly detection system
-- [CERTIFICATION_PROGRAM.md](./docs/guides/CERTIFICATION_PROGRAM.md) - Plugin Certification Program (Bronze/Silver/Gold tiers)
 - [WASM_PLUGIN_STARTER.md](./docs/guides/WASM_PLUGIN_STARTER.md) - WebAssembly plugin starter template
 - [WASM_MIGRATION_GUIDE.md](./docs/guides/WASM_MIGRATION_GUIDE.md) - Migrate Docker plugins to WASM
 
@@ -899,7 +895,7 @@ export const myPlugin = {
 };
 ```
 
-See [docs/plugins.md](./docs/plugins.md) and [examples/plugin-system.ts](./examples/plugin-system.ts) for complete guide.
+See [docs/PLUGINS.md](./docs/PLUGINS.md) and [examples/plugin-system.ts](./examples/plugin-system.ts) for complete guide.
 
 **Q: What's the difference between @dcyfr/ai and @dcyfr/agents?**
 
@@ -1051,13 +1047,12 @@ This package is dual-licensed:
 - 💼 **Executive** ($4,800/yr) - Business license + 2hr consultation/mo + 50 employees
 - 🏢 **Enterprise** ($9,600/yr) - Enterprise license + 4hr consultation/mo + unlimited scale
 
-**Learn more:** [SPONSORS.md](../SPONSORS.md)
 **Join:** [GitHub Sponsors](https://github.com/sponsors/dcyfr)
 **Contact:** licensing@dcyfr.ai
 
 ### Trademark
 
-"DCYFR" is a trademark of DCYFR Labs. See [TRADEMARK.md](../TRADEMARK.md) for usage guidelines.
+"DCYFR" is a trademark of DCYFR Labs. 
 
 ---
 
