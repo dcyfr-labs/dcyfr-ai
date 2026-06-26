@@ -328,15 +328,14 @@ dcyfr plugin publish
 ## Examples
 
 See full examples at:
-- [Basic WASM Plugin](https://github.com/dcyfr/examples/tree/main/wasm-basic)
-- [Crypto Plugin (WASM + SIMD)](https://github.com/dcyfr/examples/tree/main/wasm-crypto)
-- [JSON Parser Plugin](https://github.com/dcyfr/examples/tree/main/wasm-json)
+- Basic WASM Plugin (example coming soon)
+- Crypto Plugin (WASM + SIMD) (example coming soon)
+- JSON Parser Plugin (example coming soon)
 
 ---
 
 ## Support
 
-- **Documentation:** https://www.dcyfr.ai/docs/plugins/wasm
 - **Discord:** https://discord.gg/dcyfr
 - **GitHub Issues:** https://github.com/dcyfr-labs/dcyfr-ai/issues
 

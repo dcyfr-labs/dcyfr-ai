@@ -7,3 +7,6 @@ https://dcyfr\.ai/schema/config\.json
 localhost
 127\.0\.0\.1
 example\.com
+# Valid links that 403 automated checkers via bot protection (fine in a browser).
+npmjs\.com
+platform\.openai\.com

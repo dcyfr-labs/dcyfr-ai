@@ -464,7 +464,6 @@ For complex plugins, use both WASM and Docker:
 - **Migration help:** https://discord.gg/dcyfr #plugin-migration
 - **AssemblyScript docs:** https://www.assemblyscript.org/
 - **WASI spec:** https://wasi.dev/
-- **GitHub examples:** https://github.com/dcyfr/plugin-examples
 
 ---
 
