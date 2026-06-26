@@ -9,6 +9,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { extractEnv } from './extract-env.mjs';
+import { extractProviderEnvKeys } from './extract-provider-env-keys.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(here, '..', '..');
@@ -60,7 +61,8 @@ const EXAMPLE_VALUES = {
 
 export function computeCodeReadSet() {
   const exclude = new Set([...allow.testOnly, ...allow.platformProvided]);
-  return new Set([...extractEnv(), ...allow.dynamicProviderKeys].filter((v) => !exclude.has(v)));
+  // Dynamic provider keys are derived structurally from packages/ai/memory/config.ts.
+  return new Set([...extractEnv(), ...extractProviderEnvKeys()].filter((v) => !exclude.has(v)));
 }
 
 export function buildEnvExample(codeRead = computeCodeReadSet()) {
