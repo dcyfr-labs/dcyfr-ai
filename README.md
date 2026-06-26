@@ -1052,7 +1052,7 @@ This package is dual-licensed:
 
 ### Trademark
 
-"DCYFR" is a trademark of DCYFR Labs. 
+"DCYFR" is a trademark of DCYFR Labs.
 
 ---
 
