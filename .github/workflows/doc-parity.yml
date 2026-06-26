@@ -103,10 +103,10 @@ jobs:
         if: steps.changed.outputs.parity == 'true'
         run: npm run check:config
 
-      # markdownlint scope is docs/ + SECURITY.md (the repo's existing check:docs
-      # contract). All markdown -- incl. root + .github -- is LINK-checked by lychee
-      # below; widening rule-linting to root/.github markdown is deferred to a follow-up
-      # (pre-existing README/CHANGELOG lint debt, out of scope for this PR).
+      # markdownlint (check:docs) rule-lints docs/**, root *.md, and .github/**
+      # -- the same scope lychee link-checks below (Wave 1 task 1.5). The
+      # release-please CHANGELOG + GitHub templates get justified rule
+      # concessions in .markdownlint.jsonc.
       - name: Lint docs (markdownlint)
         if: steps.changed.outputs.parity == 'true'
         run: npm run check:docs
