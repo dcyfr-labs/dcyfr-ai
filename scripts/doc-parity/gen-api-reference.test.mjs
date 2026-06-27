@@ -1,7 +1,14 @@
 import { test, expect, describe } from 'vitest';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { renderReference, barrelsFromExports, extractApiFromDts, docFilesFor, renderIndex } from './gen-api-reference.mjs';
+import {
+  renderReference,
+  barrelsFromExports,
+  extractApiFromDts,
+  docFilesFor,
+  renderIndex,
+  isGeneratedVersionDts,
+} from './gen-api-reference.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -68,6 +75,27 @@ describe('extractApiFromDts', () => {
     expect(add.summary).toBe('Adds two numbers.');
     expect(api.find((e) => e.name === 'Store').kind).toBe('class');
     expect(api.find((e) => e.name === 'VERSION').kind).toBe('const');
+  });
+
+  test('widens the release-managed VERSION const to its base type, not the literal value', () => {
+    // Fixture carries a baked literal (`VERSION = "9.9.9"`) like the real built
+    // dist/**/generated/version.d.ts; the reference must render the version-invariant
+    // widened type so release-please version bumps never perturb docs/api.
+    const api = extractApiFromDts(join(here, '__fixtures__', 'generated', 'version.d.ts'));
+    const version = api.find((e) => e.name === 'VERSION');
+    expect(version.kind).toBe('const');
+    expect(version.signature).toBe('VERSION: string');
+    expect(version.signature).not.toContain('9.9.9');
+  });
+});
+
+describe('isGeneratedVersionDts', () => {
+  test('matches the generated version barrel across path separators, nothing else', () => {
+    expect(isGeneratedVersionDts('/repo/dist/ai/generated/version.d.ts')).toBe(true);
+    expect(isGeneratedVersionDts('dist\\ai\\generated\\version.d.ts')).toBe(true);
+    expect(isGeneratedVersionDts('/repo/dist/ai/generated/index.d.ts')).toBe(false);
+    expect(isGeneratedVersionDts('/repo/dist/ai/version.d.ts')).toBe(false);
+    expect(isGeneratedVersionDts('')).toBe(false);
   });
 });
 

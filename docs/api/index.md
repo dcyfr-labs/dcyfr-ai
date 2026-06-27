@@ -722,7 +722,7 @@ Test data guardian configuration
 `const`
 
 ```ts
-VERSION = "3.3.4"
+VERSION: string
 ```
 
 ## `ValidationFramework`

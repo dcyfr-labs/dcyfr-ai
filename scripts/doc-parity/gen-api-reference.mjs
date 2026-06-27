@@ -16,6 +16,19 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
 
+/**
+ * True when a declaration's source file is the generated, release-managed version
+ * module (`packages/ai/generated/version.ts` → `dist/**\/generated/version.d.ts`).
+ * Its `VERSION` const emits a literal-typed value (`VERSION = "3.4.0"`) that bumps
+ * every release; the reference widens it to its base type so a release-please
+ * version bump never perturbs `docs/api` and reds the strict Doc Parity gate.
+ * @param {string} fileName absolute or relative path to a `.d.ts`
+ * @returns {boolean}
+ */
+export function isGeneratedVersionDts(fileName) {
+  return /(^|[/\\])generated[/\\]version\.d\.ts$/.test(fileName || '');
+}
+
 /** Map a resolved symbol's flags to a coarse declaration kind (value exports only). */
 function classifyKind(flags) {
   if (flags & ts.SymbolFlags.Function) return 'function';
@@ -62,13 +75,21 @@ export function extractApiFromDts(dtsPath) {
     const decl = sym.declarations?.[0];
     let signature = '';
     if (decl) {
-      signature = decl
-        .getText(decl.getSourceFile())
-        .split('{')[0]
-        .replace(/\s+/g, ' ')
-        .replace(/^export\s+(declare\s+)?/, '')
-        .replace(/;?\s*$/, '')
-        .trim();
+      if (isGeneratedVersionDts(decl.getSourceFile().fileName)) {
+        // Render the release-managed VERSION const by its widened base type
+        // (`VERSION: string`) instead of the literal value the .d.ts carries, so
+        // the generated reference is version-invariant. See isGeneratedVersionDts.
+        const baseType = checker.getBaseTypeOfLiteralType(checker.getTypeOfSymbolAtLocation(sym, decl));
+        signature = `${exp.name}: ${checker.typeToString(baseType)}`;
+      } else {
+        signature = decl
+          .getText(decl.getSourceFile())
+          .split('{')[0]
+          .replace(/\s+/g, ' ')
+          .replace(/^export\s+(declare\s+)?/, '')
+          .replace(/;?\s*$/, '')
+          .trim();
+      }
     }
     const summary = ts.displayPartsToString(sym.getDocumentationComment(checker)).split('\n')[0].trim();
     out.push({ name: exp.name, kind: classifyKind(sym.flags), signature, summary });
