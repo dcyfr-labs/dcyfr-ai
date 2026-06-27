@@ -1,5 +1,19 @@
 # Changelog
 
+## [3.4.0](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.3.4...v3.4.0) (2026-06-27)
+
+
+### Features
+
+* **doc-parity:** structural PROVIDER_ENV_KEYS manifest + config determinism guard (Wave 1 task 1.6) ([#316](https://github.com/dcyfr-labs/dcyfr-ai/issues/316)) ([ce342f7](https://github.com/dcyfr-labs/dcyfr-ai/commit/ce342f7376dfad99153beed0ea4ce8eb69e05645))
+* **doc-parity:** Wave 1 — generated API reference + strict export-parity ([#313](https://github.com/dcyfr-labs/dcyfr-ai/issues/313)) ([6e855de](https://github.com/dcyfr-labs/dcyfr-ai/commit/6e855decc43ec10ccde2529ba61198326ae51bdd))
+
+
+### Bug Fixes
+
+* **doc-parity:** widen release-managed VERSION const in generated API reference ([#319](https://github.com/dcyfr-labs/dcyfr-ai/issues/319)) ([df9ae79](https://github.com/dcyfr-labs/dcyfr-ai/commit/df9ae796d4063303b43fad94424c8cdf4cad62a2))
+* **docs:** strip trailing space in README Trademark line (MD009) ([#318](https://github.com/dcyfr-labs/dcyfr-ai/issues/318)) ([e03368e](https://github.com/dcyfr-labs/dcyfr-ai/commit/e03368e36fbd39a71b317a9b59b0028c32b3b2e6))
+
 ## [3.3.4](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.3.3...v3.3.4) (2026-06-24)
 
 
