@@ -118,18 +118,24 @@ jobs:
       #     The docs link ~250 github.com URLs, so an unauthenticated shared
       #     runner would 429 and red the gate -- the dominant flakiness source.
       #   - --max-retries / --retry-wait-time absorb transient 5xx + timeouts.
-      #   - --accept 429 treats rate-limited-but-alive as OK. Transient timeouts
-      #     are absorbed by the retries above; a link still failing after retries
-      #     (DNS/refused/4xx) genuinely fails. Placeholder URLs live in code
-      #     fences and are not extracted. (--accept-timeouts is unsupported by
-      #     the lychee bundled with lychee-action@v2.)
+      #   - --accept treats transient, server-side-but-alive responses as OK:
+      #     429 (rate-limited), 408 (request timeout), and 500/502/503/504
+      #     (gateway/unavailable). The README's bundlephobia badges + links
+      #     (img.shields.io/bundlephobia/... and bundlephobia.com/...) red the
+      #     gate whenever bundlephobia is degraded -- observed as a 502 then a
+      #     408 on consecutive runs. Those are "alive but transiently failing,"
+      #     same class as the existing 429 concession; a genuinely dead link
+      #     (DNS/refused/404) still fails. Transient timeouts are also absorbed
+      #     by the retries above. Placeholder URLs live in code fences and are
+      #     not extracted. (--accept-timeouts is unsupported by the lychee
+      #     bundled with lychee-action@v2.)
       - name: Link check
         if: steps.changed.outputs.parity == 'true'
         uses: lycheeverse/lychee-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          args: "--no-progress --max-concurrency 4 --max-retries 3 --retry-wait-time 2 --accept 200,206,429 './docs/**/*.md' './*.md' './.github/**/*.md'"
+          args: "--no-progress --max-concurrency 4 --max-retries 3 --retry-wait-time 2 --accept 200,206,408,429,500,502,503,504 './docs/**/*.md' './*.md' './.github/**/*.md'"
           fail: true
 
       - name: No parity-relevant changes
