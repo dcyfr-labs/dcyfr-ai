@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.4.1](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.4.0...v3.4.1) (2026-06-28)
+
+
+### Bug Fixes
+
+* **doc-parity:** accept transient 408/5xx in link-check to absorb bundlephobia outages ([#320](https://github.com/dcyfr-labs/dcyfr-ai/issues/320)) ([090ae8c](https://github.com/dcyfr-labs/dcyfr-ai/commit/090ae8cefc68c9f5ae2057d10de8cf18708b6058))
+
 ## [3.4.0](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.3.4...v3.4.0) (2026-06-27)
 
 
