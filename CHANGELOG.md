@@ -1,6 +1,6 @@
 # Changelog
 
-## [3.4.2](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.4.1...v3.4.2) (2026-07-01)
+## [3.4.2](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.4.1...v3.4.2) (2026-07-02)
 
 
 ### Bug Fixes
