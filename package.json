@@ -136,7 +136,7 @@
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.12",
     "@types/glob": "^9.0.0",
-    "@types/node": "^26.0.1",
+    "@types/node": "^25.5.0",
     "@vitest/coverage-v8": "^4.1.7",
     "eslint": "^10.0.3",
     "globals": "^17.5.0",
