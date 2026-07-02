@@ -12,7 +12,7 @@
   last_validated: 2026-03-29
 -->
 
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/dcyfr/dcyfr-ai)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/dcyfr-labs/dcyfr-ai)
 [![Featured on Peerlist](https://img.shields.io/badge/Featured%20on-Peerlist-00AA45?logo=peerlist&logoColor=white)](https://peerlist.io/dcyfr/project/dcyfr-ai)
 
 [![npm](https://img.shields.io/npm/v/@dcyfr/ai?logo=npm&logoColor=white)](https://www.npmjs.com/package/@dcyfr/ai)
