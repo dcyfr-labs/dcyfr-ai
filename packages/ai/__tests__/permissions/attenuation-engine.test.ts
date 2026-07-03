@@ -486,49 +486,58 @@ describe('PermissionAttenuationEngine', () => {
   });
   
   describe('expiration validation', () => {
+    // Anchor expiries to the current time. The engine rejects an already-expired
+    // parent (see attenuation-engine.ts "Token has expired") before it ever
+    // compares child vs parent, so fixed calendar dates silently rot into
+    // false failures once they elapse. Relative timestamps never expire.
+    const hoursFromNow = (h: number): string =>
+      new Date(Date.now() + h * 60 * 60 * 1000).toISOString();
+
     it('should accept child expiration before parent', async () => {
-      parentToken.expires_at = '2026-12-31T23:59:59Z';
-      
+      const childExpiry = hoursFromNow(24); // Before parent
+      parentToken.expires_at = hoursFromNow(48);
+
       const request: AttenuatePermissionRequest = {
         parent_token_id: parentToken.token_id,
         new_holder: 'agent-child',
         scopes: parentToken.scopes,
-        expires_at: '2026-06-30T23:59:59Z', // Before parent
+        expires_at: childExpiry,
       };
-      
+
       const childToken = await engine.attenuate(parentToken, request);
-      
-      expect(childToken.expires_at).toBe('2026-06-30T23:59:59Z');
+
+      expect(childToken.expires_at).toBe(childExpiry);
     });
-    
+
     it('should reject child expiration after parent', async () => {
-      parentToken.expires_at = '2026-06-30T23:59:59Z';
-      
+      parentToken.expires_at = hoursFromNow(24);
+
       const request: AttenuatePermissionRequest = {
         parent_token_id: parentToken.token_id,
         new_holder: 'agent-child',
         scopes: parentToken.scopes,
-        expires_at: '2026-12-31T23:59:59Z', // After parent
+        expires_at: hoursFromNow(48), // After parent
       };
-      
+
       await expect(engine.attenuate(parentToken, request)).rejects.toThrow(
         /Child expiration .* exceeds parent expiration/
       );
     });
-    
+
     it('should allow child without expiration when parent has none', async () => {
+      const childExpiry = hoursFromNow(24);
       parentToken.expires_at = undefined;
-      
+
       const request: AttenuatePermissionRequest = {
         parent_token_id: parentToken.token_id,
         new_holder: 'agent-child',
         scopes: parentToken.scopes,
-        expires_at: '2026-12-31T23:59:59Z',
+        expires_at: childExpiry,
       };
-      
+
       const childToken = await engine.attenuate(parentToken, request);
-      
-      expect(childToken.expires_at).toBe('2026-12-31T23:59:59Z');
+
+      expect(childToken.expires_at).toBe(childExpiry);
     });
   });
   
