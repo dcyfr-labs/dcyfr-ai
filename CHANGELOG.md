@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.4.3](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.4.2...v3.4.3) (2026-07-03)
+
+
+### Bug Fixes
+
+* **permissions:** de-bomb attenuation-engine expiration tests ([#341](https://github.com/dcyfr-labs/dcyfr-ai/issues/341)) ([ee2cbf4](https://github.com/dcyfr-labs/dcyfr-ai/commit/ee2cbf4dbd476bfe15b343e52d9e128c08468df0))
+
 ## [3.4.2](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.4.1...v3.4.2) (2026-07-01)
 
 
