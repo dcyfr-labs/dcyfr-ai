@@ -12,6 +12,9 @@
  * this context on the `ManagedSession.handoffContext` field.
  */
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { mkdtempSync, rmSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
 import { SessionManager } from '../session-manager.js';
 import { ExecutionMode } from '../../types/agent-capabilities.js';
 import type { DelegationContract } from '../../types/delegation-contracts.js';
@@ -41,14 +44,18 @@ const makeHandoff = (overrides: Partial<HandoffContext> = {}): HandoffContext =>
 
 describe('Session Handoff Chain (v3.0 protocol)', () => {
   let manager: SessionManager;
+  let archiveDir: string;
 
   beforeEach(() => {
-    // Disable auto-flush timer for deterministic tests
-    manager = new SessionManager({ flushIntervalMs: 0 });
+    // Disable auto-flush timer for deterministic tests; archive to a tmp dir
+    // so archive() writes never hit the on-disk default (see resolve-log-root.ts).
+    archiveDir = mkdtempSync(join(tmpdir(), 'dcyfr-handoff-chain-test-'));
+    manager = new SessionManager({ flushIntervalMs: 0, archiveBaseDir: archiveDir });
   });
 
   afterEach(() => {
     manager.destroy();
+    rmSync(archiveDir, { recursive: true, force: true });
   });
 
   describe('Two-contract handoff chain', () => {

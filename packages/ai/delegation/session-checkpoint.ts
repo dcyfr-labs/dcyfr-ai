@@ -17,8 +17,8 @@
  */
 
 import { writeFileSync, mkdirSync, readFileSync, readdirSync, existsSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { join } from 'path';
+import { resolveLogRoot } from './resolve-log-root.js';
 import type { SessionState } from '../types/agent-capabilities.js';
 
 /** Auto-checkpoint every N messages. */
@@ -52,17 +52,14 @@ export class SessionCheckpoint {
 
   /**
    * @param checkpointBaseDir - Base directory for checkpoints.
-   *   Defaults to `<workspace-root>/logs/delegation/checkpoints`.
+   *   Defaults to `<log-root>/delegation/checkpoints` (see resolve-log-root.ts).
    */
   constructor(checkpointBaseDir?: string) {
     if (checkpointBaseDir) {
       this.checkpointDir = checkpointBaseDir;
     } else {
-      // Resolve workspace root relative to this file (packages/ai/delegation/)
-      const thisDir = dirname(fileURLToPath(import.meta.url));
-      // packages/ai/ → ../../.. → workspace root
-      const workspaceRoot = join(thisDir, '..', '..', '..', '..', '..', '..');
-      this.checkpointDir = join(workspaceRoot, 'logs', 'delegation', 'checkpoints');
+      // DCYFR_LOG_DIR env override, else <package-root>/logs (see resolve-log-root.ts).
+      this.checkpointDir = join(resolveLogRoot(import.meta.url), 'delegation', 'checkpoints');
     }
   }
 
