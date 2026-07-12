@@ -15,7 +15,9 @@ import { DelegationContractManager } from '../contract-manager.js';
 import { ExecutionMode } from '../../types/agent-capabilities.js';
 import type { CreateDelegationContractRequest } from '../../types/delegation-contracts.js';
 import { MAX_BACKGROUND_SESSIONS } from '../session-queue.js';
-import { existsSync, unlinkSync } from 'fs';
+import { existsSync, unlinkSync, mkdtempSync, rmSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -43,15 +45,24 @@ const makeRequest = (
 
 describe('Background Execution Mode — Integration', () => {
   let cm: DelegationContractManager;
+  let logDir: string;
 
   beforeEach(() => {
     if (existsSync(TEST_DB)) unlinkSync(TEST_DB);
-    cm = new DelegationContractManager({ databasePath: TEST_DB });
+    // Inject tmp dirs so session archives / checkpoints never hit the
+    // on-disk defaults (see resolve-log-root.ts).
+    logDir = mkdtempSync(join(tmpdir(), 'dcyfr-bg-exec-test-'));
+    cm = new DelegationContractManager({
+      databasePath: TEST_DB,
+      sessionArchiveDir: join(logDir, 'sessions'),
+      checkpointDir: join(logDir, 'checkpoints'),
+    });
   });
 
   afterEach(() => {
     cm.close();
     if (existsSync(TEST_DB)) unlinkSync(TEST_DB);
+    rmSync(logDir, { recursive: true, force: true });
   });
 
   // ── 1. Full lifecycle ──────────────────────────────────────────────────────

@@ -17,9 +17,9 @@
  */
 
 import { writeFileSync, mkdirSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { join } from 'path';
 import { atomicWriteFile } from '../utils/safe-fs.js';
+import { resolveLogRoot } from './resolve-log-root.js';
 import { ExecutionMode } from '../types/agent-capabilities.js';
 import type { BackgroundQueueStatus } from './session-queue.js';
 import type { ModeAdjustedScore } from '../reputation/execution-mode-reputation.js';
@@ -126,9 +126,8 @@ export class ExecutionModeDashboard {
     if (reportBaseDir) {
       this.reportBaseDir = reportBaseDir;
     } else {
-      const thisDir = dirname(fileURLToPath(import.meta.url));
-      const workspaceRoot = join(thisDir, '..', '..', '..', '..', '..', '..');
-      this.reportBaseDir = join(workspaceRoot, 'logs', 'delegation', 'reports');
+      // DCYFR_LOG_DIR env override, else <package-root>/logs (see resolve-log-root.ts).
+      this.reportBaseDir = join(resolveLogRoot(import.meta.url), 'delegation', 'reports');
     }
   }
 

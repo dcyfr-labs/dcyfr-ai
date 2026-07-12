@@ -14,3 +14,10 @@ platform\.openai\.com
 # survive --max-retries 3 and would flake this hard gate). The page is valid;
 # we don't control its uptime.
 docs\.msty\.studio
+# release-please-generated CHANGELOG compare links. The newest entry's
+# vN-1...vN URL 404s until the release tag is pushed (the release PR merges
+# before tagging), so every PR opened in that window reds this hard gate --
+# currently v3.4.2...v3.4.3 (tag v3.4.3 not yet pushed). The URLs are
+# machine-generated and become valid at tag time; a 404 here never indicates
+# a doc error a PR author can fix.
+https://github\.com/dcyfr-labs/dcyfr-ai/compare/

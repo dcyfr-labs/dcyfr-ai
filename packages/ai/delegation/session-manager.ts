@@ -16,8 +16,8 @@
 
 import { EventEmitter } from 'events';
 import { appendFileSync, mkdirSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { join } from 'path';
+import { resolveLogRoot } from './resolve-log-root.js';
 import type { SessionState, ExecutionMode } from '../types/agent-capabilities.js';
 import type { DelegationContract } from '../types/delegation-contracts.js';
 
@@ -90,9 +90,8 @@ export class SessionManager extends EventEmitter {
     if (options.archiveBaseDir) {
       this.archiveBaseDir = options.archiveBaseDir;
     } else {
-      const thisDir = dirname(fileURLToPath(import.meta.url));
-      const workspaceRoot = join(thisDir, '..', '..', '..', '..', '..', '..');
-      this.archiveBaseDir = join(workspaceRoot, 'logs', 'delegation', 'sessions');
+      // DCYFR_LOG_DIR env override, else <package-root>/logs (see resolve-log-root.ts).
+      this.archiveBaseDir = join(resolveLogRoot(import.meta.url), 'delegation', 'sessions');
     }
 
     const flushMs = options.flushIntervalMs ?? 60_000;
