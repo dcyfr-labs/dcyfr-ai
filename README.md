@@ -9,7 +9,7 @@
   status: active
   name: dcyfr-ai
   description: Portable AI agent harness with plugin architecture
-  last_validated: 2026-03-29
+  last_validated: 2026-07-11
 -->
 
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/dcyfr-labs/dcyfr-ai)
@@ -55,7 +55,7 @@ Portable AI agent harness with plugin architecture for managing multiple AI prov
 [![Bundle Size](https://img.shields.io/bundlephobia/minzip/@dcyfr/ai?logo=webpack)](https://bundlephobia.com/package/@dcyfr/ai)
 
 - **Weekly Downloads:** Check [npm stats](https://www.npmjs.com/package/@dcyfr/ai)
-- **Dependencies:** 28 production dependencies
+- **Dependencies:** 27 production dependencies
 - **Bundle Size:** See badge above ([![minzip](https://img.shields.io/bundlephobia/minzip/@dcyfr/ai)](https://bundlephobia.com/package/@dcyfr/ai))
 - **TypeScript:** Full type definitions included
 - **ESM Support:** ✅ Full ESM modules with tree shaking
@@ -190,17 +190,27 @@ const model = new ChatOpenAI({ temperature: 0.9 });
 const response = await model.call([new HumanMessage("Hello")]);
 
 // @dcyfr/ai (after)
-import { AgentRuntime } from "@dcyfr/ai";
+import {
+  AgentRuntime,
+  ProviderRegistry,
+  TelemetryEngine,
+  getMemory,
+} from "@dcyfr/ai";
 
-const runtime = new AgentRuntime({
-  provider: "openai",
-  model: "gpt-4",
-  temperature: 0.9,
-});
+const runtime = new AgentRuntime(
+  "assistant",
+  new ProviderRegistry({
+    primaryProvider: "anthropic",
+    fallbackChain: ["anthropic", "ollama"],
+    autoReturn: true,
+    healthCheckInterval: 60_000,
+  }),
+  getMemory(),
+  new TelemetryEngine(),
+);
 
-const response = await runtime.chat({
-  messages: [{ role: "user", content: "Hello" }],
-});
+const result = await runtime.execute({ task: "Hello" });
+console.log(result.output);
 ```
 
 **Key Differences:**
@@ -226,21 +236,33 @@ const { text } = await generateText({
 });
 
 // @dcyfr/ai (after)
-import { AgentRuntime, ValidationFramework } from "@dcyfr/ai";
+import {
+  AgentRuntime,
+  ProviderRegistry,
+  TelemetryEngine,
+  ValidationFramework,
+  getMemory,
+} from "@dcyfr/ai";
 
-const runtime = new AgentRuntime({
-  provider: "openai",
-  model: "gpt-4-turbo",
-});
+const runtime = new AgentRuntime(
+  "assistant",
+  new ProviderRegistry({
+    primaryProvider: "anthropic",
+    fallbackChain: ["anthropic", "ollama"],
+    autoReturn: true,
+    healthCheckInterval: 60_000,
+  }),
+  getMemory(),
+  new TelemetryEngine(),
+);
 
-const response = await runtime.chat({
-  messages: [{ role: "user", content: "Hello" }],
-});
+const result = await runtime.execute({ task: "Hello" });
+console.log(result.output);
 
 // Bonus: Built-in validation
 const validator = new ValidationFramework();
 const report = await validator.validate({
-  /* config */
+  /* ValidationContext */
 });
 ```
 
@@ -256,172 +278,154 @@ const report = await validator.validate({
 
 ---
 
-## Getting Started with AgentRuntime (Phase 0 Autonomous Operations)
+## Getting Started with AgentRuntime
+
+`AgentRuntime` executes multi-step tasks against the provider registry, with memory retrieval, tool execution, and telemetry built in.
 
 ### Prerequisites
 
 ```bash
-# Node.js 24+ required
+# Node.js 20+ required (package.json engines; CI tests on Node 24)
 node --version
 
 # Install @dcyfr/ai
 npm install @dcyfr/ai
 
-# Optional: Configure LLM providers
-export OPENAI_API_KEY=your_openai_key
-export ANTHROPIC_API_KEY=your_anthropic_key
+# Optional: enable remote providers
+export ANTHROPIC_API_KEY=your_anthropic_key   # enables the "anthropic" provider
+export GITHUB_TOKEN=your_github_token         # enables the "github-models" provider
 ```
 
 ### 1. Basic AgentRuntime Setup
+
+`AgentRuntime` takes positional arguments: an agent name, a `ProviderRegistry`, a memory instance, a `TelemetryEngine`, and an optional `RuntimeConfig`.
 
 ```typescript
 import {
   AgentRuntime,
   ProviderRegistry,
   TelemetryEngine,
-  DCYFRMemory,
+  getMemory,
 } from "@dcyfr/ai";
 
 // Initialize components
-const providerRegistry = new ProviderRegistry();
-const telemetryEngine = new TelemetryEngine({ storage: "sqlite" });
-const memory = new DCYFRMemory({ storage: "memory" });
-
-// Create runtime
-const runtime = new AgentRuntime({
-  providerRegistry,
-  memory,
-  telemetry: telemetryEngine,
+const providers = new ProviderRegistry({
+  primaryProvider: "anthropic",
+  fallbackChain: ["anthropic", "github-models", "ollama"],
+  autoReturn: true,
+  healthCheckInterval: 60_000,
 });
 
-// Verify setup
-console.log(`Runtime ready: ${runtime.isReady()}`);
+const telemetry = new TelemetryEngine({
+  storage: "file",
+  basePath: "./data/telemetry",
+});
+
+const memory = getMemory(); // shared DCYFRMemoryImpl singleton (mem0 backend)
+
+// Create runtime
+const runtime = new AgentRuntime("assistant", providers, memory, telemetry, {
+  maxIterations: 10, // optional RuntimeConfig
+  timeout: 120_000,
+});
 ```
 
-### 2. Execute Autonomous Tasks
+> **Memory:** `DCYFRMemory` is exported as an interface _type_ only. The
+> concrete class is `DCYFRMemoryImpl` (no constructor options), and
+> `getMemory()` returns a shared singleton. The mem0 backend (vector DB, LLM,
+> embedder) is configured via environment/config — see
+> [docs/MEMORY_SETUP.md](./docs/MEMORY_SETUP.md).
+
+### 2. Execute a Task
 
 ```typescript
-// Simple task execution
-const result = await runtime.executeTask("Explain quantum computing briefly");
+const result = await runtime.execute({
+  task: "Explain quantum computing briefly",
+  userId: "user-123", // optional: scopes memory retrieval
+  sessionId: "session-456", // optional: telemetry correlation
+});
 
 if (result.success) {
   console.log("Output:", result.output);
-  console.log("Memory used:", result.memoryRetrievalUsed);
+  console.log(`${result.iterations} iteration(s), $${result.cost.toFixed(4)}`);
 } else {
-  console.error("Error:", result.error);
+  console.error(`Failed (${result.outcome}):`, result.error);
 }
 ```
 
-### 3. Memory-Enhanced Execution
+`execute()` takes a `TaskContext` (`task`, plus optional `userId`, `sessionId`, `agentId`, `traceId`, `metadata`, `tools`) and returns an `AgentExecutionResult` (`success`, `output`, `error`, `outcome`, `executionTime`, `cost`, `iterations`).
+
+Memory retrieval, injection, and persistence happen automatically when `memoryEnabled` is on (the default); tune it via `RuntimeConfig` (`memoryTimeout`, `memoryRelevanceThreshold`, `workingMemoryEnabled`, `persistWorkingMemory`).
+
+### 3. Tools
+
+Pass tools in the task context; the runtime invokes them during its reasoning loop. Each tool's `execute` receives the input plus a `ToolExecutionContext` with shared working memory and a `queryMemory` helper.
 
 ```typescript
-// Task with memory context
-const result = await runtime.executeTask(
-  "Continue the quantum computing explanation",
-  {
-    timeout: 30000,
-    memoryConfig: {
-      maxResults: 10, // Maximum context entries
-      minScore: 0.7, // Relevance threshold (0.0-1.0)
+import { readFile } from "node:fs/promises";
+import { z } from "zod";
+
+const result = await runtime.execute({
+  task: "Summarize the project README",
+  tools: [
+    {
+      name: "read_file",
+      description: "Read a UTF-8 file from disk",
+      schema: z.object({ path: z.string() }),
+      execute: async (input) => readFile((input as { path: string }).path, "utf8"),
     },
-  },
-);
-
-// Memory is automatically retrieved, injected, and persisted
-console.log("Previous context used:", result.memoryRetrievalUsed);
-```
-
-### 4. Working Memory for Multi-Step Tasks
-
-```typescript
-// Access working memory for ephemeral state
-const workingMemory = runtime.getWorkingMemory();
-
-// Step 1: Research overview
-workingMemory.set("research-topic", "AI ethics");
-const overviewResult = await runtime.executeTask(
-  "Provide overview of AI ethics and key considerations",
-);
-
-// Step 2: Deep dive (with context from step 1)
-workingMemory.set("overview-complete", overviewResult.output);
-const deepDiveResult = await runtime.executeTask(
-  "Analyze specific ethical challenges in AI deployment",
-);
-
-console.log("Working memory keys:", Array.from(workingMemory.keys()));
-```
-
-### 5. Hook System for Extensions
-
-```typescript
-// Add before-execution hook
-runtime.addHook("beforeExecute", async (task: string) => {
-  console.log(`🚀 Starting task: ${task}`);
-
-  // Custom validation
-  if (task.includes("sensitive")) {
-    return { approved: false, reason: "Sensitive content detected" };
-  }
-
-  return { approved: true };
+  ],
 });
+```
 
-// Add after-execution hook
-runtime.addHook("afterExecute", async (task, result, success) => {
-  console.log(`✅ Task completed: ${success ? "SUCCESS" : "FAILED"}`);
+### 4. Hooks
 
-  // Custom telemetry
-  if (success) {
-    await customAnalytics.track({
-      task: task.substring(0, 50),
-      duration: result.duration,
-      memoryUsed: result.memoryRetrievalUsed,
-    });
+Register hooks with `beforeExecute()` / `afterExecute()`. A before-hook receives a `HookContext` (`agentName`, `task`, `userId`, `sessionId`, `timestamp`) and rejects execution by throwing; after-hooks additionally receive the final `AgentExecutionResult`.
+
+```typescript
+// Before-execution hook: throw to reject the task
+runtime.beforeExecute(async (context) => {
+  console.log(`🚀 Starting task: ${context.task}`);
+
+  if (context.task.includes("sensitive")) {
+    throw new Error("Sensitive content detected");
   }
 });
-```
 
-### 6. Provider Configuration & Fallback
-
-```typescript
-// Multi-provider setup with fallback
-const runtime = new AgentRuntime({
-  providerRegistry: new ProviderRegistry(),
-  memory,
-  telemetry,
+// After-execution hook: observe the result
+runtime.afterExecute(async (context, result) => {
+  console.log(
+    `✅ "${context.task}" → ${result.outcome} in ${result.executionTime}ms`,
+  );
 });
-
-// Providers automatically fallback: OpenAI → Anthropic → Ollama
-const result = await runtime.executeTask("Analyze market trends");
-
-// Check which provider was used
-const events = await telemetryEngine.getEvents();
-const lastExecution = events.filter((e) => e.type === "start").pop();
-console.log("Provider used:", lastExecution?.provider);
 ```
 
-### 7. Telemetry Monitoring & Analysis
+### 5. Runtime Events
+
+Subscribe to lifecycle events (task start/finish, LLM calls, tool executions, memory retrieval):
 
 ```typescript
-// Get telemetry engine for analytics
-const telemetry = runtime.getTelemetryEngine();
+const listener = (event: unknown) => console.log("runtime event:", event);
 
-// Get recent events
+runtime.on(listener);
+// ... later
+runtime.off(listener);
+```
+
+### 6. Telemetry Monitoring & Analysis
+
+Use the `TelemetryEngine` instance you constructed the runtime with:
+
+```typescript
+// Recent execution events recorded by the engine
 const events = await telemetry.getEvents();
 console.log(`Total events: ${events.length}`);
 
-// Filter memory events
-const memoryEvents = events.filter((e) => e.type === "memory_retrieval");
-const hitRate =
-  memoryEvents.length > 0
-    ? memoryEvents.filter((e) => e.memoriesRelevant > 0).length /
-      memoryEvents.length
-    : 0;
-console.log(`Memory hit rate: ${(hitRate * 100).toFixed(1)}%`);
+// Aggregate per-agent stats over a period
+const stats = await telemetry.getAgentStats("anthropic", "30d");
 ```
 
-### 8. CLI Dashboard Commands
+### 7. CLI Dashboard Commands
 
 ```bash
 # View telemetry dashboard (cost summary + recent activity)
@@ -443,87 +447,71 @@ npx dcyfr-ai validate-runtime
 npx dcyfr-ai telemetry --export usage_data.csv
 ```
 
-### 9. Provider Setup
+### 8. Provider Setup
 
-**OpenAI:**
+Providers register automatically inside `ProviderRegistry`; remote providers are enabled when their credentials/endpoints are present:
 
-```bash
-export OPENAI_API_KEY=sk-your-key-here
-# Supports: gpt-4, gpt-4o, gpt-3.5-turbo
-```
+| Provider        | Tier                                  | Enabled by                                                        |
+| --------------- | ------------------------------------- | ----------------------------------------------------------------- |
+| `local`         | 0 — local OpenAI-compatible endpoint | always (default `LOCAL_LLM_BASE_URL` = `http://localhost:11973/v1`) |
+| `ollama`        | 0 — local Ollama                      | always (default `OLLAMA_HOST` = `http://localhost:11434`)          |
+| `workbench`     | 1 — private GPU node                  | `WORKBENCH_BASE_URL` set                                           |
+| `github-models` | 2 — GitHub Models                     | `GITHUB_TOKEN` set                                                 |
+| `anthropic`     | 3 — Anthropic API                     | `ANTHROPIC_API_KEY` set                                            |
 
-**Anthropic:**
-
-```bash
-export ANTHROPIC_API_KEY=sk-ant-your-key-here
-# Supports: claude-3-5-sonnet, claude-3-haiku, claude-3-opus
-```
-
-**Ollama (Local):**
+Fallback order follows the `fallbackChain` you pass to `ProviderRegistry`; with `autoReturn: true` the registry returns to the primary provider when it recovers.
 
 ```bash
-# Install Ollama
+# Ollama (local)
 curl -fsSL https://ollama.ai/install.sh | sh
+ollama pull llama3.2
+export OLLAMA_HOST=http://localhost:11434  # optional custom host
 
-# Install a model
-ollama pull llama2
-# OR: ollama pull codellama, qwen2.5, etc.
+# Anthropic
+export ANTHROPIC_API_KEY=sk-ant-your-key-here
 
-# Optional: Custom host
-export OLLAMA_HOST=localhost:11434
+# GitHub Models
+export GITHUB_TOKEN=your_github_token
 ```
 
-### 10. Configuration Examples
+### 9. Configuration Examples
 
-**Development:**
+**Development (no persistence):**
 
 ```typescript
-const devConfig = {
-  providerRegistry: new ProviderRegistry(),
-  memory: new DCYFRMemory({
-    storage: "memory",
-    maxEntries: 100,
+const runtime = new AgentRuntime(
+  "dev-assistant",
+  new ProviderRegistry({
+    primaryProvider: "ollama",
+    fallbackChain: ["ollama", "local"],
+    autoReturn: false,
+    healthCheckInterval: 60_000,
   }),
-  telemetry: new TelemetryEngine({
-    storage: "memory", // No persistence for dev
-  }),
-};
+  getMemory(),
+  new TelemetryEngine(), // defaults to in-memory storage
+);
 ```
 
-**Production:**
+**Production (file-backed telemetry):**
 
 ```typescript
-const prodConfig = {
-  providerRegistry: new ProviderRegistry(),
-  memory: new DCYFRMemory({
-    storage: "file",
-    filePath: "./data/memory.json",
+const runtime = new AgentRuntime(
+  "prod-assistant",
+  new ProviderRegistry({
+    primaryProvider: "anthropic",
+    fallbackChain: ["anthropic", "github-models", "ollama"],
+    autoReturn: true,
+    healthCheckInterval: 60_000,
   }),
-  telemetry: new TelemetryEngine({
-    storage: "sqlite",
-    dbPath: "./data/telemetry.db",
-  }),
-};
+  getMemory(),
+  new TelemetryEngine({ storage: "file", basePath: "./data/telemetry" }),
+  { persistWorkingMemory: true },
+);
 ```
 
-### 11. Real-World Example
-
-See our comprehensive example: **[Autonomous Research Agent](https://github.com/dcyfr-labs/dcyfr-ai-agents/tree/main/examples/autonomous-research-agent)**
-
-```bash
-cd dcyfr-ai-agents/examples/autonomous-research-agent
-npm run demo -- --topic "quantum computing applications"
-```
-
-This example demonstrates:
-
-- 5-step autonomous research pipeline
-- Memory context integration
-- Working memory coordination
-- Hook system extensions
-- Telemetry monitoring
-- Provider fallback handling
-- Configuration management
+> Telemetry storage supports the `"memory"` and `"file"` adapters (or pass your
+> own `StorageAdapter`). Database-backed storage is not implemented yet — see
+> [Known Limitations](#️-known-limitations).
 
 ---
 
@@ -646,12 +634,11 @@ Framework Defaults → Project Config → Environment Variables
 
 ### Environment Overrides
 
-Override any config value with environment variables:
+Override any config value with environment variables. `DCYFR_<PATH>` maps to the lowercased dot-path in the config (e.g. `DCYFR_TELEMETRY_ENABLED` → `telemetry.enabled`):
 
 ```bash
 DCYFR_TELEMETRY_ENABLED=false
-DCYFR_PROVIDERS_PRIMARY=groq
-DCYFR_AGENTS_DESIGNTOKENS_COMPLIANCE=0.95
+DCYFR_VALIDATION_PARALLEL=true
 ```
 
 ## Plugin System
@@ -665,7 +652,7 @@ DCYFR comes with specialized validation agents:
 - **PageLayout Enforcer** - Validates layout usage patterns
 - **Test Data Guardian** - Prevents production data in tests
 
-See `@dcyfr/agents` for specialized DCYFR agents.
+See `@dcyfr/workspace-agents` for specialized DCYFR agents.
 
 ### Custom Plugins
 
@@ -897,9 +884,9 @@ export const myPlugin = {
 
 See [docs/PLUGINS.md](./docs/PLUGINS.md) and [examples/plugin-system.ts](./examples/plugin-system.ts) for complete guide.
 
-**Q: What's the difference between @dcyfr/ai and @dcyfr/agents?**
+**Q: What's the difference between @dcyfr/ai and @dcyfr/workspace-agents?**
 
-A: `@dcyfr/ai` is the **public harness** (plugin architecture, config management, telemetry engine, validation harness). `@dcyfr/agents` is a **private package** with DCYFR-specific validation agents (design tokens, barrel exports, PageLayout enforcement). Think of @dcyfr/ai as the engine, @dcyfr/agents as pre-built plugins.
+A: `@dcyfr/ai` is the **public harness** (plugin architecture, config management, telemetry engine, validation harness). `@dcyfr/workspace-agents` is a **private package** with DCYFR-specific validation agents (design tokens, barrel exports, PageLayout enforcement). Think of @dcyfr/ai as the engine, @dcyfr/workspace-agents as pre-built plugins.
 
 **Q: Can I use this with other AI providers (non-Claude)?**
 
@@ -1002,7 +989,7 @@ Found a security issue? Report it privately:
 ### Platform-Specific Issues
 
 - **Windows:** Path separators handled automatically but some plugins may have issues
-- **Node.js version:** Requires ≥24.13.0 (uses native fetch, modern APIs)
+- **Node.js version:** Requires ≥20.0.0 per `package.json` engines (uses native fetch, modern APIs); CI tests on Node 24
 - **ESM-only:** Package is ESM (ECMAScript Modules) - CommonJS require() not supported
 
 ### Planned Improvements
@@ -1022,30 +1009,11 @@ See [GitHub Issues](https://github.com/dcyfr-labs/dcyfr-ai/issues) for tracked f
 
 ## 📄 License & Sponsorship
 
-**License:** MIT for personal/non-commercial use. Commercial use requires a paid tier.
+**License:** [MIT](./LICENSE). The [LICENSE](./LICENSE) file is the canonical statement of this package's licensing terms.
 
-### Commercial Use
+### Sponsorship
 
-This package is dual-licensed:
-
-- **MIT License** for personal, educational, and non-commercial use (free)
-- **Commercial License** for business and revenue-generating use (paid)
-
-**Commercial use includes:**
-
-- Using @dcyfr/ai in SaaS products or revenue-generating services
-- Deploying in companies with >5 employees
-- Providing paid consulting/services using @dcyfr/ai
-- Distributing as part of commercial products
-
-### Sponsorship Tiers
-
-- 🌍 **Community** ($5/mo) - Signal community access (DCYFR.NET, Quantum Flux)
-- 💚 **Sponsors** ($10/mo) - Bio on dcyfr.ai website + private channels
-- 👨‍💻 **Developer** ($20/mo) - Limited commercial license + pre-release builds + portfolio support
-- 🚀 **Founder** ($2,400/yr) - Full commercial license + 1hr consultation/mo
-- 💼 **Executive** ($4,800/yr) - Business license + 2hr consultation/mo + 50 employees
-- 🏢 **Enterprise** ($9,600/yr) - Enterprise license + 4hr consultation/mo + unlimited scale
+Development is supported through sponsorship — if @dcyfr/ai is useful to you or your business, consider sponsoring.
 
 **Join:** [GitHub Sponsors](https://github.com/sponsors/dcyfr)
 **Contact:** licensing@dcyfr.ai
