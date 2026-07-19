@@ -330,7 +330,7 @@ const runtime = new AgentRuntime("assistant", providers, memory, telemetry, {
 });
 ```
 
-> **Memory:** `DCYFRMemory` is exported as an interface _type_ only. The
+> **Memory:** `DCYFRMemory` is exported as an interface *type* only. The
 > concrete class is `DCYFRMemoryImpl` (no constructor options), and
 > `getMemory()` returns a shared singleton. The mem0 backend (vector DB, LLM,
 > embedder) is configured via environment/config — see
