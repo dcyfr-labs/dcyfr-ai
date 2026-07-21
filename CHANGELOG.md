@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.5.1](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.5.0...v3.5.1) (2026-07-21)
+
+
+### Bug Fixes
+
+* **release:** pin npm to ^11.5 in publish job (npm@latest→npm@12 broke publish) ([#379](https://github.com/dcyfr-labs/dcyfr-ai/issues/379)) ([8997b2c](https://github.com/dcyfr-labs/dcyfr-ai/commit/8997b2c032afeeecd95d77506da29d4782a38e7c))
+
+
+### Dependencies
+
+* bump cloudflare from 6.5.0 to 7.0.0 ([#358](https://github.com/dcyfr-labs/dcyfr-ai/issues/358)) ([69c8ad0](https://github.com/dcyfr-labs/dcyfr-ai/commit/69c8ad04e176254c56123ada040474fa36f938d5))
+
 ## [3.5.0](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.4.3...v3.5.0) (2026-07-21)
 
 
