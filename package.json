@@ -117,7 +117,7 @@
     "better-sqlite3": "^12.8.0",
     "chalk": "^4.1.2",
     "cli-table3": "^0.6.5",
-    "cloudflare": "^6.1.0",
+    "cloudflare": "^7.0.0",
     "commander": "^15.0.0",
     "fastmcp": "^4.0.0",
     "gray-matter": "^4.0.3",
