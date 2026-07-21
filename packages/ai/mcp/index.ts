@@ -125,6 +125,23 @@ export type {
 } from './servers/shared/promptintel-types.js';
 export { PromptIntelClient } from './servers/shared/promptintel-client.js';
 
+// Remote transport selection + fail-closed bearer auth.
+// Embedders (e.g. dcyfr-labs start scripts) need these to serve the factory
+// servers below over Streamable HTTP; without the barrel export they are
+// unreachable outside this package. See ./servers/shared/transport.ts.
+export type {
+  McpTransportType,
+  ResolvedTransportConfig,
+  BearerSession,
+} from './servers/shared/transport.js';
+export {
+  allowedBearerTokens,
+  buildBearerAuthenticator,
+  resolveTransportConfig,
+  assertRemoteAuthConfigured,
+  describeTransport,
+} from './servers/shared/transport.js';
+
 // ============================================================================
 // MCP Server Factories
 // ============================================================================
