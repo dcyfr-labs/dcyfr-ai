@@ -79,7 +79,10 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
 
       - name: Upgrade npm for Trusted Publishing
-        run: npm install -g npm@latest
+        # Pin to the 11.x line: it already supports Trusted Publishing (>=11.5) and
+        # runs on the pinned Node (24.13). `npm@latest` now resolves to npm@12, whose
+        # engines require Node >=24.15 → EBADENGINE, which broke the 3.5.0 publish.
+        run: npm install -g npm@^11.5
 
       - name: Verify npm version and OIDC support
         run: |
