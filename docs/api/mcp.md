@@ -47,6 +47,16 @@ class SimpleCache<T>
 
 Simple in-memory cache for MCP servers
 
+## `allowedBearerTokens`
+
+`function`
+
+```ts
+function allowedBearerTokens(): string[]
+```
+
+Parse the comma-separated allow-list of bearer tokens from the environment.
+
 ## `analyticsCache`
 
 `const`
@@ -56,6 +66,26 @@ analyticsCache: SimpleCache<unknown>
 ```
 
 Global cache instances for each MCP server
+
+## `assertRemoteAuthConfigured`
+
+`function`
+
+```ts
+function assertRemoteAuthConfigured(serverName: string, config: ResolvedTransportConfig): void
+```
+
+Fail-closed guard: refuse to start an HTTP-exposed server without a bearer
+
+## `buildBearerAuthenticator`
+
+`function`
+
+```ts
+function buildBearerAuthenticator(): (request: IncomingMessage) => Promise<BearerSession>
+```
+
+Build a FastMCP `authenticate` hook enforcing `Authorization: Bearer <token>`
 
 ## `calculateReadingTime`
 
@@ -110,6 +140,16 @@ Create Design Token MCP Server with a token provider
 ```ts
 function dedupe<T>(items: T[]): T[]
 ```
+
+## `describeTransport`
+
+`function`
+
+```ts
+function describeTransport(serverName: string, config: ResolvedTransportConfig): string
+```
+
+Human-readable one-line startup banner for the resolved transport.
 
 ## `extractSlug`
 
@@ -266,6 +306,16 @@ function resetGlobalMCPRegistry(): void
 ```
 
 Reset global MCP registry
+
+## `resolveTransportConfig`
+
+`function`
+
+```ts
+function resolveTransportConfig(): ResolvedTransportConfig
+```
+
+Resolve the transport configuration from the environment.
 
 ## `sanitizePath`
 

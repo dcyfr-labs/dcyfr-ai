@@ -27,6 +27,30 @@ import type {
  * Create Design Token MCP Server with a token provider
  * @param provider - TokenProvider implementation for design token access
  */
+/**
+ * Resolve a caller-supplied path and confine it to the project root (cwd).
+ *
+ * The token-analysis tools (`tokens:checkCompliance`, `tokens:analyzeFile`)
+ * only ever legitimately read source files inside the repo. Confining the
+ * resolved path to `process.cwd()` turns an authenticated arbitrary-file-read
+ * into a repo-scoped read — a bearer holder cannot coax the server into
+ * reading `/etc/passwd`, credentials, or any file outside the project.
+ *
+ * `path.resolve` uses `filePath` as-is when absolute (else joins it onto the
+ * root) and normalizes away `..` segments, so the containment check catches
+ * both absolute-path escapes and relative `../` traversal.
+ *
+ * See the `dcyfr-mcp-remote-serving` TLP:AMBER sign-off, condition 2.1b.
+ */
+export function resolveWithinRoot(filePath: string, root: string = process.cwd()): string {
+  const base = path.resolve(root);
+  const full = path.resolve(base, filePath);
+  if (full !== base && !full.startsWith(base + path.sep)) {
+    throw new Error(`Refusing to read a path outside the project root: ${filePath}`);
+  }
+  return full;
+}
+
 export function createDesignTokenServer(provider: TokenProvider) {
   const server = new FastMCP({
     name: 'dcyfr-design-tokens',
@@ -186,7 +210,7 @@ export function createDesignTokenServer(provider: TokenProvider) {
     // For specific file
     if (filePath) {
       try {
-        const fullPath = path.isAbsolute(filePath) ? filePath : path.join(process.cwd(), filePath);
+        const fullPath = resolveWithinRoot(filePath);
 
         const content = await fs.readFile(fullPath, 'utf-8');
         const result = validateCode(content);
@@ -390,7 +414,7 @@ export function createDesignTokenServer(provider: TokenProvider) {
     }),
     execute: async ({ filePath }: { filePath: string }) => {
       try {
-        const fullPath = path.isAbsolute(filePath) ? filePath : path.join(process.cwd(), filePath);
+        const fullPath = resolveWithinRoot(filePath);
 
         const content = await fs.readFile(fullPath, 'utf-8');
         const validation = validateCode(content);
