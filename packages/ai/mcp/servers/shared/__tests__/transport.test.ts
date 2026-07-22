@@ -29,6 +29,7 @@ const ENV_KEYS = [
   'MCP_HTTP_PORT',
   'MCP_HTTP_ENDPOINT',
   'MCP_HTTP_STATELESS',
+  'MCP_HTTP_HOST',
   'MCP_BEARER_TOKEN',
 ] as const;
 
@@ -87,11 +88,11 @@ describe('resolveTransportConfig', () => {
     expect(resolveTransportConfig()).toEqual({ transportType: 'stdio' });
   });
 
-  it('resolves httpStream with documented defaults', () => {
+  it('resolves httpStream with documented defaults (loopback host)', () => {
     process.env['MCP_TRANSPORT'] = 'httpStream';
     expect(resolveTransportConfig()).toEqual({
       transportType: 'httpStream',
-      httpStream: { port: 8080, endpoint: '/mcp', stateless: false },
+      httpStream: { host: '127.0.0.1', port: 8080, endpoint: '/mcp', stateless: false },
     });
   });
 
@@ -103,8 +104,21 @@ describe('resolveTransportConfig', () => {
     expect(resolveTransportConfig()).toEqual({
       transportType: 'httpStream',
       // endpoint is coerced to start with a slash
-      httpStream: { port: 9099, endpoint: '/connector', stateless: true },
+      httpStream: { host: '127.0.0.1', port: 9099, endpoint: '/connector', stateless: true },
     });
+  });
+
+  it('defaults httpStream host to loopback (127.0.0.1), not all-interfaces', () => {
+    process.env['MCP_TRANSPORT'] = 'httpStream';
+    const c = resolveTransportConfig();
+    expect(c.transportType === 'httpStream' && c.httpStream.host).toBe('127.0.0.1');
+  });
+
+  it('honors an explicit MCP_HTTP_HOST override (operator opt-in to a wider bind)', () => {
+    process.env['MCP_TRANSPORT'] = 'httpStream';
+    process.env['MCP_HTTP_HOST'] = '0.0.0.0';
+    const c = resolveTransportConfig();
+    expect(c.transportType === 'httpStream' && c.httpStream.host).toBe('0.0.0.0');
   });
 
   it('parses common truthy stateless spellings but not arbitrary strings', () => {
@@ -132,7 +146,7 @@ describe('assertRemoteAuthConfigured', () => {
   it('throws for httpStream when no bearer token is configured', () => {
     const httpStream = {
       transportType: 'httpStream' as const,
-      httpStream: { port: 8080, endpoint: '/mcp' as const, stateless: false },
+      httpStream: { host: '127.0.0.1', port: 8080, endpoint: '/mcp' as const, stateless: false },
     };
     expect(() => assertRemoteAuthConfigured('svc', httpStream)).toThrow(/without MCP_BEARER_TOKEN/);
   });
@@ -141,7 +155,7 @@ describe('assertRemoteAuthConfigured', () => {
     process.env['MCP_BEARER_TOKEN'] = 'secret';
     const httpStream = {
       transportType: 'httpStream' as const,
-      httpStream: { port: 8080, endpoint: '/mcp' as const, stateless: false },
+      httpStream: { host: '127.0.0.1', port: 8080, endpoint: '/mcp' as const, stateless: false },
     };
     expect(() => assertRemoteAuthConfigured('svc', httpStream)).not.toThrow();
   });
@@ -211,12 +225,13 @@ describe('describeTransport', () => {
     expect(describeTransport('svc', { transportType: 'stdio' })).toContain('stdio');
   });
 
-  it('describes httpStream with host, port, endpoint, and the auth note', () => {
+  it('describes httpStream with the ACTUAL host (not a hardcoded 0.0.0.0), port, endpoint, and the auth note', () => {
     const banner = describeTransport('svc', {
       transportType: 'httpStream',
-      httpStream: { port: 8080, endpoint: '/mcp', stateless: false },
+      httpStream: { host: '127.0.0.1', port: 8080, endpoint: '/mcp', stateless: false },
     });
-    expect(banner).toContain(':8080/mcp');
+    expect(banner).toContain('127.0.0.1:8080/mcp');
+    expect(banner).not.toContain('0.0.0.0');
     expect(banner).toContain('bearer auth enforced');
   });
 });
