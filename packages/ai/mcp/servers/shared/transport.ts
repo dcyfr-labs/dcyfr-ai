@@ -19,6 +19,7 @@
  *   MCP_HTTP_PORT      port for httpStream                     (default 8080)
  *   MCP_HTTP_ENDPOINT  endpoint path                           (default "/mcp")
  *   MCP_HTTP_STATELESS "true" to run stateless                 (default false)
+ *   MCP_HTTP_HOST      bind interface for httpStream           (default 127.0.0.1 — loopback only)
  *   MCP_BEARER_TOKEN   comma-separated allowed bearer tokens   (REQUIRED for httpStream)
  */
 
@@ -31,7 +32,7 @@ export type ResolvedTransportConfig =
   | { transportType: 'stdio' }
   | {
       transportType: 'httpStream';
-      httpStream: { port: number; endpoint: `/${string}`; stateless: boolean };
+      httpStream: { host: string; port: number; endpoint: `/${string}`; stateless: boolean };
     };
 
 export interface BearerSession extends Record<string, unknown> {
@@ -87,7 +88,11 @@ export function resolveTransportConfig(): ResolvedTransportConfig {
     const endpointRaw = (process.env.MCP_HTTP_ENDPOINT ?? '/mcp').trim();
     const endpoint = (endpointRaw.startsWith('/') ? endpointRaw : `/${endpointRaw}`) as `/${string}`;
     const stateless = /^(1|true|yes)$/i.test(process.env.MCP_HTTP_STATELESS ?? '');
-    return { transportType: 'httpStream', httpStream: { port, endpoint, stateless } };
+    // Default to loopback. A plaintext bearer over a non-loopback interface is no
+    // protection (dcyfr-mcp-remote-serving Task 2.1) — operators opt into a wider
+    // bind explicitly via MCP_HTTP_HOST once TLS terminates in front.
+    const host = (process.env.MCP_HTTP_HOST ?? '').trim() || '127.0.0.1';
+    return { transportType: 'httpStream', httpStream: { host, port, endpoint, stateless } };
   }
   return { transportType: 'stdio' };
 }
@@ -109,7 +114,7 @@ export function assertRemoteAuthConfigured(serverName: string, config: ResolvedT
 /** Human-readable one-line startup banner for the resolved transport. */
 export function describeTransport(serverName: string, config: ResolvedTransportConfig): string {
   if (config.transportType === 'httpStream') {
-    return `✅ ${serverName} started (httpStream) on http://0.0.0.0:${config.httpStream.port}${config.httpStream.endpoint} — bearer auth enforced`;
+    return `✅ ${serverName} started (httpStream) on http://${config.httpStream.host}:${config.httpStream.port}${config.httpStream.endpoint} — bearer auth enforced`;
   }
   return `✅ ${serverName} started (stdio mode)`;
 }
