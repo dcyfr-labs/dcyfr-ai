@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.5.3](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.5.2...v3.5.3) (2026-07-24)
+
+
+### Bug Fixes
+
+* **doc-parity:** unblock Doc Parity on release [#381](https://github.com/dcyfr-labs/dcyfr-ai/issues/381) (JSDoc reattach + npm-stat link timeout) ([0223efe](https://github.com/dcyfr-labs/dcyfr-ai/commit/0223efe390db275cb8b91844cb93e747f9b57245))
+
+
+### Dependencies
+
+* Bump the npm_and_yarn group across 1 directory with 2 updates ([#385](https://github.com/dcyfr-labs/dcyfr-ai/issues/385)) ([eed954e](https://github.com/dcyfr-labs/dcyfr-ai/commit/eed954ea66944e0314abe2f835ab4ce4e27745fb))
+
 ## [3.5.2](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.5.1...v3.5.2) (2026-07-22)
 
 
