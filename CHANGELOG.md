@@ -1,5 +1,14 @@
 # Changelog
 
+## [3.5.2](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.5.1...v3.5.2) (2026-07-22)
+
+
+### Bug Fixes
+
+* **mcp:** bind httpStream to loopback by default; report real host in banner ([24a4245](https://github.com/dcyfr-labs/dcyfr-ai/commit/24a4245d4f52afcd4a71cc818d4dc85dd368101a))
+* **mcp:** loopback-default httpStream bind + accurate host banner ([7db0378](https://github.com/dcyfr-labs/dcyfr-ai/commit/7db037845e942cec85878962359b3acc00d4947b))
+* **mcp:** sandbox design-tokens file reads to the project root ([#382](https://github.com/dcyfr-labs/dcyfr-ai/issues/382)) ([94275f8](https://github.com/dcyfr-labs/dcyfr-ai/commit/94275f8048c91d74d548903f6d6a22f4668cb0a3))
+
 ## [3.5.1](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.5.0...v3.5.1) (2026-07-21)
 
 
