@@ -24,10 +24,6 @@ import type {
 } from './token-provider.js';
 
 /**
- * Create Design Token MCP Server with a token provider
- * @param provider - TokenProvider implementation for design token access
- */
-/**
  * Resolve a caller-supplied path and confine it to the project root (cwd).
  *
  * The token-analysis tools (`tokens:checkCompliance`, `tokens:analyzeFile`)
@@ -51,6 +47,10 @@ export function resolveWithinRoot(filePath: string, root: string = process.cwd()
   return full;
 }
 
+/**
+ * Create Design Token MCP Server with a token provider
+ * @param provider - TokenProvider implementation for design token access
+ */
 export function createDesignTokenServer(provider: TokenProvider) {
   const server = new FastMCP({
     name: 'dcyfr-design-tokens',
