@@ -14,6 +14,12 @@ platform\.openai\.com
 # survive --max-retries 3 and would flake this hard gate). The page is valid;
 # we don't control its uptime.
 docs\.msty\.studio
+# 3rd-party npm download-stats chart. Its server-side chart rendering is slow
+# and persistently exceeds lychee's request timeout (observed as a client-side
+# TIMEOUT, which --accept cannot absorb -- lychee-action@v2's bundled lychee has
+# no --accept-timeouts). The page is a valid convenience link; we don't control
+# its uptime.
+npm-stat\.com
 # release-please-generated CHANGELOG compare links. The newest entry's
 # vN-1...vN URL 404s until the release tag is pushed (the release PR merges
 # before tagging), so every PR opened in that window reds this hard gate --
