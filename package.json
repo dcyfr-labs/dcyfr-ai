@@ -114,7 +114,7 @@
     "@supabase/supabase-js": "^2.49.1",
     "@upstash/redis": "^1.34.3",
     "axios": "1.18.1",
-    "better-sqlite3": "^12.8.0",
+    "better-sqlite3": "^13.0.1",
     "chalk": "^4.1.2",
     "cli-table3": "^0.6.5",
     "cloudflare": "^7.0.0",
