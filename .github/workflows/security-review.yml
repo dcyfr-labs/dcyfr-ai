@@ -11,10 +11,17 @@ on:
 
 jobs:
   review:
+    # Compile-time gate: bot-triggered runs (dependabot, release-please) abort
+    # while resolving this reusable call - before the called workflow's own
+    # dependabot skip can run - so the gate has to live here in the caller.
+    if: ${{ !endsWith(github.actor, '[bot]') }}
     permissions:
       contents: read
       pull-requests: write
     uses: dcyfr-labs/.github/.github/workflows/security-review-reusable.yml@e9003e1f11bd488cdce12b484c1f8c6ba0a828e3
     with:
       exclude-directories: 'node_modules, coverage, dist, docs, bin, config, examples, scripts'
-    secrets: inherit
+    # Explicit pass instead of `secrets: inherit`: inherit is the construct
+    # that fails to compile under restricted bot tokens.
+    secrets:
+      CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
