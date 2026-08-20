@@ -11,10 +11,19 @@ on:
 
 jobs:
   review:
+    # Skip bot PRs (dependabot, release-please): mechanical bumps do not need
+    # an LLM review pass; CodeQL/Semgrep/npm-audit still cover them.
+    if: ${{ !endsWith(github.actor, '[bot]') }}
     permissions:
       contents: read
       pull-requests: write
-    uses: dcyfr-labs/.github/.github/workflows/security-review-reusable.yml@e9003e1f11bd488cdce12b484c1f8c6ba0a828e3
+    # Pin must stay reachable from main in dcyfr-labs/.github: branch SHAs go
+    # dangling when the branch is deleted after a squash-merge, and Actions
+    # then fails the whole run at compile time ("workflow file issue", 0 jobs).
+    uses: dcyfr-labs/.github/.github/workflows/security-review-reusable.yml@925197c9b0cce5cafc4d777265611098879812c7
     with:
       exclude-directories: 'node_modules, coverage, dist, docs, bin, config, examples, scripts'
-    secrets: inherit
+    # The reusable workflow declares exactly one (optional) secret; pass it
+    # explicitly instead of inheriting everything.
+    secrets:
+      CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
