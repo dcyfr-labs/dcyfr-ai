@@ -1,5 +1,42 @@
 # Changelog
 
+## [3.5.4](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.5.3...v3.5.4) (2026-09-05)
+
+
+### Bug Fixes
+
+* **ci:** scope the weekly Semgrep sweep to Code so it stops OOMing ([5021eac](https://github.com/dcyfr-labs/dcyfr-ai/commit/5021eac82e699dc05e0ee1dc91e85ad8013d4545))
+* **ci:** scope the weekly Semgrep sweep to Code so it stops OOMing ([77163a5](https://github.com/dcyfr-labs/dcyfr-ai/commit/77163a59f697298b5f6d69471910036f0f51bf32))
+* **ci:** unblock bot PRs on security-review ([#413](https://github.com/dcyfr-labs/dcyfr-ai/issues/413)) ([cfad789](https://github.com/dcyfr-labs/dcyfr-ai/commit/cfad7898e53a634bafde5fe388f0e56629a1db24))
+* **deps:** clear all 17 open high Dependabot alerts ([9759a1e](https://github.com/dcyfr-labs/dcyfr-ai/commit/9759a1ea1671ef863a095616eb2b0b4ad98e0c9e))
+* **deps:** clear all 17 open high Dependabot alerts (lockfile bumps) ([a1eb387](https://github.com/dcyfr-labs/dcyfr-ai/commit/a1eb3874fd8dcb13180ca43ec0bcf5cabd4e4285))
+* **deps:** make the axios override track the direct dep ([56f4945](https://github.com/dcyfr-labs/dcyfr-ai/commit/56f4945ddcb1e531d440dffcdcde0a3bc1ad3ac8))
+* **deps:** make the axios override track the direct dep ([ea58eb6](https://github.com/dcyfr-labs/dcyfr-ai/commit/ea58eb60973bbd238dc9f2ab7cc4c8b5afc82004))
+* **deps:** patch fast-uri advisories in the lockfile ([#414](https://github.com/dcyfr-labs/dcyfr-ai/issues/414)) ([286bcb9](https://github.com/dcyfr-labs/dcyfr-ai/commit/286bcb92c77e40d65fabe2ad222d976a4e9cc2bf))
+* **deps:** patch fast-uri advisories in the nested example lockfile ([#418](https://github.com/dcyfr-labs/dcyfr-ai/issues/418)) ([1c09e4d](https://github.com/dcyfr-labs/dcyfr-ai/commit/1c09e4d9f86bc9db85c727a57b1a41a55c048b48))
+
+
+### Dependencies
+
+* Bump @anthropic-ai/sdk from 0.112.3 to 0.115.0 ([#390](https://github.com/dcyfr-labs/dcyfr-ai/issues/390)) ([64f1dec](https://github.com/dcyfr-labs/dcyfr-ai/commit/64f1dec22b678c5049fee4e51b8bb46f6311e5d4))
+* Bump @google/genai from 2.12.0 to 2.13.0 ([#388](https://github.com/dcyfr-labs/dcyfr-ai/issues/388)) ([cd2b543](https://github.com/dcyfr-labs/dcyfr-ai/commit/cd2b543917913fb6808807adbbbc7bd83d99b672))
+* Bump @google/genai from 2.13.0 to 2.15.0 ([#407](https://github.com/dcyfr-labs/dcyfr-ai/issues/407)) ([bbf4c02](https://github.com/dcyfr-labs/dcyfr-ai/commit/bbf4c023db4ee40a37d1d65c2208c7a1670d6f40))
+* bump @hono/node-server ([#398](https://github.com/dcyfr-labs/dcyfr-ai/issues/398)) ([7a586ea](https://github.com/dcyfr-labs/dcyfr-ai/commit/7a586ea303ec7ca4492ed83f2c4ddf0fb4246373))
+* Bump @langchain/core from 1.2.3 to 1.2.4 ([#404](https://github.com/dcyfr-labs/dcyfr-ai/issues/404)) ([3c2b8da](https://github.com/dcyfr-labs/dcyfr-ai/commit/3c2b8da9f34226b4165663c1058121c7629becce))
+* Bump @supabase/supabase-js from 2.110.7 to 2.110.8 ([#396](https://github.com/dcyfr-labs/dcyfr-ai/issues/396)) ([3a4d3b8](https://github.com/dcyfr-labs/dcyfr-ai/commit/3a4d3b89b8030f5b0331def46429cb5eec713ceb))
+* Bump @types/node from 26.1.1 to 26.1.2 ([#405](https://github.com/dcyfr-labs/dcyfr-ai/issues/405)) ([8250f42](https://github.com/dcyfr-labs/dcyfr-ai/commit/8250f42a7e66fd1af709365a4f3f7dfb1eaff760))
+* Bump axios from 1.18.1 to 1.19.0 ([#401](https://github.com/dcyfr-labs/dcyfr-ai/issues/401)) ([f5d2245](https://github.com/dcyfr-labs/dcyfr-ai/commit/f5d2245ce8224593b8bc6aae70aa849d1c5ced02))
+* bump better-sqlite3 from 12.11.1 to 13.0.3 ([#402](https://github.com/dcyfr-labs/dcyfr-ai/issues/402)) ([1a78396](https://github.com/dcyfr-labs/dcyfr-ai/commit/1a783966d4c9a8318ef5889b1b7fdf77736f85da))
+* Bump eslint from 10.7.0 to 10.8.0 ([#392](https://github.com/dcyfr-labs/dcyfr-ai/issues/392)) ([9dd9f41](https://github.com/dcyfr-labs/dcyfr-ai/commit/9dd9f413d7fc8768ea02633abeeab3eaac2be724))
+* Bump fastmcp from 4.12.0 to 4.12.1 ([#400](https://github.com/dcyfr-labs/dcyfr-ai/issues/400)) ([773ca0d](https://github.com/dcyfr-labs/dcyfr-ai/commit/773ca0d3515f7ce4d85b3e1a71046c010076e0fa))
+* Bump fastmcp from 4.7.2 to 4.12.0 ([#395](https://github.com/dcyfr-labs/dcyfr-ai/issues/395)) ([93ec0be](https://github.com/dcyfr-labs/dcyfr-ai/commit/93ec0be5952f34ce763d8aaa97b88342ff3c192e))
+* Bump globals from 17.7.0 to 17.8.0 ([#403](https://github.com/dcyfr-labs/dcyfr-ai/issues/403)) ([d803d4d](https://github.com/dcyfr-labs/dcyfr-ai/commit/d803d4dd901a293d00cf3777710111bd62a203e8))
+* Bump groq-sdk from 1.3.0 to 1.4.1 ([#406](https://github.com/dcyfr-labs/dcyfr-ai/issues/406)) ([52cc1ee](https://github.com/dcyfr-labs/dcyfr-ai/commit/52cc1ee116c38d7e17b2bdcacb6f0d34cb017106))
+* Bump mem0ai from 3.1.0 to 3.1.2 ([#394](https://github.com/dcyfr-labs/dcyfr-ai/issues/394)) ([aef6427](https://github.com/dcyfr-labs/dcyfr-ai/commit/aef6427d254f9849191501e56fb3952b7ae1dedc))
+* Bump openai from 6.48.0 to 6.49.0 ([#387](https://github.com/dcyfr-labs/dcyfr-ai/issues/387)) ([c1d75cd](https://github.com/dcyfr-labs/dcyfr-ai/commit/c1d75cd9fb9a7696448d5f7f8d86a8589deacd68))
+* Bump postcss in the npm_and_yarn group across 1 directory ([#397](https://github.com/dcyfr-labs/dcyfr-ai/issues/397)) ([7a559bf](https://github.com/dcyfr-labs/dcyfr-ai/commit/7a559bffd6115e906659811e2fab7be93e27337c))
+* Bump typescript-eslint from 8.64.0 to 8.65.0 ([#389](https://github.com/dcyfr-labs/dcyfr-ai/issues/389)) ([56ea9b4](https://github.com/dcyfr-labs/dcyfr-ai/commit/56ea9b454e72a1e2f11ab8c3420979b07e1c46cd))
+
 ## [3.5.3](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.5.2...v3.5.3) (2026-07-24)
 
 
