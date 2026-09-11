@@ -19,9 +19,21 @@
 # gate. So a caller records the commit it was reviewed against and nothing else.
 #
 # `npm run validate:docgen-bundle` refuses a file where the two disagree, where
-# either is neither a full SHA nor the GATE_RUNNER_SHA placeholder this carried
-# before the runner was published, or where gate-version drifts from the
-# committed bundle.
+# either is neither a full SHA nor the GATE_RUNNER_SHA placeholder, or where
+# gate-version drifts from the committed bundle.
+#
+# Moved from 0.1.0 at 9150f27e to 0.2.0 at 6bd0095c, which is dcyfr-labs/.github's
+# main head after dcyfr-labs/.github#9 published the rebuilt bundle. 0.2.0 refuses
+# an H4 markdownlint count that 0.1.0 returned: markdownlint-cli2 treats its
+# arguments as globs, and a path it resolves to nothing prints `Linting: 0 files`
+# with a well-formed zero summary and exits 0, which 0.1.0 recorded as a clean
+# page. So the two runners disagree about such a page on purpose, and this is the
+# commit that decides which answer this repository gets.
+#
+# Both pins passed through the GATE_RUNNER_SHA placeholder in #1027, because a
+# caller may not name a published SHA before one exists: leaving 9150f27e beside
+# gate-version 0.2.0 would have pinned a runner that fails its own version
+# assertion inside the job.
 
 name: docs-wiki-eval
 
@@ -52,8 +64,8 @@ jobs:
     # A pull request that touches a generated path but was not opened by Scribe
     # is still gated: the point is that the paths are generator-owned, not that
     # the author claimed to be the generator.
-    uses: dcyfr-labs/.github/.github/workflows/docs-wiki-eval-reusable.yml@9150f27e6c94280668acff4b543c1be791adc811
+    uses: dcyfr-labs/.github/.github/workflows/docs-wiki-eval-reusable.yml@6bd0095c7d41175adba40a582b6bb2490a6aad2e
     with:
-      gate-ref: 9150f27e6c94280668acff4b543c1be791adc811
-      gate-version: '0.1.0'
+      gate-ref: 6bd0095c7d41175adba40a582b6bb2490a6aad2e
+      gate-version: '0.2.0'
       base-sha: ${{ github.event.pull_request.base.sha || inputs.base-sha }}
