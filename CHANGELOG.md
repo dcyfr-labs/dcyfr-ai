@@ -1,5 +1,20 @@
 # Changelog
 
+## [3.5.5](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.5.4...v3.5.5) (2026-09-14)
+
+
+### Dependencies
+
+* bump @google/genai from 2.15.0 to 2.21.0 ([#428](https://github.com/dcyfr-labs/dcyfr-ai/issues/428)) ([da24a4c](https://github.com/dcyfr-labs/dcyfr-ai/commit/da24a4c6ab5839c42cabdc58bed4f7f401be29cf))
+* bump @qdrant/js-client-rest from 1.18.0 to 1.19.0 ([#430](https://github.com/dcyfr-labs/dcyfr-ai/issues/430)) ([5e55232](https://github.com/dcyfr-labs/dcyfr-ai/commit/5e55232e6bebd23213f92d411de7ae049d976052))
+* bump @upstash/redis from 1.38.0 to 1.38.3 ([#434](https://github.com/dcyfr-labs/dcyfr-ai/issues/434)) ([4642603](https://github.com/dcyfr-labs/dcyfr-ai/commit/464260346cf13b48bb5e23ed7b3ff89a5786dc5c))
+* bump axios from 1.19.0 to 1.20.0 ([#429](https://github.com/dcyfr-labs/dcyfr-ai/issues/429)) ([a5101d2](https://github.com/dcyfr-labs/dcyfr-ai/commit/a5101d2ba369abd73bb704091d286647cfe8e275))
+* bump fastmcp from 4.12.1 to 4.20.0 ([#431](https://github.com/dcyfr-labs/dcyfr-ai/issues/431)) ([98d3cbc](https://github.com/dcyfr-labs/dcyfr-ai/commit/98d3cbcf36a0406e0e707112f70d9e72bad7179b))
+* bump mem0ai from 3.1.2 to 3.1.8 ([#427](https://github.com/dcyfr-labs/dcyfr-ai/issues/427)) ([964d004](https://github.com/dcyfr-labs/dcyfr-ai/commit/964d0040cdb59f5d9e95389c5e93139a0206d201))
+* bump pg from 8.22.0 to 8.23.0 ([#426](https://github.com/dcyfr-labs/dcyfr-ai/issues/426)) ([adf98ef](https://github.com/dcyfr-labs/dcyfr-ai/commit/adf98ef5d7e6a3d9457eff0b3663eca6fac79fc0))
+* bump redis from 6.1.0 to 6.2.1 ([#425](https://github.com/dcyfr-labs/dcyfr-ai/issues/425)) ([2bbfd70](https://github.com/dcyfr-labs/dcyfr-ai/commit/2bbfd7036772566c2a881349733e25abb24ab91b))
+* bump the npm_and_yarn group across 1 directory with 3 updates ([#435](https://github.com/dcyfr-labs/dcyfr-ai/issues/435)) ([6a16d89](https://github.com/dcyfr-labs/dcyfr-ai/commit/6a16d8989ca8688190e09d955ed7e98467493282))
+
 ## [3.5.4](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.5.3...v3.5.4) (2026-09-05)
 
 
