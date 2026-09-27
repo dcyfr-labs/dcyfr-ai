@@ -27,8 +27,10 @@
 # disagrees with 0.3.0 in H1 alone: a bare climb with a trailing slash (`../../`,
 # a link to a parent directory) no longer lands on the empty path, which the deny
 # predicate calls restricted (#1113). A restricted file behind a climb
-# (`../.env.production`) still fails. Of dcyfr-ai's 48 docs pages, the one this
-# changes is docs/guides/PLUGIN_DEVELOPMENT_GUIDE.md, which 0.3.0 failed.
+# (`../.env.production`) still fails. No gate run has recorded that finding: this
+# job reads docs/wiki/*.md, and dcyfr-ai has none yet. A direct probe of its
+# hand-written docs found the one link it would have hit, the `../../` in
+# docs/guides/PLUGIN_DEVELOPMENT_GUIDE.md, which no gate reads.
 #
 # 0.3.0 (bbb9fcc8) moved H3 to mermaid 12.0.0 and stopped H1 failing a page over
 # an ordinary relative link (`../README.md`) while still judging where the `..`
