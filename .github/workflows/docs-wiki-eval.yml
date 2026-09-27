@@ -22,20 +22,23 @@
 # either is neither a full SHA nor the GATE_RUNNER_SHA placeholder, or where
 # gate-version drifts from the committed bundle.
 #
-# Moved from 0.2.0 at 6bd0095c to 0.3.0 at bbb9fcc8, which is dcyfr-labs/.github's
-# main head after dcyfr-labs/.github#10 published the rebuilt bundle. 0.3.0 can
-# disagree with 0.2.0 about a page in two places. H3 parses with mermaid 12.0.0
-# rather than 11.17.2, which gave the same verdict on every tracked fence. H1 no
-# longer fails a page over an ordinary relative link (`../README.md`), and still
-# fails one naming a restricted file behind a climb
-# (`../.env.production`), because it judges where the `..` lands (#1046, as
-# corrected by #1107). This is the commit that decides which answer this
-# repository gets.
+# Moved from 0.3.0 at bbb9fcc8 to 0.3.1 at f276a268, which is dcyfr-labs/.github's
+# main head after dcyfr-labs/.github#11 published the rebuilt bundle. 0.3.1
+# disagrees with 0.3.0 in H1 alone: a bare climb with a trailing slash (`../../`,
+# a link to a parent directory) no longer lands on the empty path, which the deny
+# predicate calls restricted (#1113). A restricted file behind a climb
+# (`../.env.production`) still fails. Of dcyfr-ai's 48 docs pages, the one this
+# changes is docs/guides/PLUGIN_DEVELOPMENT_GUIDE.md, which 0.3.0 failed.
 #
-# Each earlier version passed through the GATE_RUNNER_SHA placeholder first (#1027
-# for 0.2.0, #1104 for 0.3.0), because a caller may not name a published SHA
-# before one exists: an old SHA beside a new gate-version pins a runner that fails
-# its own version assertion inside the job. Before 0.2.0 it was 0.1.0 at 9150f27e.
+# 0.3.0 (bbb9fcc8) moved H3 to mermaid 12.0.0 and stopped H1 failing a page over
+# an ordinary relative link (`../README.md`) while still judging where the `..`
+# lands (#1046, as corrected by #1107).
+#
+# Each version passes through the GATE_RUNNER_SHA placeholder first (#1027
+# for 0.2.0, #1104 for 0.3.0, #1113 for 0.3.1), because a caller may not name a
+# published SHA before one exists: an old SHA beside a new gate-version pins a
+# runner that fails its own version assertion inside the job. Before 0.3.0 it was
+# 0.2.0 at 6bd0095c, and before that 0.1.0 at 9150f27e.
 
 name: docs-wiki-eval
 
@@ -66,8 +69,8 @@ jobs:
     # A pull request that touches a generated path but was not opened by Scribe
     # is still gated: the point is that the paths are generator-owned, not that
     # the author claimed to be the generator.
-    uses: dcyfr-labs/.github/.github/workflows/docs-wiki-eval-reusable.yml@bbb9fcc80a9b5c4edb5860a1495782880db61480
+    uses: dcyfr-labs/.github/.github/workflows/docs-wiki-eval-reusable.yml@f276a26822bfce07d2f8335d50253083edf8edcc
     with:
-      gate-ref: bbb9fcc80a9b5c4edb5860a1495782880db61480
-      gate-version: '0.3.0'
+      gate-ref: f276a26822bfce07d2f8335d50253083edf8edcc
+      gate-version: '0.3.1'
       base-sha: ${{ github.event.pull_request.base.sha || inputs.base-sha }}
