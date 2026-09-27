@@ -20,6 +20,10 @@ import { homedir } from 'os';
 import { ProviderRegistry } from '../../core/provider-registry.js';
 import type { ProviderType } from '../../types/index.js';
 
+/** Leading characters a spreadsheet may read as the start of a formula; see escapeCsvField. */
+const FORMULA_SIGILS = new Set(['=', '+', '-', '@', '\t', '\r']);
+const NUMERIC_LITERAL = /^[+-]?(\d+\.?\d*|\.\d+)(e[+-]?\d+)?$/i;
+
 /**
  * Minimal structural view of the better-sqlite3 surface this CLI uses.
  * Declared locally so the (native) module stays lazily imported — the
@@ -524,16 +528,23 @@ export class TelemetryDashboard {
   }
 
   /**
-   * Escape CSV field (handle commas, quotes, newlines)
+   * Escape a CSV field: neutralize a leading formula sigil, then quote per
+   * RFC4180 (commas, quotes, CR/LF).
+   *
+   * A cell whose first character is =, +, -, @, TAB or CR runs as a formula
+   * when the export is opened in Excel or Sheets (CWE-1236), and a telemetry
+   * description is free text. Prefixing `'` makes the spreadsheet read it as
+   * text; a bare number such as -5 is left alone.
    */
   private escapeCsvField(field: string | null | undefined): string {
     if (!field) {
       return '';
     }
-    if (field.includes(',') || field.includes('"') || field.includes('\n')) {
-      return `"${field.replace(/"/g, '""')}"`;
+    const s = FORMULA_SIGILS.has(field[0]) && !NUMERIC_LITERAL.test(field) ? `'${field}` : field;
+    if (/[",\r\n]/.test(s)) {
+      return `"${s.replace(/"/g, '""')}"`;
     }
-    return field;
+    return s;
   }
 
   /**
