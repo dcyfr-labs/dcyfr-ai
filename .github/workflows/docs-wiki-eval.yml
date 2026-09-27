@@ -22,18 +22,20 @@
 # either is neither a full SHA nor the GATE_RUNNER_SHA placeholder, or where
 # gate-version drifts from the committed bundle.
 #
-# Moved from 0.1.0 at 9150f27e to 0.2.0 at 6bd0095c, which is dcyfr-labs/.github's
-# main head after dcyfr-labs/.github#9 published the rebuilt bundle. 0.2.0 refuses
-# an H4 markdownlint count that 0.1.0 returned: markdownlint-cli2 treats its
-# arguments as globs, and a path it resolves to nothing prints `Linting: 0 files`
-# with a well-formed zero summary and exits 0, which 0.1.0 recorded as a clean
-# page. So the two runners disagree about such a page on purpose, and this is the
-# commit that decides which answer this repository gets.
+# Moved from 0.2.0 at 6bd0095c to 0.3.0 at bbb9fcc8, which is dcyfr-labs/.github's
+# main head after dcyfr-labs/.github#10 published the rebuilt bundle. 0.3.0 can
+# disagree with 0.2.0 about a page in two places. H3 parses with mermaid 12.0.0
+# rather than 11.17.2, which gave the same verdict on every tracked fence. H1 no
+# longer fails a page over an ordinary relative link (`../README.md`), and still
+# fails one naming a restricted file behind a climb
+# (`../.env.production`), because it judges where the `..` lands (#1046, as
+# corrected by #1107). This is the commit that decides which answer this
+# repository gets.
 #
-# Both pins passed through the GATE_RUNNER_SHA placeholder in #1027, because a
-# caller may not name a published SHA before one exists: leaving 9150f27e beside
-# gate-version 0.2.0 would have pinned a runner that fails its own version
-# assertion inside the job.
+# Each earlier version passed through the GATE_RUNNER_SHA placeholder first (#1027
+# for 0.2.0, #1104 for 0.3.0), because a caller may not name a published SHA
+# before one exists: an old SHA beside a new gate-version pins a runner that fails
+# its own version assertion inside the job. Before 0.2.0 it was 0.1.0 at 9150f27e.
 
 name: docs-wiki-eval
 
@@ -64,8 +66,8 @@ jobs:
     # A pull request that touches a generated path but was not opened by Scribe
     # is still gated: the point is that the paths are generator-owned, not that
     # the author claimed to be the generator.
-    uses: dcyfr-labs/.github/.github/workflows/docs-wiki-eval-reusable.yml@6bd0095c7d41175adba40a582b6bb2490a6aad2e
+    uses: dcyfr-labs/.github/.github/workflows/docs-wiki-eval-reusable.yml@bbb9fcc80a9b5c4edb5860a1495782880db61480
     with:
-      gate-ref: 6bd0095c7d41175adba40a582b6bb2490a6aad2e
-      gate-version: '0.2.0'
+      gate-ref: bbb9fcc80a9b5c4edb5860a1495782880db61480
+      gate-version: '0.3.0'
       base-sha: ${{ github.event.pull_request.base.sha || inputs.base-sha }}
