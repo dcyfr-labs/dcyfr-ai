@@ -5,9 +5,23 @@ name: Claude Code Security Review
 # version, model, or shared config THERE, not here; only this repo's
 # exclude-directories differs. security-assessment 2026-08-15 (M5 durable fix).
 
+# Trigger scope mirrors dcyfr/rei-workspace security-review.yml (2026-08-15,
+# after the DCYFR Labs org hit its $100/mo Anthropic cap; see that file's header
+# for the full cost breakdown). Propagated here 2026-09-28.
+#   - `synchronize` dropped: each push re-paid the full prompt-cache write
+#     against a 5m TTL, banking almost no reuse. Open/reopen still reviews every
+#     PR at least once; later pushes to an open PR are NOT re-reviewed.
+#   - `paths-ignore`: prose/spec/log-only PRs have no attack surface. GitHub
+#     skips only when EVERY changed file matches, so mixed PRs still run.
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [opened, reopened]
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - 'openspec/**'
+      - 'logs/**'
+      - 'usr/agents/**/kb/**'
 
 jobs:
   review:
