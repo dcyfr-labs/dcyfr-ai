@@ -134,7 +134,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@types/better-sqlite3": "^7.6.12",
+    "@types/better-sqlite3": "^9.6.0",
     "@types/glob": "^9.0.0",
     "@types/node": "^26.0.1",
     "@vitest/coverage-v8": "^5.0.0",
