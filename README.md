@@ -27,7 +27,7 @@ Portable AI agent harness with plugin architecture for managing multiple AI prov
 
 `@dcyfr/ai` is maintained by **DCYFR Labs** as part of the DCYFR AI tooling portfolio.
 
-- **DCYFR** is a registered trademark of DCYFR Labs.
+- **DCYFR** is a trademark of DCYFR Labs.
 - Primary domain: [www.dcyfr.ai](https://www.dcyfr.ai)
 - Licensing details: [LICENSE](./LICENSE)
 - Peerlist project: [peerlist.io/dcyfr/project/dcyfr-ai](https://peerlist.io/dcyfr/project/dcyfr-ai)
