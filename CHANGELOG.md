@@ -1,5 +1,59 @@
 # Changelog
 
+## [3.6.0](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.5.4...v3.6.0) (2026-10-10)
+
+
+### Features
+
+* **cli:** add version command and --version/-v flags ([#464](https://github.com/dcyfr-labs/dcyfr-ai/issues/464)) ([25e4583](https://github.com/dcyfr-labs/dcyfr-ai/commit/25e45836f494b8f87ca2ab0004e65b735170e8de))
+
+
+### Bug Fixes
+
+* **deps:** bump brace-expansion, fast-uri and hono to clear open alerts ([#480](https://github.com/dcyfr-labs/dcyfr-ai/issues/480)) ([1241264](https://github.com/dcyfr-labs/dcyfr-ai/commit/1241264d0d68fceac0257a4bc588e8c5196de11d))
+* **deps:** bump js-yaml to 4.3.2 (GHSA-2883-xcg3-v3hh) ([#466](https://github.com/dcyfr-labs/dcyfr-ai/issues/466)) ([e2e4965](https://github.com/dcyfr-labs/dcyfr-ai/commit/e2e4965d04aeababb275a64cf5682ad68e26456d))
+* **license:** let GitHub detect MIT ([#482](https://github.com/dcyfr-labs/dcyfr-ai/issues/482)) ([16caef4](https://github.com/dcyfr-labs/dcyfr-ai/commit/16caef425133b44009ebb6bf1559192e7aabb14e))
+* **security:** neutralize CSV formula sigils in telemetry export (CWE-1236) ([#463](https://github.com/dcyfr-labs/dcyfr-ai/issues/463)) ([afcfabf](https://github.com/dcyfr-labs/dcyfr-ai/commit/afcfabfb7b5d9a5aaa42f7a2845d56ed03f781a8))
+
+
+### Dependencies
+
+* bump @azure/identity from 4.13.1 to 4.13.2 ([#443](https://github.com/dcyfr-labs/dcyfr-ai/issues/443)) ([5091d6f](https://github.com/dcyfr-labs/dcyfr-ai/commit/5091d6f67471365d9d44caa4d4c193c12e396448))
+* bump @azure/identity from 4.13.2 to 4.13.3 ([#467](https://github.com/dcyfr-labs/dcyfr-ai/issues/467)) ([bfca783](https://github.com/dcyfr-labs/dcyfr-ai/commit/bfca783979d3056611f467fff657ffe5e65d2509))
+* bump @google/genai from 2.15.0 to 2.21.0 ([#428](https://github.com/dcyfr-labs/dcyfr-ai/issues/428)) ([da24a4c](https://github.com/dcyfr-labs/dcyfr-ai/commit/da24a4c6ab5839c42cabdc58bed4f7f401be29cf))
+* bump @google/genai from 2.21.0 to 2.22.0 ([#446](https://github.com/dcyfr-labs/dcyfr-ai/issues/446)) ([4d1a8f0](https://github.com/dcyfr-labs/dcyfr-ai/commit/4d1a8f08960ae2fd5e9673f918cb99b400c36c80))
+* bump @google/genai from 2.22.0 to 2.23.0 ([#457](https://github.com/dcyfr-labs/dcyfr-ai/issues/457)) ([43458e5](https://github.com/dcyfr-labs/dcyfr-ai/commit/43458e5c510b16c33010e9f349adbbb8034997ba))
+* bump @google/genai from 2.23.0 to 2.24.0 ([#468](https://github.com/dcyfr-labs/dcyfr-ai/issues/468)) ([b7875e7](https://github.com/dcyfr-labs/dcyfr-ai/commit/b7875e7b4c2c8db1e6307c385b25ab7b3a38abdc))
+* bump @qdrant/js-client-rest from 1.18.0 to 1.19.0 ([#430](https://github.com/dcyfr-labs/dcyfr-ai/issues/430)) ([5e55232](https://github.com/dcyfr-labs/dcyfr-ai/commit/5e55232e6bebd23213f92d411de7ae049d976052))
+* bump @supabase/supabase-js from 2.110.8 to 2.116.0 ([#450](https://github.com/dcyfr-labs/dcyfr-ai/issues/450)) ([c250efd](https://github.com/dcyfr-labs/dcyfr-ai/commit/c250efdc93577145a800e269015de749ab11b24a))
+* bump @supabase/supabase-js from 2.116.0 to 2.117.1 ([#471](https://github.com/dcyfr-labs/dcyfr-ai/issues/471)) ([ad6ba49](https://github.com/dcyfr-labs/dcyfr-ai/commit/ad6ba4937055ed4199deb68537987317c1e1ea0f))
+* bump @types/better-sqlite3 from 7.6.13 to 9.6.0 ([#444](https://github.com/dcyfr-labs/dcyfr-ai/issues/444)) ([f89046a](https://github.com/dcyfr-labs/dcyfr-ai/commit/f89046ade89d38392dc9f8dd90ff29630e5fab91))
+* bump @types/node from 26.1.2 to 26.6.2 ([#473](https://github.com/dcyfr-labs/dcyfr-ai/issues/473)) ([e5e59f9](https://github.com/dcyfr-labs/dcyfr-ai/commit/e5e59f9781f7722190b1924d4c7ffc30458af052))
+* bump @upstash/redis from 1.38.0 to 1.38.3 ([#434](https://github.com/dcyfr-labs/dcyfr-ai/issues/434)) ([4642603](https://github.com/dcyfr-labs/dcyfr-ai/commit/464260346cf13b48bb5e23ed7b3ff89a5786dc5c))
+* bump @upstash/redis from 1.38.3 to 1.38.4 ([#452](https://github.com/dcyfr-labs/dcyfr-ai/issues/452)) ([a0bb2bd](https://github.com/dcyfr-labs/dcyfr-ai/commit/a0bb2bdbfadf79214a263bb428ce92d31cea039c))
+* bump @vitest/coverage-v8 from 5.0.0 to 5.0.1 ([#454](https://github.com/dcyfr-labs/dcyfr-ai/issues/454)) ([6e18d8f](https://github.com/dcyfr-labs/dcyfr-ai/commit/6e18d8f72ac45b6730e75e0965fc73f661d05129))
+* bump axios from 1.19.0 to 1.20.0 ([#429](https://github.com/dcyfr-labs/dcyfr-ai/issues/429)) ([a5101d2](https://github.com/dcyfr-labs/dcyfr-ai/commit/a5101d2ba369abd73bb704091d286647cfe8e275))
+* bump cloudflare from 7.0.0 to 7.1.0 ([#449](https://github.com/dcyfr-labs/dcyfr-ai/issues/449)) ([60279cc](https://github.com/dcyfr-labs/dcyfr-ai/commit/60279ccff49f3793a97e5e1536a37647ef40018a))
+* bump eslint from 10.10.0 to 10.11.0 ([#470](https://github.com/dcyfr-labs/dcyfr-ai/issues/470)) ([f3e536f](https://github.com/dcyfr-labs/dcyfr-ai/commit/f3e536ffe44b914ce7be634bde9daaefc974e0dd))
+* bump eslint from 10.8.0 to 10.10.0 ([#440](https://github.com/dcyfr-labs/dcyfr-ai/issues/440)) ([b7ebbc5](https://github.com/dcyfr-labs/dcyfr-ai/commit/b7ebbc51593a883911a318ab3d12d25c8d393135))
+* bump fastmcp from 4.12.1 to 4.20.0 ([#431](https://github.com/dcyfr-labs/dcyfr-ai/issues/431)) ([98d3cbc](https://github.com/dcyfr-labs/dcyfr-ai/commit/98d3cbcf36a0406e0e707112f70d9e72bad7179b))
+* bump fastmcp from 4.20.0 to 4.20.10 ([#442](https://github.com/dcyfr-labs/dcyfr-ai/issues/442)) ([bba6594](https://github.com/dcyfr-labs/dcyfr-ai/commit/bba6594b8011afd8f29fcce259425cab2b720eb2))
+* bump fastmcp from 4.20.10 to 4.20.14 ([#455](https://github.com/dcyfr-labs/dcyfr-ai/issues/455)) ([01ce679](https://github.com/dcyfr-labs/dcyfr-ai/commit/01ce679adb1272b16ee8175cc6fde6f45603a103))
+* bump globals from 17.8.0 to 17.12.0 ([#453](https://github.com/dcyfr-labs/dcyfr-ai/issues/453)) ([9a8174e](https://github.com/dcyfr-labs/dcyfr-ai/commit/9a8174ee28230e90faea603e37343932feb2ac6e))
+* bump groq-sdk from 1.4.1 to 1.6.0 ([#448](https://github.com/dcyfr-labs/dcyfr-ai/issues/448)) ([b3a0451](https://github.com/dcyfr-labs/dcyfr-ai/commit/b3a0451fa60fa2e7bcd03263853231e8b11dbd80))
+* bump inquirer from 14.0.2 to 14.2.2 ([#474](https://github.com/dcyfr-labs/dcyfr-ai/issues/474)) ([8eead79](https://github.com/dcyfr-labs/dcyfr-ai/commit/8eead79219e6d614b988a0ea7681b944139b88e2))
+* bump mem0ai from 3.1.2 to 3.1.8 ([#427](https://github.com/dcyfr-labs/dcyfr-ai/issues/427)) ([964d004](https://github.com/dcyfr-labs/dcyfr-ai/commit/964d0040cdb59f5d9e95389c5e93139a0206d201))
+* bump mem0ai from 3.1.8 to 3.3.0 ([#472](https://github.com/dcyfr-labs/dcyfr-ai/issues/472)) ([c59f876](https://github.com/dcyfr-labs/dcyfr-ai/commit/c59f8766650540b49f5fdbdc0df8abc1a283dad5))
+* bump pg from 8.22.0 to 8.23.0 ([#426](https://github.com/dcyfr-labs/dcyfr-ai/issues/426)) ([adf98ef](https://github.com/dcyfr-labs/dcyfr-ai/commit/adf98ef5d7e6a3d9457eff0b3663eca6fac79fc0))
+* bump redis from 6.1.0 to 6.2.1 ([#425](https://github.com/dcyfr-labs/dcyfr-ai/issues/425)) ([2bbfd70](https://github.com/dcyfr-labs/dcyfr-ai/commit/2bbfd7036772566c2a881349733e25abb24ab91b))
+* bump the npm_and_yarn group across 1 directory with 2 updates ([#477](https://github.com/dcyfr-labs/dcyfr-ai/issues/477)) ([efdce5f](https://github.com/dcyfr-labs/dcyfr-ai/commit/efdce5f6f9f2307fa7413a23b1559ce95eebcec4))
+* bump the npm_and_yarn group across 1 directory with 3 updates ([#435](https://github.com/dcyfr-labs/dcyfr-ai/issues/435)) ([6a16d89](https://github.com/dcyfr-labs/dcyfr-ai/commit/6a16d8989ca8688190e09d955ed7e98467493282))
+* bump typescript-eslint from 8.65.0 to 8.70.0 ([#456](https://github.com/dcyfr-labs/dcyfr-ai/issues/456)) ([342ad1c](https://github.com/dcyfr-labs/dcyfr-ai/commit/342ad1ceb51b46be5464b8940aa3641403139ae9))
+* bump vite from 8.2.2 to 8.3.0 ([#445](https://github.com/dcyfr-labs/dcyfr-ai/issues/445)) ([33d70a9](https://github.com/dcyfr-labs/dcyfr-ai/commit/33d70a9ebe7466b532cb67bbf4746b3a137a9cc2))
+* bump vitest from 5.0.0 to 5.0.1 ([#458](https://github.com/dcyfr-labs/dcyfr-ai/issues/458)) ([7b3c93a](https://github.com/dcyfr-labs/dcyfr-ai/commit/7b3c93aad4541b19f302df4f6cf84bfab7a74e60))
+* bump zod from 4.4.3 to 4.6.2 ([#447](https://github.com/dcyfr-labs/dcyfr-ai/issues/447)) ([aa08587](https://github.com/dcyfr-labs/dcyfr-ai/commit/aa08587f7b70a817cc8ce0f6e50b7553560e093d))
+* bump zod from 4.6.2 to 4.6.5 ([#469](https://github.com/dcyfr-labs/dcyfr-ai/issues/469)) ([2b903c7](https://github.com/dcyfr-labs/dcyfr-ai/commit/2b903c7e0e0cae4d3ae750fe656984241e92aea4))
+
 ## [3.5.4](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.5.3...v3.5.4) (2026-09-05)
 
 
