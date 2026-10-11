@@ -219,7 +219,7 @@ npm run version:major
 
 ```json
 {
-  "changelog": ["@changesets/changelog-github", { "repo": "dcyfr/dcyfr-ai" }],
+  "changelog": ["@changesets/changelog-github", { "repo": "dcyfr-labs/dcyfr-ai" }],
   "access": "public",
   "baseBranch": "main"
 }

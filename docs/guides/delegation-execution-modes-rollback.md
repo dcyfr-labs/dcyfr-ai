@@ -78,7 +78,7 @@ version in their `package.json`:
 ```json
 {
   "dependencies": {
-    "@dcyfr/ai": "github:dcyfr/dcyfr-ai#v1.4.0-pre-breaking-changes"
+    "@dcyfr/ai": "github:dcyfr-labs/dcyfr-ai#v1.4.0-pre-breaking-changes"
   }
 }
 ```
