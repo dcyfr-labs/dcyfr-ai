@@ -27,40 +27,10 @@ Portable AI agent harness with plugin architecture for managing multiple AI prov
 
 `@dcyfr/ai` is maintained by **DCYFR Labs** as part of the DCYFR AI tooling portfolio.
 
-- **DCYFR** is a registered trademark of DCYFR Labs.
+- **DCYFR** is a trademark of Drew Gowan.
 - Primary domain: [www.dcyfr.ai](https://www.dcyfr.ai)
 - Licensing details: [LICENSE](./LICENSE)
 - Peerlist project: [peerlist.io/dcyfr/project/dcyfr-ai](https://peerlist.io/dcyfr/project/dcyfr-ai)
-
-## 🔍 @dcyfr/ai vs. Alternatives
-
-| Feature        | @dcyfr/ai                      | LangChain  | Vercel AI SDK | AutoGPT |
-| -------------- | ------------------------------ | ---------- | ------------- | ------- |
-| Multi-Provider | ✅                             | ✅         | ✅            | ❌      |
-| Plugin System  | ✅ Custom                      | ✅ Complex | ❌            | ❌      |
-| Telemetry      | ✅ Built-in                    | ❌         | ❌            | ❌      |
-| Zero Config    | ✅                             | ❌         | ✅            | ❌      |
-| Bundle Size    | [![Bundle size](https://img.shields.io/bundlephobia/minzip/@dcyfr/ai)](https://bundlephobia.com/package/@dcyfr/ai) | ~2.3MB     | ~450KB        | N/A     |
-| TypeScript     | ✅ Strict                      | Partial    | ✅            | ❌      |
-| Quality Gates  | ✅                             | ❌         | ❌            | ❌      |
-| Config System  | YAML/JSON/package              | Code-only  | Code-only     | JSON    |
-| Learning Curve | Low                            | High       | Low           | High    |
-
----
-
-## 📊 npm Statistics
-
-[![npm](https://img.shields.io/npm/v/@dcyfr/ai?logo=npm&logoColor=white)](https://www.npmjs.com/package/@dcyfr/ai)
-[![Downloads](https://img.shields.io/npm/dm/@dcyfr/ai?logo=npm&logoColor=white)](https://www.npmjs.com/package/@dcyfr/ai)
-[![Bundle Size](https://img.shields.io/bundlephobia/minzip/@dcyfr/ai?logo=webpack)](https://bundlephobia.com/package/@dcyfr/ai)
-
-- **Weekly Downloads:** Check [npm stats](https://www.npmjs.com/package/@dcyfr/ai)
-- **Dependencies:** 27 production dependencies
-- **Bundle Size:** See badge above ([![minzip](https://img.shields.io/bundlephobia/minzip/@dcyfr/ai)](https://bundlephobia.com/package/@dcyfr/ai))
-- **TypeScript:** Full type definitions included
-- **ESM Support:** ✅ Full ESM modules with tree shaking
-
----
 
 ## Table of Contents
 
@@ -939,12 +909,6 @@ A: Yes! @dcyfr/ai is used in production at dcyfr-labs and other projects. It has
 - **Cache config loading** (use singleton pattern): Load once, reuse across app
 - **Batch telemetry writes** (reduce I/O overhead): Buffer writes, flush periodically
 - **Lazy load plugins** (faster startup): Only load plugins you need for current validation
-
-### Comparison with Alternatives
-
-- **vs. Custom Scripts:** 10-20x faster due to optimized plugin execution
-- **vs. Serial Validation:** 2-5x faster with parallel execution mode
-- **vs. LangChain:** Smaller bundle footprint ([bundlephobia](https://bundlephobia.com/package/@dcyfr/ai))
 
 [⬆️ Back to top](#dcyfr-ai)
 

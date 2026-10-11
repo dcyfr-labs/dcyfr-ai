@@ -185,7 +185,7 @@ git push origin v1.0.0
 ```
 
 ### 4. Create GitHub Release
-- Go to https://github.com/dcyfr/dcyfr-ai/releases
+- Go to https://github.com/dcyfr-labs/dcyfr-ai/releases
 - Create new release from v1.0.0 tag
 - Copy CHANGELOG.md content
 - Publish release
@@ -289,7 +289,7 @@ Built with ❤️ by DCYFR Labs as part of the DCYFR modularization initiative t
 **Status:** 🚀 READY FOR LAUNCH  
 **Version:** 1.0.0  
 **License:** MIT  
-**Repository:** https://github.com/dcyfr/dcyfr-ai  
+**Repository:** https://github.com/dcyfr-labs/dcyfr-ai  
 **NPM:** https://www.npmjs.com/package/@dcyfr/ai (pending publish)
 
 **Next Command:** `npm publish`

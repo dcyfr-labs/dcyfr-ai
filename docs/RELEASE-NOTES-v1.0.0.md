@@ -152,10 +152,10 @@ MIT © DCYFR Labs
 ## 🔗 Links
 
 - **npm:** https://www.npmjs.com/package/@dcyfr/ai
-- **GitHub:** https://github.com/dcyfr/dcyfr-ai
+- **GitHub:** https://github.com/dcyfr-labs/dcyfr-ai
 - **Documentation:** [docs/](./)
 - **Examples:** [examples/](../examples/)
-- **Issues:** https://github.com/dcyfr/dcyfr-ai/issues
+- **Issues:** https://github.com/dcyfr-labs/dcyfr-ai/issues
 
 ## 🙏 Acknowledgments
 
@@ -163,4 +163,4 @@ Built with ❤️ by DCYFR Labs as part of the DCYFR modularization initiative t
 
 ---
 
-**Full Changelog:** https://github.com/dcyfr/dcyfr-ai/blob/main/CHANGELOG.md
+**Full Changelog:** https://github.com/dcyfr-labs/dcyfr-ai/blob/main/CHANGELOG.md

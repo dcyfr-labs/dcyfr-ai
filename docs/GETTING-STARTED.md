@@ -585,7 +585,7 @@ npx dcyfr-ai config:schema
 ## Support
 
 - 📚 [Documentation](../README.md)
-- 💬 [GitHub Issues](https://github.com/dcyfr/dcyfr-ai/issues)
+- 💬 [GitHub Issues](https://github.com/dcyfr-labs/dcyfr-ai/issues)
 - 🔗 [Examples](../examples/)
 
 ## License

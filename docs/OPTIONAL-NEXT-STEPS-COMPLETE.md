@@ -77,14 +77,14 @@ Status: ✅ PASS
 
 #### 1. Create GitHub Releases
 **dcyfr-ai Release:**
-- URL: https://github.com/dcyfr/dcyfr-ai/releases/new
+- URL: https://github.com/dcyfr-labs/dcyfr-ai/releases/new
 - Tag: v1.0.0 (already created)
 - Title: `v1.0.0 - Initial Public Release`
 - Description: Copy from CHANGELOG.md
 - Attach: Optional tarball
 
 **dcyfr-ai-agents Release:**
-- URL: https://github.com/dcyfr/dcyfr-ai-agents/releases/new
+- URL: https://github.com/dcyfr-labs/dcyfr-ai-agents/releases/new
 - Tag: v1.0.0 (already created)
 - Title: `v1.0.0 - Specialized DCYFR Validators`
 - Description: List the 4 validators
@@ -103,7 +103,7 @@ Status: ✅ PASS
 npm install @dcyfr/ai
 
 📦 https://www.npmjs.com/package/@dcyfr/ai
-🐙 https://github.com/dcyfr/dcyfr-ai
+🐙 https://github.com/dcyfr-labs/dcyfr-ai
 
 #TypeScript #AI #OpenSource #npm
 ```
@@ -123,7 +123,7 @@ npm install @dcyfr/ai
 
 **Submission Format:**
 ```markdown
-- [@dcyfr/ai](https://github.com/dcyfr/dcyfr-ai) - Portable AI agent framework with plugin architecture for multi-provider integration, telemetry tracking, and quality validation.
+- [@dcyfr/ai](https://github.com/dcyfr-labs/dcyfr-ai) - Portable AI agent framework with plugin architecture for multi-provider integration, telemetry tracking, and quality validation.
 ```
 
 ### Week 1 Actions
@@ -136,7 +136,7 @@ npm install @dcyfr/ai
 
 **Tracking URLs:**
 - npm stats: https://npm-stat.com/charts.html?package=@dcyfr/ai
-- GitHub insights: https://github.com/dcyfr/dcyfr-ai/pulse
+- GitHub insights: https://github.com/dcyfr-labs/dcyfr-ai/pulse
 
 #### 5. Create Tutorial Content
 **Blog Post Ideas:**
@@ -222,9 +222,9 @@ npx dcyfr-ai plugin:create --name my-validator
 
 ### Quick Links
 - 📦 npm: https://www.npmjs.com/package/@dcyfr/ai
-- 🐙 GitHub: https://github.com/dcyfr/dcyfr-ai
-- 📚 Docs: https://github.com/dcyfr/dcyfr-ai/blob/main/docs/GETTING-STARTED.md
-- 🔌 Plugins: https://github.com/dcyfr/dcyfr-ai/blob/main/docs/PLUGINS.md
+- 🐙 GitHub: https://github.com/dcyfr-labs/dcyfr-ai
+- 📚 Docs: https://github.com/dcyfr-labs/dcyfr-ai/blob/main/docs/GETTING-STARTED.md
+- 🔌 Plugins: https://github.com/dcyfr-labs/dcyfr-ai/blob/main/docs/PLUGINS.md
 
 ## Next Phase: Community Growth
 

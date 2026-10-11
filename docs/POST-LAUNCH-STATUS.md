@@ -40,8 +40,8 @@ git push origin v1.0.0
 ```
 
 **Then: Create GitHub Releases**
-- dcyfr-ai: https://github.com/dcyfr/dcyfr-ai/releases/new
-- dcyfr-ai-agents: https://github.com/dcyfr/dcyfr-ai-agents/releases/new
+- dcyfr-ai: https://github.com/dcyfr-labs/dcyfr-ai/releases/new
+- dcyfr-ai-agents: https://github.com/dcyfr-labs/dcyfr-ai-agents/releases/new
 
 ### 📊 Package Metrics
 
