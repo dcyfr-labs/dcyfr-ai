@@ -987,7 +987,7 @@ Development is supported through sponsorship — if @dcyfr/ai is useful to you o
 
 ### Trademark
 
-"DCYFR" is a trademark of DCYFR Labs.
+"DCYFR" is a trademark of Drew Gowan.
 
 ---
 
