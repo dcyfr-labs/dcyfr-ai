@@ -133,6 +133,8 @@ const report = await framework.validate({
 console.log(`Validation: ${report.valid ? "PASS" : "FAIL"}`);
 ```
 
+Each gate runs the plugins named in its `plugins` list, which you load with `framework.loadPlugins([...])` (see [docs/PLUGINS.md](docs/PLUGINS.md)). A gate whose plugins aren't loaded runs nothing and is reported with `skipped: true`. If that gate is `required`, it fails with a `gate-skipped` violation naming the missing plugins. A report where no gate ran anything is never `valid`. Until you load plugins for the default gates, this script prints `FAIL`.
+
 ### 3. Validate Configuration
 
 ```bash

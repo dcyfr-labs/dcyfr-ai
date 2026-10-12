@@ -321,4 +321,83 @@ describe('ValidationFramework', () => {
     const report = await framework.validateGates(['test-gate'], context);
     expect(report.summary.totalGates).toBe(1);
   });
+
+  describe('gates that run nothing', () => {
+    const context: ValidationContext = {
+      projectRoot: '/test',
+      files: ['test.ts'],
+      config: {},
+    };
+    const passingPlugin = (name: string): Plugin => ({
+      manifest: { name, version: '1.0.0', description: 'Test' },
+      async onValidate() {
+        return { valid: true, violations: [], warnings: [] };
+      },
+    });
+
+    it('fails a required gate whose plugins are not loaded', async () => {
+      const report = await framework.validate(context);
+
+      expect(report.valid).toBe(false);
+      expect(report.gates[0]).toMatchObject({ name: 'test-gate', passed: false, skipped: true });
+      expect(report.gates[0].violations[0]).toMatchObject({ type: 'gate-skipped', severity: 'error' });
+      expect(report.gates[0].violations[0].message).toContain('test-validator');
+      expect(report.summary).toMatchObject({ failedGates: 1, skippedGates: 1 });
+    });
+
+    it('fails a required gate whose only plugin is disabled', async () => {
+      const loader = framework.getLoader();
+      await loader.loadPlugin(passingPlugin('test-validator'));
+      loader.disablePlugin('test-validator');
+
+      const report = await framework.validate(context);
+
+      expect(report.valid).toBe(false);
+      expect(report.gates[0]).toMatchObject({ passed: false, skipped: true });
+    });
+
+    it('warns on an optional gate that runs nothing, without failing the run', async () => {
+      framework.addGate({ name: 'optional', plugins: ['missing'], required: false, failureMode: 'warn' });
+      await framework.getLoader().loadPlugin(passingPlugin('test-validator'));
+
+      const report = await framework.validate(context);
+
+      expect(report.valid).toBe(true);
+      const optional = report.gates.find(g => g.name === 'optional');
+      expect(optional).toMatchObject({ passed: true, skipped: true, violations: [] });
+      expect(optional?.warnings[0]).toMatchObject({ type: 'gate-skipped', severity: 'warning' });
+      expect(report.summary).toMatchObject({ passedGates: 2, failedGates: 0, skippedGates: 1 });
+    });
+
+    it('is not valid when every gate was skipped, even if none is required', async () => {
+      const optionalOnly = new ValidationFramework({
+        gates: [{ name: 'optional', plugins: ['missing'], required: false, failureMode: 'warn' }],
+      });
+
+      const report = await optionalOnly.validate(context);
+
+      expect(report.gates[0]).toMatchObject({ passed: true, skipped: true });
+      expect(report.summary.failedGates).toBe(0);
+      expect(report.valid).toBe(false);
+    });
+
+    it('is not valid with no gates at all', async () => {
+      const empty = new ValidationFramework({ gates: [] });
+
+      const report = await empty.validate(context);
+
+      expect(report.summary.totalGates).toBe(0);
+      expect(report.valid).toBe(false);
+    });
+
+    it('marks a gate that ran as not skipped', async () => {
+      await framework.getLoader().loadPlugin(passingPlugin('test-validator'));
+
+      const report = await framework.validate(context);
+
+      expect(report.valid).toBe(true);
+      expect(report.gates[0]).toMatchObject({ passed: true, skipped: false });
+      expect(report.summary.skippedGates).toBe(0);
+    });
+  });
 });

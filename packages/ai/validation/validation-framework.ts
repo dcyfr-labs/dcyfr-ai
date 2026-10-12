@@ -51,10 +51,16 @@ export interface ValidationFrameworkConfig {
  * Validation report
  */
 export interface ValidationReport {
+  /**
+   * True only when no gate failed and at least one gate actually ran a
+   * plugin. A report where every gate was skipped is not a pass.
+   */
   valid: boolean;
   gates: {
     name: string;
     passed: boolean;
+    /** No plugin ran for this gate (none loaded, all disabled, or skipped on error). */
+    skipped: boolean;
     violations: ValidationViolation[];
     warnings: ValidationViolation[];
     executionTime: number;
@@ -63,6 +69,7 @@ export interface ValidationReport {
     totalGates: number;
     passedGates: number;
     failedGates: number;
+    skippedGates: number;
     totalViolations: number;
     totalWarnings: number;
     executionTime: number;
@@ -125,10 +132,13 @@ export class ValidationFramework {
     // Calculate summary
     const passedGates = gateResults.filter(g => g.passed).length;
     const failedGates = gateResults.length - passedGates;
+    const skippedGates = gateResults.filter(g => g.skipped).length;
     const totalViolations = gateResults.reduce((sum, g) => sum + g.violations.length, 0);
     const totalWarnings = gateResults.reduce((sum, g) => sum + g.warnings.length, 0);
 
-    const valid = failedGates === 0 && totalViolations === 0;
+    // A run that executed nothing has validated nothing, so it can't pass.
+    const ranAnything = gateResults.some(g => !g.skipped);
+    const valid = failedGates === 0 && totalViolations === 0 && ranAnything;
 
     return {
       valid,
@@ -137,6 +147,7 @@ export class ValidationFramework {
         totalGates: gateResults.length,
         passedGates,
         failedGates,
+        skippedGates,
         totalViolations,
         totalWarnings,
         executionTime: totalExecutionTime,
@@ -210,6 +221,32 @@ export class ValidationFramework {
   ): Promise<ValidationReport['gates'][0]> {
     const startTime = Date.now();
 
+    // PluginLoader.validateWith silently skips plugins that aren't loaded or
+    // are disabled, and reports an empty run as valid. Decide here whether
+    // this gate will run anything at all.
+    const runnable = gate.plugins.filter(name => {
+      const loaded = this.loader.getPlugin(name);
+      return loaded !== undefined && loaded.enabled && typeof loaded.plugin.onValidate === 'function';
+    });
+    if (runnable.length === 0) {
+      const message =
+        `Gate '${gate.name}' ran no plugins: ${gate.plugins.join(', ') || '(none listed)'} ` +
+        `not loaded or disabled. Load them with ValidationFramework.loadPlugins().`;
+      const finding: ValidationViolation = {
+        type: 'gate-skipped',
+        severity: gate.required ? 'error' : 'warning',
+        message,
+      };
+      return {
+        name: gate.name,
+        passed: !gate.required,
+        skipped: true,
+        violations: gate.required ? [finding] : [],
+        warnings: gate.required ? [] : [finding],
+        executionTime: Date.now() - startTime,
+      };
+    }
+
     try {
       const result = await this.loader.validateWith(gate.plugins, context);
       const executionTime = Date.now() - startTime;
@@ -219,6 +256,7 @@ export class ValidationFramework {
       return {
         name: gate.name,
         passed,
+        skipped: false,
         violations: result.violations,
         warnings: result.warnings,
         executionTime,
@@ -231,6 +269,7 @@ export class ValidationFramework {
         return {
           name: gate.name,
           passed: true,
+          skipped: true,
           violations: [],
           warnings: [
             {
@@ -252,6 +291,7 @@ export class ValidationFramework {
       return {
         name: gate.name,
         passed: false,
+        skipped: false,
         violations: [errorViolation],
         warnings: [],
         executionTime,
