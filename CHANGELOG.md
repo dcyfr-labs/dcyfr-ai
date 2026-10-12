@@ -1,5 +1,22 @@
 # Changelog
 
+## [3.7.0](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.6.0...v3.7.0) (2026-10-12)
+
+
+### Features
+
+* **validation:** a run that executes nothing no longer passes ([#500](https://github.com/dcyfr-labs/dcyfr-ai/issues/500)) ([ab61534](https://github.com/dcyfr-labs/dcyfr-ai/commit/ab61534dbf7a63ec013be1318139fe0e18fb46f1))
+
+
+### Bug Fixes
+
+* **build:** add ESM extensions to the shipped .d.ts files too ([#495](https://github.com/dcyfr-labs/dcyfr-ai/issues/495)) ([4979c65](https://github.com/dcyfr-labs/dcyfr-ai/commit/4979c65db3462748a5b1eaa8e68cab49ef19a9ae))
+
+
+### Dependencies
+
+* drop gray-matter, which nothing imports ([#497](https://github.com/dcyfr-labs/dcyfr-ai/issues/497)) ([4d76270](https://github.com/dcyfr-labs/dcyfr-ai/commit/4d762703223833448d3a9453190928387a839333))
+
 ## [3.6.0](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.5.4...v3.6.0) (2026-10-12)
 
 
