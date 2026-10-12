@@ -102,6 +102,9 @@ const framework = new ValidationFramework({
   parallel: true,
 });
 
+// Load the plugins the gates name (see docs/PLUGINS.md)
+await framework.loadPlugins([/* your eslint and typescript validator plugins */]);
+
 // Run validation
 const report = await framework.validate({
   projectRoot: process.cwd(),
@@ -111,7 +114,10 @@ const report = await framework.validate({
 
 console.log(`Validation: ${report.valid ? 'PASS' : 'FAIL'}`);
 console.log(`Gates passed: ${report.summary.passedGates}/${report.summary.totalGates}`);
+console.log(`Gates skipped: ${report.summary.skippedGates}`);
 ```
+
+A gate whose plugins aren't loaded (or are disabled) runs nothing and is marked `skipped`. A skipped `required` gate fails the report with a `gate-skipped` violation, and a report in which no gate ran is never `valid`.
 
 ## Core Concepts
 

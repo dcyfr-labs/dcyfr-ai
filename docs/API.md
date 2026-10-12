@@ -357,6 +357,35 @@ Run validation with all gates.
 
 **Returns:** `Promise<ValidationReport>`
 
+A gate whose plugins are all missing or disabled runs nothing and is reported with `skipped: true`:
+
+- A `required` gate that is skipped fails, with a `gate-skipped` violation (severity `error`) naming the plugins.
+- An optional gate that is skipped passes with a `gate-skipped` warning.
+- `report.valid` is `true` only when no gate failed **and at least one gate ran**. A run where every gate was skipped, or with no gates, is not valid.
+
+```typescript
+interface ValidationReport {
+  valid: boolean;
+  gates: {
+    name: string;
+    passed: boolean;
+    skipped: boolean;
+    violations: ValidationViolation[];
+    warnings: ValidationViolation[];
+    executionTime: number;
+  }[];
+  summary: {
+    totalGates: number;
+    passedGates: number;
+    failedGates: number;
+    skippedGates: number;
+    totalViolations: number;
+    totalWarnings: number;
+    executionTime: number;
+  };
+}
+```
+
 #### `getGates(): ValidationGate[]`
 Get configured gates.
 
