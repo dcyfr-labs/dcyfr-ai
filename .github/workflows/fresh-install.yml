@@ -1,0 +1,127 @@
+name: Fresh Install
+
+# Installs the published package from npm the way a new user does (no
+# lockfile, current transitive releases) and runs the consumer smoke test
+# against it. CI on PRs tests the repo's own lockfile; this catches what
+# changes underneath a release after it ships: a dependency publishing a
+# breaking patch, dropping a Node version, or a new advisory.
+
+on:
+  schedule:
+    - cron: '17 9 * * *'
+  workflow_dispatch:
+    inputs:
+      spec:
+        description: 'Package spec to install'
+        required: false
+        default: '@dcyfr/ai@latest'
+
+permissions: {}
+
+concurrency:
+  group: fresh-install
+  cancel-in-progress: false
+
+env:
+  INSTALL_SPEC: ${{ inputs.spec || '@dcyfr/ai@latest' }}
+
+jobs:
+  consumer:
+    name: Fresh install (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['20', '22', '24']
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node }}
+
+      # The smoke test borrows typescript and @types/node from the repo for
+      # its nodenext typecheck; the package under test comes from the registry.
+      - name: Install Dependencies
+        run: npm install --ignore-scripts
+
+      - name: Consumer smoke test against the registry
+        env:
+          SMOKE_INSTALL_SPEC: ${{ env.INSTALL_SPEC }}
+        run: npm run smoke:bins
+
+  audit:
+    name: Production dependency audit
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 5
+
+    steps:
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      # Repo overrides don't reach consumers, so audit the tree a consumer
+      # resolves. Reported, not enforced: a high here warns until the
+      # remaining upstream advisories have a fix.
+      - name: Audit a fresh consumer install
+        working-directory: ${{ runner.temp }}
+        run: |
+          mkdir audit && cd audit
+          npm init -y >/dev/null
+          npm install "$INSTALL_SPEC" --package-lock-only --ignore-scripts --no-fund --no-audit
+          npm audit --omit=dev --json > audit.json || true
+          # shellcheck disable=SC2016 # the node -e program is JS, not shell
+          node -e '
+            const a = require("./audit.json");
+            const v = (a.metadata && a.metadata.vulnerabilities) || {};
+            const rows = Object.values(a.vulnerabilities || {})
+              .map((x) => `| ${x.name} | ${x.severity} | ${x.isDirect ? "direct" : "transitive"} |`);
+            const lines = [
+              `## npm audit --omit=dev: ${process.env.INSTALL_SPEC}`,
+              "",
+              `critical ${v.critical || 0} · high ${v.high || 0} · moderate ${v.moderate || 0} · low ${v.low || 0}`,
+              "",
+              ...(rows.length ? ["| Package | Severity | |", "| --- | --- | --- |", ...rows] : ["No advisories."]),
+            ];
+            require("fs").appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join("\n") + "\n");
+            if ((v.critical || 0) + (v.high || 0) > 0) {
+              console.log(`::warning title=Fresh install audit::${v.critical || 0} critical, ${v.high || 0} high in a fresh install of ${process.env.INSTALL_SPEC}`);
+            }
+          '
+
+  report:
+    name: Report failure
+    needs: consumer
+    if: failure() && github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    timeout-minutes: 5
+
+    steps:
+      # One open issue tracks the breakage; later failures comment on it
+      # instead of opening duplicates.
+      - name: Open or update the tracking issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          title="Fresh install of $INSTALL_SPEC is failing"
+          existing=$(gh issue list --state open --label ci-failure --search "in:title \"$title\"" --json number --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "Still failing: $RUN_URL"
+          else
+            gh issue create --title "$title" --label ci-failure --body "The scheduled fresh-install test failed: $RUN_URL
+
+          It installs \`$INSTALL_SPEC\` from npm without a lockfile and runs \`npm run smoke:bins\` against it on Node 20, 22 and 24. A failure here with green PR CI usually means a dependency released something that breaks the published package."
+          fi

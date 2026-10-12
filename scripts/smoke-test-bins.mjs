@@ -23,6 +23,10 @@
  *   - the removed `dcyfr` bin (which collided with @dcyfr/ai-cli) must stay gone
  *
  * Run: npm run smoke:bins
+ *
+ * Set SMOKE_INSTALL_SPEC (e.g. `@dcyfr/ai@latest`) to skip the build and pack
+ * and test a published version from the registry instead, with no lockfile.
+ * The scheduled fresh-install workflow uses this to catch upstream drift.
  */
 
 import { execFileSync } from 'node:child_process';
@@ -41,11 +45,11 @@ import { fileURLToPath } from 'node:url';
 
 const repoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const NODE = process.execPath;
-const pkgVersion = JSON.parse(readFileSync(join(repoRoot, 'package.json'), 'utf8')).version;
+const INSTALL_SPEC = process.env.SMOKE_INSTALL_SPEC || '';
 
 const EXPECTED_BINS = ['dcyfr-ai', 'dcyfr-ai-tui'];
 const REMOVED_BINS = ['dcyfr'];
-const HELP_CHECKS = [
+const helpChecks = (pkgVersion) => [
   { argv: ['dcyfr-ai', '--help'], contains: 'dcyfr-ai' },
   { argv: ['dcyfr-ai-tui', '--help'], contains: 'TUI' },
   { argv: ['dcyfr-ai', 'telemetry', '--help'], contains: 'telemetry' },
@@ -73,19 +77,24 @@ function run(file, args, opts = {}) {
 
 const workdir = mkdtempSync(join(tmpdir(), 'dcyfr-ai-smoke-'));
 try {
-  console.log('• Building (tsc + fix-esm-imports)…');
-  run('npm', ['run', 'build'], { cwd: repoRoot });
-  ok('built');
+  let installArgs;
+  if (INSTALL_SPEC) {
+    installArgs = [INSTALL_SPEC, '--ignore-scripts', '--no-audit', '--no-fund', '--prefer-online'];
+  } else {
+    console.log('• Building (tsc + fix-esm-imports)…');
+    run('npm', ['run', 'build'], { cwd: repoRoot });
+    ok('built');
 
-  // Pack with --ignore-scripts so the build above isn't re-run; locate the
-  // tarball by reading the (otherwise empty) pack destination rather than
-  // parsing npm's stdout, which lifecycle output can pollute.
-  console.log('• Packing the tarball…');
-  run('npm', ['pack', '--ignore-scripts', '--pack-destination', workdir], { cwd: repoRoot });
-  const tgz = readdirSync(workdir).find((f) => f.endsWith('.tgz'));
-  if (!tgz) throw new Error('npm pack produced no .tgz in the pack destination');
-  const tarball = join(workdir, tgz);
-  ok(`packed ${tgz}`);
+    // Pack with --ignore-scripts so the build above isn't re-run; locate the
+    // tarball by reading the (otherwise empty) pack destination rather than
+    // parsing npm's stdout, which lifecycle output can pollute.
+    console.log('• Packing the tarball…');
+    run('npm', ['pack', '--ignore-scripts', '--pack-destination', workdir], { cwd: repoRoot });
+    const tgz = readdirSync(workdir).find((f) => f.endsWith('.tgz'));
+    if (!tgz) throw new Error('npm pack produced no .tgz in the pack destination');
+    ok(`packed ${tgz}`);
+    installArgs = [join(workdir, tgz), '--ignore-scripts', '--no-audit', '--no-fund', '--prefer-offline'];
+  }
 
   const proj = join(workdir, 'consumer');
   mkdirSync(proj, { recursive: true });
@@ -94,15 +103,12 @@ try {
     JSON.stringify({ name: 'smoke-consumer', version: '0.0.0', private: true }, null, 2)
   );
 
-  console.log('• Installing the tarball into a throwaway consumer project…');
-  run('npm', ['install', tarball, '--ignore-scripts', '--no-audit', '--no-fund', '--prefer-offline'], {
-    cwd: proj,
-  });
-  ok('installed');
-
+  console.log(`• Installing ${INSTALL_SPEC || 'the tarball'} into a throwaway consumer project…`);
+  run('npm', ['install', ...installArgs], { cwd: proj });
   const installedPkg = JSON.parse(
     readFileSync(join(proj, 'node_modules', '@dcyfr', 'ai', 'package.json'), 'utf8')
   );
+  ok(`installed @dcyfr/ai@${installedPkg.version}`);
   const declaredBins = Object.keys(installedPkg.bin || {});
   const binDir = join(proj, 'node_modules', '.bin');
 
@@ -122,7 +128,7 @@ try {
   }
 
   console.log('• Running --help / version checks on each bin / subcommand…');
-  for (const { argv, contains } of HELP_CHECKS) {
+  for (const { argv, contains } of helpChecks(installedPkg.version)) {
     const [name, ...rest] = argv;
     try {
       const out = run(NODE, [join(binDir, name), ...rest]);
@@ -255,4 +261,4 @@ if (failures.length > 0) {
   console.error(`\n❌ Packaging smoke test FAILED (${failures.length} issue(s)).`);
   process.exit(1);
 }
-console.log('\n✅ Packaging smoke test passed: bins, types, runtime imports and the README quickstart all work from the packed tarball.');
+console.log(`\n✅ Packaging smoke test passed: bins, types, runtime imports and the README quickstart all work from ${INSTALL_SPEC || 'the packed tarball'}.`);
