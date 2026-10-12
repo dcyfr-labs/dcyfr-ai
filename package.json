@@ -120,7 +120,6 @@
     "cloudflare": "^7.0.0",
     "commander": "^15.0.0",
     "fastmcp": "^4.0.0",
-    "gray-matter": "^4.0.3",
     "groq-sdk": "1.6.0",
     "inquirer": "^14.0.2",
     "mem0ai": "^3.0.2",
