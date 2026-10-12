@@ -39,6 +39,7 @@ import {
   readdirSync,
   writeFileSync,
 } from 'node:fs';
+import { builtinModules } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -208,6 +209,50 @@ try {
   } catch (err) {
     bad(`runtime import script crashed: ${String(err.stderr || err.message).split('\n')[0]}`);
   }
+
+  // Importing each subpath only loads its static graph. A package reached
+  // through a lazy `import('x')` (glob in AgentLoader) is never touched there,
+  // and if it arrived only as some other dependency's transitive dependency,
+  // dropping that dependency breaks it silently. Every bare specifier in the
+  // shipped files must resolve from the consumer's install.
+  console.log('• Resolving every package the shipped files import…');
+  const installedDir = join(proj, 'node_modules', '@dcyfr', 'ai');
+  const shipped = [];
+  const walk = (dir) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const p = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (entry.name !== 'node_modules') walk(p);
+      } else if (/\.(m?js|cjs)$/.test(entry.name)) {
+        shipped.push(p);
+      }
+    }
+  };
+  for (const dir of ['dist', 'bin']) {
+    if (existsSync(join(installedDir, dir))) walk(join(installedDir, dir));
+  }
+  const specRe = /(?:\bfrom\s*|\bimport\s*\(\s*|\brequire\s*\(\s*|^\s*import\s+)['"]([^'"./][^'"]*)['"]/gm;
+  const importers = new Map();
+  for (const file of shipped) {
+    // Drop block comments and whole-line // comments: JSDoc examples import
+    // packages the code never loads.
+    const code = readFileSync(file, 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/^\s*\/\/.*$/gm, '');
+    for (const [, spec] of code.matchAll(specRe)) {
+      if (spec.startsWith('node:') || /\s|\$\{/.test(spec)) continue;
+      const name = spec.startsWith('@') ? spec.split('/').slice(0, 2).join('/') : spec.split('/')[0];
+      if (builtinModules.includes(name) || name === installedPkg.name) continue;
+      if (!importers.has(name)) importers.set(name, file.slice(installedDir.length + 1));
+    }
+  }
+  const unresolved = [...importers].filter(
+    ([name]) =>
+      !existsSync(join(installedDir, 'node_modules', name, 'package.json')) &&
+      !existsSync(join(proj, 'node_modules', name, 'package.json'))
+  );
+  for (const [name, file] of unresolved) bad(`"${name}" (imported by ${file}) is not installed for consumers`);
+  if (unresolved.length === 0) ok(`${importers.size} imported packages all resolve from the consumer install`);
 
   // The README quickstart, verbatim: init a config, validate it, then run the
   // documented ValidationFramework script against it.
