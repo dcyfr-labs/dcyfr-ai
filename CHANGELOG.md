@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.7.1](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.7.0...v3.7.1) (2026-10-12)
+
+
+### Bug Fixes
+
+* **deps:** drop 15 runtime dependencies the package never imports ([#501](https://github.com/dcyfr-labs/dcyfr-ai/issues/501)) ([5074774](https://github.com/dcyfr-labs/dcyfr-ai/commit/507477467d7e999fd37f25b2f46622eaaba8ce52))
+
 ## [3.7.0](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.6.0...v3.7.0) (2026-10-12)
 
 
