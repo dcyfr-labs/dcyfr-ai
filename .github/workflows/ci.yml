@@ -16,6 +16,41 @@ env:
   NODE_VERSION: '24.13.0'
 
 jobs:
+  consumer:
+    # Validate runs the packaging smoke test on Node 24. engines.node is >=20,
+    # so install and use the packed tarball on the older majors too: a
+    # dependency that drops a Node version breaks consumers there first.
+    name: Consumer smoke (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['20', '22']
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node }}
+          cache: 'npm'
+          cache-dependency-path: '**/package.json'
+
+      - name: Install Dependencies
+        run: npm install --ignore-scripts
+
+      - name: Packaging + consumer smoke test
+        # Builds, packs, installs the tarball into a throwaway project, then
+        # checks bins, nodenext types, runtime imports of every subpath and
+        # the README quickstart.
+        run: npm run smoke:bins
+
+
   validate:
     name: Validate
     runs-on: ubuntu-latest
@@ -55,11 +90,12 @@ jobs:
         id: build
         run: npm run build
 
-      - name: Packaging Smoke Test (bins)
+      - name: Packaging + Consumer Smoke Test
         id: smoke_bins
         # Packs the tarball and installs it into a throwaway consumer to assert
         # every declared bin links and runs --help (guards the 2.1.0–3.2.1
-        # stale-bin-target regression class, issue #253).
+        # stale-bin-target regression class, issue #253), then typechecks and
+        # imports every export subpath and runs the README quickstart.
         run: npm run smoke:bins
 
       - name: Test
@@ -104,5 +140,5 @@ jobs:
           echo "| --- | --- |" >> $GITHUB_STEP_SUMMARY
           echo "| TypeScript | ${{ steps.typecheck.outcome == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Build | ${{ steps.build.outcome == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Bin packaging smoke | ${{ steps.smoke_bins.outcome == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Packaging + consumer smoke | ${{ steps.smoke_bins.outcome == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Tests | ${{ steps.test.outcome == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
