@@ -1,5 +1,13 @@
 #!/usr/bin/env node
 
+// Adds the file extensions Node's ESM loader requires to relative specifiers
+// in the compiled output. tsc emits them as written (`./foo`), which works for
+// bundlers but not for Node, and not for consumers whose tsconfig uses
+// `moduleResolution: node16 | nodenext` without `skipLibCheck`: their compiler
+// reads our .d.ts files and stops at TS2834/TS2835. So both the .js files and
+// the .d.ts files are rewritten; in a .d.ts the specifier still names the .js
+// file, which TypeScript maps to the declaration next to it.
+
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
@@ -32,26 +40,29 @@ async function resolveSpecifier(filePath, specifier) {
 
   const absoluteBase = path.resolve(path.dirname(filePath), specifier);
 
-  if (await exists(`${absoluteBase}.js`)) {
+  if ((await exists(`${absoluteBase}.js`)) || (await exists(`${absoluteBase}.d.ts`))) {
     return `${specifier}.js`;
   }
 
-  if (await exists(path.join(absoluteBase, 'index.js'))) {
+  if (
+    (await exists(path.join(absoluteBase, 'index.js'))) ||
+    (await exists(path.join(absoluteBase, 'index.d.ts')))
+  ) {
     return `${specifier}/index.js`;
   }
 
   return null;
 }
 
-async function walkJsFiles(dir) {
+async function walkOutputFiles(dir) {
   const entries = await fs.readdir(dir, { withFileTypes: true });
   const files = [];
 
   for (const entry of entries) {
     const fullPath = path.join(dir, entry.name);
     if (entry.isDirectory()) {
-      files.push(...(await walkJsFiles(fullPath)));
-    } else if (entry.isFile() && fullPath.endsWith('.js')) {
+      files.push(...(await walkOutputFiles(fullPath)));
+    } else if (entry.isFile() && (fullPath.endsWith('.js') || fullPath.endsWith('.d.ts'))) {
       files.push(fullPath);
     }
   }
@@ -104,7 +115,7 @@ async function main() {
     return;
   }
 
-  const files = await walkJsFiles(DIST_ROOT);
+  const files = await walkOutputFiles(DIST_ROOT);
   let changedFiles = 0;
   let totalReplacements = 0;
 

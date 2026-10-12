@@ -126,6 +126,46 @@ try {
       bad(`${argv.join(' ')} → exited ${err.status ?? '?'}: ${first}`);
     }
   }
+
+  // A consumer on `moduleResolution: nodenext` without skipLibCheck reads our
+  // .d.ts files as written; an extensionless relative import there is TS2834.
+  // 3.6.0 shipped 45 of them while every check above passed.
+  console.log('• Typechecking every export subpath as a strict nodenext consumer…');
+  const subpaths = Object.entries(installedPkg.exports || {})
+    .filter(([, target]) => typeof target === 'object' && target.types)
+    .map(([key]) => (key === '.' ? '@dcyfr/ai' : `@dcyfr/ai/${key.slice(2)}`));
+  writeFileSync(
+    join(proj, 'consumer.ts'),
+    subpaths.map((spec, i) => `import * as m${i} from '${spec}';\nvoid m${i};\n`).join('')
+  );
+  writeFileSync(
+    join(proj, 'tsconfig.json'),
+    JSON.stringify(
+      {
+        compilerOptions: {
+          target: 'es2022',
+          module: 'nodenext',
+          moduleResolution: 'nodenext',
+          strict: true,
+          noEmit: true,
+          skipLibCheck: false,
+          typeRoots: [join(repoRoot, 'node_modules', '@types')],
+          types: ['node'],
+        },
+        files: ['consumer.ts'],
+      },
+      null,
+      2
+    )
+  );
+  try {
+    run(NODE, [join(repoRoot, 'node_modules', 'typescript', 'bin', 'tsc'), '-p', proj], { cwd: proj });
+    ok(`${subpaths.length} subpaths typecheck under nodenext (skipLibCheck off)`);
+  } catch (err) {
+    const errors = String(err.stdout || '').split('\n').filter((l) => l.includes('error TS'));
+    for (const line of errors.slice(0, 10)) console.log(`    ${line}`);
+    bad(`nodenext consumer typecheck → ${errors.length} error(s)`);
+  }
 } finally {
   rmSync(workdir, { recursive: true, force: true });
 }
