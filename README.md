@@ -983,7 +983,7 @@ See [GitHub Issues](https://github.com/dcyfr-labs/dcyfr-ai/issues) for tracked f
 Development is supported through sponsorship — if @dcyfr/ai is useful to you or your business, consider sponsoring.
 
 **Join:** [GitHub Sponsors](https://github.com/sponsors/dcyfr)
-**Contact:** licensing@dcyfr.ai
+**Contact:** [hello@dcyfr.ai](mailto:hello@dcyfr.ai)
 
 ### Trademark
 

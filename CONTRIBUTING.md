@@ -10,21 +10,17 @@ Be respectful, inclusive, and professional in all interactions.
 
 ### Your Contributions
 
-By contributing to @dcyfr/ai, you agree that:
-- Your contributions will be licensed under the MIT License (personal/non-commercial)
-- Commercial use of @dcyfr/ai requires a paid tier (see [LICENSE](./LICENSE))
-- You have the right to submit the contribution under this license
-- You grant DCYFR Labs perpetual rights to use, modify, and distribute your contribution
+@dcyfr/ai is released under the [MIT License](./LICENSE), for personal and
+commercial use alike. By contributing, you confirm you have the right to submit
+your contribution, and your contribution is licensed under that same license,
+as GitHub's Terms of Service describe.
 
 ### Trademark
 
-Do not use "DCYFR" trademarks in ways that imply endorsement without permission.
+DCYFR is a trademark of Drew Gowan. Do not use it in ways that imply
+endorsement without permission.
 
-### Commercial Contributors
-
-If you're contributing while working for a company using @dcyfr/ai commercially, ensure your company has the appropriate commercial license tier (Developer tier or higher).
-
-**Questions?** Contact licensing@dcyfr.ai
+**Questions about licensing?** Email [hello@dcyfr.ai](mailto:hello@dcyfr.ai).
 
 ---
 

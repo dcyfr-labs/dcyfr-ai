@@ -1,165 +1,84 @@
-# Security Policy
+<!-- TLP:CLEAR — Public Distribution -->
 
-## Supported Versions
+# Security policy
 
-We release patches for security vulnerabilities in the following versions:
+This policy covers `@dcyfr/ai`: the core framework, the delegation and
+permission system, and the plugin marketplace. It follows the
+[DCYFR Labs default policy](https://github.com/dcyfr-labs/.github/blob/main/SECURITY.md)
+and adds the plugin reporting path.
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 0.x.x (current)   | :white_check_mark: |
-| < 0.1   | :x:                |
+## Supported versions
 
-**Note:** We support the latest major version with security updates. Pre-1.0 versions receive security patches for the current minor version only.
+| Version | Security fixes |
+| ------- | -------------- |
+| Latest major (3.x) | Yes |
+| Previous major | Critical fixes only |
+| Older | No |
 
-## Reporting a Vulnerability
+## Reporting a vulnerability
 
-**Please do not report security vulnerabilities through public GitHub issues.**
+**Do not open a public issue.** Report privately instead.
 
-We take security seriously and appreciate responsible disclosure. If you discover a security vulnerability, please follow these steps:
+### Framework vulnerabilities
 
-### 1. Report via GitHub Security Advisories (Preferred)
+For the core framework, the delegation system, or permission enforcement:
 
-1. Go to the repository's Security tab
-2. Click "Report a vulnerability"
-3. Fill out the private advisory form with as much detail as possible
+1. **Preferred:** open a
+   [private security advisory](https://github.com/dcyfr-labs/dcyfr-ai/security/advisories/new).
+2. **Or email** [security@dcyfr.ai](mailto:security@dcyfr.ai) with the subject
+   `[Security] dcyfr-ai: <short description>`.
 
-**OR**
+Include the affected version (or commit), steps to reproduce, and the impact
+you expect. A proof of concept helps.
 
-### 2. Report via Email
+### Plugin vulnerabilities
 
-Send an email to **security@dcyfr.ai** with:
+For a published marketplace plugin:
 
-- **Subject:** `[Security] Brief description of the vulnerability`
-- **Body should include:**
-  - Description of the vulnerability
-  - Steps to reproduce
-  - Potential impact
-  - Suggested fix (if you have one)
-  - Your contact information for follow-up
+1. Report to the plugin's maintainer first (see that plugin's own `SECURITY.md`).
+2. If the maintainer hasn't responded within 5 business days, email
+   [security@dcyfr.ai](mailto:security@dcyfr.ai) with the subject
+   `[PLUGIN SECURITY] <plugin-name>`.
+3. A plugin with a high-risk finding can be disabled in the marketplace while
+   it is fixed.
 
-### What to Include
+If the problem is that `@dcyfr/ai`'s permission enforcement or sandbox failed
+to contain a malicious plugin, that is a framework vulnerability: use the
+framework path above.
 
-Please provide as much information as possible:
+## What to expect
 
-- **Type of vulnerability** (e.g., injection, XSS, authentication bypass, etc.)
-- **Full paths of source file(s)** related to the vulnerability
-- **Location of the affected source code** (tag/branch/commit or direct URL)
-- **Step-by-step instructions to reproduce** the issue
-- **Proof-of-concept or exploit code** (if possible)
-- **Impact of the vulnerability** including how an attacker might exploit it
+DCYFR Labs is a small team, so these are targets rather than guarantees:
 
-## Response Timeline
+- Acknowledgement within 3 business days.
+- An initial assessment, and a fix plan for confirmed issues, within 10
+  business days.
+- Credit in the published advisory, unless you ask to stay anonymous.
 
-- **Initial Response:** Within 24 hours of report submission
-- **Triage:** Within 48 hours, we'll provide an assessment of the report
-- **Fix Timeline:**
-  - **Critical vulnerabilities:** 7 days
-  - **High severity:** 14 days
-  - **Medium severity:** 30 days
-  - **Low severity:** 60 days or next release
-- **Public Disclosure:** After a fix is released, we'll publish a security advisory
+We publish a GitHub security advisory once a fix is released.
 
-## Our Commitment
+## Plugin security
 
-- We will acknowledge your email within 24 hours
-- We will keep you informed of our progress throughout the resolution process
-- We will credit you in the security advisory (unless you prefer to remain anonymous)
-- We will handle your report with strict confidentiality
+Marketplace plugins run sandboxed, with deny-by-default permissions declared
+in `plugin.json`, and pass automated security checks before publication.
 
-## Security Best Practices
+- Trust model, sandbox specification and incident response:
+  [docs/security/PLUGIN_SECURITY_POLICY.md](docs/security/PLUGIN_SECURITY_POLICY.md)
+- Building a plugin that fits the permission model:
+  [docs/guides/PLUGIN_DEVELOPMENT_GUIDE.md](docs/guides/PLUGIN_DEVELOPMENT_GUIDE.md)
 
-When using DCYFR packages:
+## Using @dcyfr/ai safely
 
-### For Application Developers
+- Keep it current: `npm audit` and `npm update @dcyfr/ai`.
+- Load provider keys from the environment or a secret manager, never from
+  source.
+- Validate user input before it reaches an agent (a Zod schema with length
+  limits is a good start).
+- Rate-limit any endpoint that calls a model.
 
-1. **Keep dependencies updated**
-   ```bash
-   npm audit
-   npm update @dcyfr/package-name
-   ```
+## Contributing securely
 
-2. **Use environment variables** for sensitive configuration
-   ```typescript
-   // ❌ Don't hardcode secrets
-   const apiKey = "sk-abc123..."; 
-   
-   // ✅ Use environment variables
-   const apiKey = process.env.OPENAI_API_KEY;
-   ```
+No secrets in code, tests or fixtures; use `.env.example` for templates. CodeQL
+and Semgrep run on every pull request.
 
-3. **Validate user inputs** before passing to AI agents
-   ```typescript
-   import { z } from 'zod';
-   
-   const InputSchema = z.object({
-     query: z.string().max(500),
-     userId: z.string().uuid()
-   });
-   
-   const validated = InputSchema.parse(userInput);
-   ```
-
-4. **Implement rate limiting** for AI-powered endpoints
-   ```typescript
-   import rateLimit from 'express-rate-limit';
-   
-   const limiter = rateLimit({
-     windowMs: 15 * 60 * 1000, // 15 minutes
-     max: 100 // limit each IP to 100 requests per windowMs
-   });
-   ```
-
-5. **Enable security headers** in production
-   ```typescript
-   // For Next.js apps
-   export const config = {
-     headers: [
-       {
-         key: 'X-Content-Type-Options',
-         value: 'nosniff'
-       },
-       {
-         key: 'X-Frame-Options',
-         value: 'DENY'
-       }
-     ]
-   };
-   ```
-
-### For Contributors
-
-1. **No hardcoded secrets** in code or tests
-2. **Use `.env.example`** for environment variable templates
-3. **Validate and sanitize** all external inputs
-4. **Follow OWASP** top 10 security guidelines
-5. **Run security linters** before committing
-
-## Security Features
-
-DCYFR packages include security-by-default features:
-
-- ✅ **Input validation** with Zod schemas
-- ✅ **Type safety** with TypeScript strict mode
-- ✅ **Dependency scanning** via Dependabot/Renovate
-- ✅ **Automated security updates** for vulnerabilities
-- ✅ **CodeQL scanning** on all pull requests
-- ✅ **Secret scanning** to prevent credential leaks
-- ✅ **OWASP compliance** in API design patterns
-
-## Attribution
-
-We believe in recognizing security researchers who help us keep DCYFR secure. With your permission, we will:
-
-- Credit you in the security advisory
-- List you in our Hall of Fame (coming soon)
-- Provide a monetary reward through our bug bounty program (once established)
-
-## Questions?
-
-If you have questions about this security policy, please email **security@dcyfr.ai**.
-
----
-
-**Last Updated:** February 7, 2026  
-**Version:** 1.0.0  
-**Repository:** @dcyfr/ai
+Questions about this policy: [security@dcyfr.ai](mailto:security@dcyfr.ai).
