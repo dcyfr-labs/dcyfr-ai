@@ -223,7 +223,6 @@ Bot:  [Creates thread with analysis results]
 - [Discord Developer Portal](https://discord.com/developers/docs)
 - [Slack Integration Backlog](./SLACK_INTEGRATION_2026-02-05.md)
 - [@dcyfr/ai Documentation](../API.md)
-- [Product Roadmap 2026](../plans/PRODUCT_ROADMAP_2026.md)
 
 ---
 
