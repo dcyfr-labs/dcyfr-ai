@@ -5,7 +5,7 @@
 **Information Classification:** TLP:GREEN (Organization + Contributors)  
 **Effective Date:** 2026-03-01  
 **Last Updated:** 2026-03-01  
-**Owner:** DCYFR Security Team  
+**Owner:** DCYFR Labs Security Team  
 **Contact:** <security@dcyfr.ai>
 
 ---
@@ -194,7 +194,7 @@ Effect: Immediately uninstalls the plugin from all workspaces, blocks reinstalla
 For privately reported vulnerabilities:
 
 1. Researcher reports via GitHub Security Advisories or <security@dcyfr.ai>
-2. DCYFR security team acknowledges within 24 hours
+2. The DCYFR Labs security team acknowledges within 24 hours
 3. Plugin author coordinated with for **90-day patch window**
 4. If no patch within 90 days, advisory is published regardless
 5. CVE requested from MITRE if applicable

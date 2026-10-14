@@ -9,7 +9,7 @@ This directory contains examples demonstrating the interactive Terminal UI featu
 Run a live validation dashboard with real-time metrics:
 
 ```bash
-cd /Users/drew/DCYFR/code/dcyfr-ai
+cd dcyfr-ai   # your clone of this repository
 node bin/tui.js dashboard
 ```
 
@@ -47,7 +47,7 @@ node bin/tui.js dashboard
 Create configuration files with an interactive wizard:
 
 ```bash
-cd /Users/drew/DCYFR/code/dcyfr-ai
+cd dcyfr-ai   # your clone of this repository
 node bin/tui.js wizard
 ```
 
