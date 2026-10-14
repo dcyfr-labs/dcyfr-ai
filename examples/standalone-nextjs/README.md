@@ -102,7 +102,7 @@ validation:
 
 ## Custom Validation
 
-See [plugins/next-validator.ts](./plugins/next-validator.ts) for an example of creating custom validators for Next.js projects.
+To add a custom validator for Next.js projects, write a plugin that implements the `Plugin` interface and register it in `.dcyfr.yaml`. See [docs/PLUGINS.md](../../docs/PLUGINS.md) and [examples/plugin-system.ts](../plugin-system.ts).
 
 ## Telemetry Tracking
 

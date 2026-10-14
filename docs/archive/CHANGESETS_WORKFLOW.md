@@ -125,4 +125,4 @@ See `AGENTS.md` Package Publishing section for full governance rules.
 
 ---
 
-**Questions?** Open an issue or check [CONTRIBUTING.md](../CONTRIBUTING.md)
+**Questions?** Open an issue or check [CONTRIBUTING.md](../../CONTRIBUTING.md)

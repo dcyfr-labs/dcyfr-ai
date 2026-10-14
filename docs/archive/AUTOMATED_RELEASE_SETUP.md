@@ -242,8 +242,8 @@ Within a few minutes, the Changesets bot should:
 
 ## Documentation Links
 
-- **Full Guide:** [docs/RELEASE_MANAGEMENT.md](./RELEASE_MANAGEMENT.md)
-- **Quick Start:** [docs/RELEASE_QUICK_START.md](./RELEASE_QUICK_START.md)
+- **Full Guide:** [docs/RELEASE_MANAGEMENT.md](../RELEASE_MANAGEMENT.md)
+- **Quick Start:** [docs/RELEASE_QUICK_START.md](../RELEASE_QUICK_START.md)
 - **Changesets Docs:** https://github.com/changesets/changesets
 - **npm Package:** https://www.npmjs.com/package/@dcyfr/ai
 

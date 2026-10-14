@@ -17,9 +17,13 @@ implementation is one ~100-line script:
   exists. This package is that name, so the documented commands work
   cold — see [dcyfr-labs/dcyfr-ai#253](https://github.com/dcyfr-labs/dcyfr-ai/issues/253).
 - The unscoped `dcyfr-ai` name was briefly published and unpublished by a
-  third party on 2026-01-27, which left it claimable by anyone. DCYFR Labs
-  holds it so `npx dcyfr-ai …` always resolves to code from
-  [dcyfr-labs/dcyfr-ai](https://github.com/dcyfr-labs/dcyfr-ai).
+  third party on 2026-01-27, which left it claimable by anyone. This launcher
+  exists so DCYFR Labs can hold the name and `npx dcyfr-ai …` resolves to code
+  from [dcyfr-labs/dcyfr-ai](https://github.com/dcyfr-labs/dcyfr-ai).
+  **Publish status:** as of 2026-10-14 the launcher is prepared but not yet
+  published (`npm view dcyfr-ai` returns E404); see
+  [PUBLISH.md](https://github.com/dcyfr-labs/dcyfr-ai/blob/main/launcher/PUBLISH.md).
+  Until it is, `npx dcyfr-ai …` only works after `npm install @dcyfr/ai`.
 
 ## Usage
 

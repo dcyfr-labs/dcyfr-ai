@@ -47,7 +47,7 @@ Complete integration with development and deployment workflows.
 
 ```typescript
 // workflow/agent-development.ts
-import { bootstrapAgent } from '@dcyfr/ai/capability-bootstrap';
+import { bootstrapAgent } from '@dcyfr/ai';
 import { validateCapabilities } from '@dcyfr/ai/capability-validation';
 import { AgentFactory } from '@dcyfr/ai';
 import { deployAgent } from '@dcyfr/ai/deployment';
@@ -129,7 +129,7 @@ Automated batch onboarding for multiple agents with validation and rollback.
 
 ```typescript
 // onboarding/batch-onboarding.ts
-import { bootstrapAgents } from '@dcyfr/ai/capability-bootstrap';
+import { bootstrapAgents } from '@dcyfr/ai';
 import { validateCapabilities } from '@dcyfr/ai/capability-validation';
 import { AgentRegistry } from '@dcyfr/ai/registry';
 import { glob } from 'glob';
@@ -233,7 +233,7 @@ Dynamic capability discovery and delegation at runtime.
 
 ```typescript
 // runtime/dynamic-delegation.ts
-import { bootstrapAgent } from '@dcyfr/ai/capability-bootstrap';
+import { bootstrapAgent } from '@dcyfr/ai';
 import { DelegationEngine } from '@dcyfr/ai/delegation';
 import { AgentRegistry } from '@dcyfr/ai/registry';
 
@@ -351,7 +351,7 @@ Bootstrap agents and configure MCP server connections automatically.
 
 ```typescript
 // integration/mcp-integration.ts
-import { bootstrapAgent } from '@dcyfr/ai/capability-bootstrap';
+import { bootstrapAgent } from '@dcyfr/ai';
 import { MCPServerManager } from '@dcyfr/ai/mcp';
 import { writeFileSync } from 'fs';
 
@@ -473,7 +473,7 @@ Integrate bootstrap system with monitoring for capability tracking and optimizat
 
 ```typescript
 // monitoring/capability-analytics.ts
-import { bootstrapAgent } from '@dcyfr/ai/capability-bootstrap';
+import { bootstrapAgent } from '@dcyfr/ai';
 import { MetricsCollector } from '@dcyfr/ai/monitoring';
 import { CapabilityPerformanceTracker } from '@dcyfr/ai/analytics';
 
@@ -638,7 +638,7 @@ export async function analyticsIntegration() {
 ```typescript
 // __tests__/integration/bootstrap-integration.test.ts
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { bootstrapAgent } from '@dcyfr/ai/capability-bootstrap';
+import { bootstrapAgent } from '@dcyfr/ai';
 import { AgentFactory } from '@dcyfr/ai';
 import { writeFileSync, unlinkSync } from 'fs';
 
@@ -766,7 +766,7 @@ CMD ["npm", "start"]
 
 ```typescript
 // scripts/bootstrap-agents.ts - Run during Docker build
-import { bootstrapAgents } from '@dcyfr/ai/capability-bootstrap';
+import { bootstrapAgents } from '@dcyfr/ai';
 import { glob } from 'glob';
 import { writeFileSync, mkdirSync } from 'fs';
 

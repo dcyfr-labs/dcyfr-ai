@@ -804,7 +804,7 @@ projectName: my-app
 import { PluginLoader } from "@dcyfr/ai";
 const loader = new PluginLoader();
 await loader.loadPlugin(myPlugin);
-await loader.runValidation();
+const result = await loader.validateAll({ projectRoot: process.cwd(), files: [], config: {} });
 ```
 
 ### CLI Issues
@@ -852,7 +852,7 @@ export const myPlugin = {
   },
   async onValidate(context) {
     // Your validation logic here
-    return { passed: true, issues: [] };
+    return { valid: true, violations: [], warnings: [] };
   },
 };
 ```
@@ -950,7 +950,7 @@ Found a security issue? Report it privately:
 ### Current Constraints
 
 - **Plugin isolation:** Plugins run in same process (no sandboxing yet) - trust plugin code before loading
-- **File-based telemetry only:** No database storage adapter yet (planned for v2.0)
+- **File-based telemetry only:** No database storage adapter yet (not scheduled)
 - **Config caching:** Requires manual cache invalidation on config changes (no hot-reload yet)
 - **Provider-specific features:** Some providers may have limited support (e.g., streaming not supported for all)
 - **TypeScript required for development:** JavaScript works at runtime but TypeScript recommended for development
