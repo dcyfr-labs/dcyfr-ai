@@ -63,3 +63,5 @@ tmp/
 
 # Changesets (don't ignore .changeset/*.md files - those should be committed)
 **/.archive/**
+# Local MCP config: paths differ per machine. Start from .mcp.json.example.
+.mcp.json

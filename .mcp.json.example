@@ -1,6 +1,6 @@
 {
   "$schema": "https://modelcontextprotocol.io/schema/mcp.json",
-  "description": "MCP servers for dcyfr-ai (synced from dcyfr-labs)",
+  "description": "Example MCP servers that need no local checkout. Copy to .mcp.json (gitignored) and add your own.",
   "mcpServers": {
     "memory": {
       "command": "npx",
@@ -8,15 +8,6 @@
         "-y",
         "@modelcontextprotocol/server-memory"
       ]
-    },
-    "filesystem": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-filesystem",
-        "/Users/drew/DCYFR/code/dcyfr-workspace/dcyfr-labs"
-      ],
-      "type": "stdio"
     },
     "github": {
       "type": "http",
@@ -101,67 +92,6 @@
       "env": {
         "PERPLEXITY_API_KEY": "${PERPLEXITY_API_KEY}"
       }
-    },
-    "sonarqube": {
-      "type": "stdio",
-      "command": "bash",
-      "args": [
-        "/Users/drew/DCYFR/code/dcyfr-workspace/scripts/sonarqube-mcp-launcher.sh"
-      ],
-      "env": {
-        "SONARQUBE_TOKEN": "${SONAR_TOKEN}",
-        "SONARQUBE_ORG": "${SONAR_ORGANIZATION}",
-        "SONARQUBE_IDE_PORT": "${SONARQUBE_IDE_PORT}",
-        "SONARQUBE_URL": "${SONARQUBE_URL}"
-      }
-    },
-    "dcyfr-analytics": {
-      "type": "stdio",
-      "command": "npx",
-      "args": [
-        "dotenv",
-        "-e",
-        ".env.local",
-        "--",
-        "npm",
-        "run",
-        "mcp:analytics"
-      ],
-      "cwd": "/Users/drew/DCYFR/code/dcyfr-labs"
-    },
-    "dcyfr-designtokens": {
-      "type": "stdio",
-      "command": "npm",
-      "args": [
-        "run",
-        "mcp:tokens"
-      ],
-      "cwd": "/Users/drew/DCYFR/code/dcyfr-labs"
-    },
-    "dcyfr-contentmanager": {
-      "type": "stdio",
-      "command": "npm",
-      "args": [
-        "run",
-        "mcp:content"
-      ],
-      "cwd": "/Users/drew/DCYFR/code/dcyfr-labs"
-    },
-    "dcyfr-promptintel": {
-      "type": "stdio",
-      "command": "npm",
-      "args": [
-        "run",
-        "mcp:promptintel"
-      ],
-      "cwd": "/Users/drew/DCYFR/code/dcyfr-labs",
-      "env": {
-        "PROMPTINTEL_API_KEY": "${PROMPTINTEL_API_KEY}"
-      }
-    },
-    "msty-sidecar": {
-      "type": "http",
-      "url": "${MSTY_SIDECAR_URL}"
     }
   }
 }
