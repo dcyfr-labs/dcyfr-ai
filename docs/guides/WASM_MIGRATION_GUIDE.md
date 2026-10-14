@@ -469,4 +469,4 @@ For complex plugins, use both WASM and Docker:
 
 **Last Updated:** March 1, 2026  
 **License:** MIT  
-**Maintainer:** DCYFR Security Team
+**Maintainer:** DCYFR Labs Security Team

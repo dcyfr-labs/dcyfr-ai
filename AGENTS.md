@@ -353,7 +353,7 @@ npm publish --access public
 ---
 
 **Last Updated:** February 1, 2026  
-**Maintained By:** DCYFR Team  
+**Maintained By:** DCYFR Labs  
 **NPM:** [@dcyfr/ai](https://www.npmjs.com/package/@dcyfr/ai)
 
 ## Quality Gates

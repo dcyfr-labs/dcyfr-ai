@@ -5,7 +5,7 @@
 **Information Classification:** TLP:AMBER (Limited Distribution)  
 **Created:** February 5, 2026  
 **Status:** Planning  
-**Owner:** DCYFR Core Team  
+**Owner:** DCYFR Labs Core Team  
 **Package:** @dcyfr/ai
 
 ---
