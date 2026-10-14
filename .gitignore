@@ -65,3 +65,6 @@ tmp/
 **/.archive/**
 # Local MCP config: paths differ per machine. Start from .mcp.json.example.
 .mcp.json
+
+# Local tool caches (eslint cache embeds absolute paths)
+.cache/
