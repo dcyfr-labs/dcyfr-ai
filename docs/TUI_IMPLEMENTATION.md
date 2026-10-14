@@ -14,7 +14,7 @@ Successfully implemented interactive terminal UIs for the dcyfr-ai CLI using mat
 | **chalk** | ^4.1.2 | Terminal colors and text styling |
 | **ora** | ^9.1.0 | Elegant terminal spinners |
 | **cli-table3** | ^0.6.5 | Beautiful ASCII tables |
-| **inquirer** | ^13.2.2 | Interactive command-line prompts |
+| **inquirer** | ^14.0.2 | Interactive command-line prompts |
 
 ### Why Not OpenTUI?
 

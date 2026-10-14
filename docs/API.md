@@ -87,41 +87,35 @@ Core telemetry tracking engine.
 
 **Constructor:**
 ```typescript
-new TelemetryEngine(options: TelemetryEngineOptions)
-```
-
-**Options:**
-```typescript
-interface TelemetryEngineOptions {
-  storage: 'memory' | 'file' | 'redis' | 'database';
-  enabled?: boolean;
-  storagePath?: string;
-  retentionDays?: number;
-}
+new TelemetryEngine(options?: {
+  storage?: StorageType | StorageAdapter; // default: 'memory'
+  basePath?: string;                       // used by the 'file' storage type
+})
 ```
 
 **Methods:**
 
-#### `startSession(agent, context): TelemetrySession`
+#### `startSession(agent, options): TelemetrySessionManager`
 Start a new telemetry session.
 
 **Parameters:**
 - `agent: AgentType` - Agent identifier
-- `context: SessionContext` - Session metadata
+- `options: { taskType: TaskType; description: string }` - Session metadata
 
-**Returns:** `TelemetrySession`
+#### `getSession(sessionId): TelemetrySessionManager | undefined`
+Get an active session.
 
-#### `getAgentStats(agent, period): Promise<AgentStats>`
+#### `endSession(sessionId, outcome): Promise<TelemetrySession | null>`
+End an active session by ID.
+
+#### `getAgentStats(agent, period = '30d'): Promise<AgentStats>`
 Get statistics for an agent.
 
-**Parameters:**
-- `agent: AgentType` - Agent to query
-- `period: string` - Time period (e.g., '30d', '7d')
+#### `compareAgents(period = '30d'): Promise<ComparisonStats>`
+Compare all agents, with recommendations.
 
-**Returns:** `Promise<AgentStats>`
-
-#### `getAllSessions(): Promise<TelemetrySession[]>`
-Get all telemetry sessions.
+#### `getHandoffPatterns(period = '30d'): Promise<HandoffPatterns>`
+Summarize agent handoffs.
 
 **Example:**
 ```typescript
@@ -129,48 +123,41 @@ import { TelemetryEngine } from '@dcyfr/ai';
 
 const engine = new TelemetryEngine({
   storage: 'file',
-  storagePath: '.dcyfr/telemetry',
-  retentionDays: 30,
+  basePath: '.dcyfr/telemetry',
 });
 
-const session = engine.startSession('claude', {
+const session = engine.startSession('anthropic', {
   taskType: 'feature',
-  taskDescription: 'Add dark mode',
+  description: 'Add dark mode',
 });
 ```
 
 ### `class TelemetrySessionManager`
 
-Manage telemetry sessions with lifecycle hooks.
-
-**Constructor:**
-```typescript
-new TelemetrySessionManager(engine: TelemetryEngine)
-```
+A running session, returned by `TelemetryEngine.startSession()`. It is not constructed directly.
 
 **Methods:**
-
-#### `startSession(agent, context): SessionWrapper`
-Start managed session with helper methods.
-
-**Returns:** `SessionWrapper` with methods:
-- `recordMetric(name: string, value: number): void`
-- `complete(result: SessionResult): void`
+- `recordMetric(metric: keyof TelemetryMetrics, value: number): void`
+- `recordValidation(validation: string, status: ValidationStatus): void`
+- `recordViolation(violation: Omit<ViolationRecord, 'timestamp'>): void`
+- `recordHandoff(handoff: Omit<HandoffRecord, 'timestamp' | 'fromAgent'>): void`
+- `updateCost(inputTokens: number, outputTokens: number): void`
+- `getSession(): TelemetrySession`
+- `end(outcome: TaskOutcome): Promise<TelemetrySession>`
 
 **Example:**
 ```typescript
-import { TelemetryEngine, TelemetrySessionManager } from '@dcyfr/ai';
+import { TelemetryEngine } from '@dcyfr/ai';
 
 const engine = new TelemetryEngine({ storage: 'memory' });
-const manager = new TelemetrySessionManager(engine);
 
-const session = manager.startSession('claude', {
+const session = engine.startSession('anthropic', {
   taskType: 'feature',
-  taskDescription: 'Implement auth',
+  description: 'Implement auth',
 });
 
 session.recordMetric('tokenCompliance', 0.95);
-session.complete({ success: true });
+await session.end('success');
 ```
 
 ## Providers
@@ -187,50 +174,56 @@ new ProviderRegistry(config: ProviderRegistryConfig)
 **Config:**
 ```typescript
 interface ProviderRegistryConfig {
-  providers: Record<ProviderType, ProviderConfig>;
-  fallbackOrder: ProviderType[];
-  timeout?: number;
-  retries?: number;
+  primaryProvider: ProviderType;
+  fallbackChain: ProviderType[];
+  autoReturn: boolean;          // return to the primary when it recovers
+  healthCheckInterval: number;  // ms
+  sessionStatePath?: string;
+  validationLevel?: 'standard' | 'enhanced' | 'strict';
 }
 ```
 
 **Methods:**
 
-#### `executeWithFallback<T>(provider, context, executor): Promise<T>`
-Execute function with provider fallback.
+#### `executeWithFallback<T>(task, executor): Promise<ExecutionResult<T>>`
+Run `executor` against the current provider, falling back along `fallbackChain` on failure.
 
 **Parameters:**
-- `provider: ProviderType` - Primary provider
-- `context: TaskContext` - Execution context
+- `task: TaskContext` - Execution context (`description`, `phase`, `filesInProgress`)
 - `executor: (provider: ProviderType) => Promise<T>` - Execution function
 
-**Returns:** `Promise<T>` - Execution result
+#### `getCurrentProvider(): ProviderType`
+Get the active provider.
 
-#### `getProviderHealth(provider): ProviderHealth`
-Get provider health status.
+#### `getHealthStatus(): Map<ProviderType, ProviderHealth>`
+Get health status for every provider.
 
-#### `switchProvider(from, to, reason): Promise<void>`
-Manually switch provider.
+#### `destroy(): void`
+Stop health monitoring.
 
 **Example:**
 ```typescript
 import { ProviderRegistry } from '@dcyfr/ai';
 
 const registry = new ProviderRegistry({
-  providers: {
-    claude: { enabled: true },
-    groq: { enabled: true },
-  },
-  fallbackOrder: ['claude', 'groq'],
+  primaryProvider: 'anthropic',
+  fallbackChain: ['github-models', 'ollama'],
+  autoReturn: true,
+  healthCheckInterval: 60000,
 });
 
 const result = await registry.executeWithFallback(
-  'claude',
-  { taskType: 'feature' },
+  {
+    description: 'Implement feature',
+    phase: 'implementation',
+    filesInProgress: ['src/app.ts'],
+  },
   async (provider) => {
     return await callAI(provider);
   }
 );
+
+registry.destroy();
 ```
 
 ## Plugins
@@ -247,8 +240,9 @@ new PluginLoader(config?: PluginLoaderConfig)
 **Config:**
 ```typescript
 interface PluginLoaderConfig {
-  failureMode?: 'error' | 'warn' | 'skip';
-  timeout?: number;
+  failureMode?: 'throw' | 'warn' | 'silent';
+  autoLoad?: boolean;
+  timeout?: number; // ms
 }
 ```
 
@@ -330,8 +324,9 @@ new ValidationFramework(config?: ValidationFrameworkConfig)
 ```typescript
 interface ValidationFrameworkConfig {
   gates?: ValidationGate[];
+  failureMode?: 'error' | 'warn' | 'block';
   parallel?: boolean;
-  failFast?: boolean;
+  timeout?: number;
 }
 
 interface ValidationGate {
@@ -339,8 +334,6 @@ interface ValidationGate {
   plugins: string[];
   required: boolean;
   failureMode: 'error' | 'warn' | 'skip';
-  parallel?: boolean;
-  timeout?: number;
 }
 ```
 
@@ -418,13 +411,15 @@ const report = await framework.validate({
 
 ```typescript
 // Agent types
-type AgentType = 'claude' | 'copilot' | 'groq' | 'ollama';
+type AgentType = 'ollama' | 'workbench' | 'github-models' | 'anthropic';
 
 // Task types
-type TaskType = 'feature' | 'bug' | 'refactor' | 'quick-fix' | 'research';
+type TaskType =
+  | 'feature' | 'bug' | 'refactor' | 'quick-fix' | 'research'
+  | 'documentation' | 'testing' | 'plugin_installation';
 
 // Task outcomes
-type TaskOutcome = 'success' | 'escalated' | 'failed';
+type TaskOutcome = 'success' | 'escalated' | 'failed' | 'partial';
 
 // Validation severity
 type ValidationSeverity = 'error' | 'warning' | 'info';
@@ -445,6 +440,9 @@ interface TelemetrySession {
   endTime?: Date;
   outcome?: TaskOutcome;
   metrics: TelemetryMetrics;
+  violations: ViolationRecord[];
+  handoffs: HandoffRecord[];
+  cost: { provider: string; inputTokens: number; outputTokens: number; estimatedCost: number; currency: 'USD' | 'EUR' | 'GBP' };
 }
 
 interface TelemetryMetrics {
@@ -456,28 +454,33 @@ interface TelemetryMetrics {
   tokensUsed: number;
   filesModified: number;
   linesChanged: number;
-  validations: ValidationStatus;
+  validations: Record<string, ValidationStatus>;
 }
 ```
 
 ### Provider Types
 
 ```typescript
-type ProviderType = 'claude' | 'groq' | 'ollama' | 'copilot' | 'openai' | 'anthropic';
+type ProviderType = 'local' | 'ollama' | 'workbench' | 'github-models' | 'anthropic';
 
 interface ProviderConfig {
-  enabled: boolean;
-  apiKey?: string;
-  baseUrl?: string;
-  model?: string;
-  maxTokens?: number;
+  name: ProviderType;
+  apiEndpoint?: string;
+  healthCheckUrl?: string;
+  maxRetries: number;
+  retryDelay: number;
+  timeout: number;
+  enabled?: boolean;
 }
 
 interface ProviderHealth {
+  provider: ProviderType;
   available: boolean;
   responseTime?: number;
-  errorRate?: number;
-  lastCheck: Date;
+  lastChecked: Date;
+  rateLimitRemaining?: number;
+  rateLimitReset?: Date;
+  error?: string;
 }
 ```
 
@@ -504,6 +507,8 @@ interface ValidationViolation {
   message: string;
   file?: string;
   line?: number;
+  column?: number;
+  fixed?: boolean;
 }
 
 interface ValidationReport {
@@ -521,7 +526,7 @@ Thrown when provider rate limit is exceeded.
 
 ```typescript
 class RateLimitError extends Error {
-  constructor(provider: ProviderType, retryAfter?: number);
+  constructor(message: string, provider: ProviderType, retryAfter?: number);
 }
 ```
 
@@ -531,7 +536,7 @@ Thrown when provider is unavailable.
 
 ```typescript
 class ProviderUnavailableError extends Error {
-  constructor(provider: ProviderType, reason?: string);
+  constructor(message: string, provider: ProviderType);
 }
 ```
 
@@ -541,7 +546,7 @@ Thrown when plugin fails to load.
 
 ```typescript
 class PluginLoadError extends Error {
-  constructor(pluginName: string, reason: string);
+  constructor(message: string, pluginName: string, cause?: Error);
 }
 ```
 
@@ -551,7 +556,7 @@ Thrown when plugin manifest is invalid.
 
 ```typescript
 class PluginValidationError extends Error {
-  constructor(pluginName: string, errors: string[]);
+  constructor(message: string, pluginName: string);
 }
 ```
 
@@ -561,17 +566,18 @@ class PluginValidationError extends Error {
 
 ```typescript
 interface StorageAdapter {
-  save(key: string, value: unknown): Promise<void>;
-  load(key: string): Promise<unknown>;
+  type: StorageType;
+  get<T>(key: string): Promise<T | null>;
+  set<T>(key: string, value: T): Promise<void>;
   delete(key: string): Promise<void>;
-  list(): Promise<string[]>;
+  list(prefix?: string): Promise<string[]>;
+  clear(): Promise<void>;
 }
 
-// Built-in adapters
-class MemoryStorage implements StorageAdapter { }
-class FileStorage implements StorageAdapter {
-  constructor(basePath: string);
-}
+// Built-in adapters and factory
+class MemoryStorageAdapter implements StorageAdapter { }
+class FileStorageAdapter implements StorageAdapter { }
+function createStorageAdapter(type: StorageType, options?: { basePath?: string }): StorageAdapter;
 ```
 
 ## Constants
@@ -579,16 +585,6 @@ class FileStorage implements StorageAdapter {
 ```typescript
 // Default configuration
 export const DEFAULT_CONFIG: FrameworkConfig;
-
-// Provider defaults
-export const DEFAULT_PROVIDERS: Record<ProviderType, ProviderConfig>;
-
-// Timeouts
-export const DEFAULT_TIMEOUT = 30000;
-export const DEFAULT_PLUGIN_TIMEOUT = 30000;
-
-// Retention
-export const DEFAULT_RETENTION_DAYS = 30;
 ```
 
 ---

@@ -26,7 +26,7 @@ npm install @dcyfr/ai
 ### For DCYFR Projects (with specialized agents)
 
 ```bash
-npm install @dcyfr/ai @dcyfr/agents
+npm install @dcyfr/ai @dcyfr/workspace-agents
 ```
 
 ## Quick Start
@@ -68,20 +68,19 @@ const config = await loadConfig();
 // Initialize telemetry
 const telemetry = new TelemetryEngine({
   storage: config.telemetry.storage,
-  enabled: config.telemetry.enabled,
+  basePath: config.telemetry.storagePath,
 });
 
 // Start tracking
-const sessionManager = new TelemetrySessionManager(telemetry);
-const session = sessionManager.startSession('claude', {
+const session = telemetry.startSession('anthropic', {
   taskType: 'feature',
-  taskDescription: 'Implement dark mode',
+  description: 'Implement dark mode',
 });
 
 // Your code here...
 
 // Complete session
-session.complete({ success: true });
+await session.end('success');
 ```
 
 ### 3. Using Validation Framework
@@ -146,7 +145,7 @@ DCYFR_AGENTS_DESIGNTOKENS_COMPLIANCE=0.95
 Plugins extend the framework with custom validation logic:
 
 ```typescript
-import { Plugin } from '@dcyfr/ai';
+import { Plugin, PluginLoader } from '@dcyfr/ai';
 
 const myPlugin: Plugin = {
   manifest: {
@@ -179,21 +178,17 @@ await loader.loadPlugin(myPlugin);
 Track AI usage, costs, and quality metrics:
 
 ```typescript
-import { TelemetryEngine, TelemetrySessionManager } from '@dcyfr/ai';
+import { TelemetryEngine } from '@dcyfr/ai';
 
 const engine = new TelemetryEngine({
   storage: 'file',
-  storagePath: '.dcyfr/telemetry',
-  retentionDays: 30,
+  basePath: '.dcyfr/telemetry',
 });
 
-const manager = new TelemetrySessionManager(engine);
-
 // Start session
-const session = manager.startSession('claude', {
+const session = engine.startSession('anthropic', {
   taskType: 'feature',
-  taskDescription: 'Add authentication',
-  projectName: 'my-app',
+  description: 'Add authentication',
 });
 
 // Record metrics
@@ -201,12 +196,12 @@ session.recordMetric('tokenCompliance', 0.95);
 session.recordMetric('testPassRate', 1.0);
 
 // Complete
-session.complete({ success: true });
+await session.end('success');
 
 // Get analytics
-const stats = await engine.getAgentStats('claude', '30d');
+const stats = await engine.getAgentStats('anthropic', '30d');
 console.log(`Total sessions: ${stats.totalSessions}`);
-console.log(`Success rate: ${stats.successRate * 100}%`);
+console.log(`Successes: ${stats.outcomes.success}`);
 ```
 
 ### 4. Provider Registry
@@ -217,23 +212,27 @@ Multi-provider AI with automatic fallback:
 import { ProviderRegistry } from '@dcyfr/ai';
 
 const registry = new ProviderRegistry({
-  providers: {
-    claude: { enabled: true },
-    groq: { enabled: true },
-    ollama: { enabled: true },
-  },
-  fallbackOrder: ['claude', 'groq', 'ollama'],
+  primaryProvider: 'anthropic',
+  fallbackChain: ['github-models', 'ollama'],
+  autoReturn: true,
+  healthCheckInterval: 60000,
 });
 
 // Execute with fallback
 const result = await registry.executeWithFallback(
-  'claude',
-  { taskType: 'feature' },
+  {
+    description: 'Implement feature',
+    phase: 'implementation',
+    filesInProgress: ['src/app.ts'],
+  },
   async (provider) => {
     // Your AI execution logic
     return await callAI(provider);
   }
 );
+
+// Stop health monitoring when you are done
+registry.destroy();
 ```
 
 ## Configuration
@@ -287,7 +286,7 @@ validation:
       required: true
       failureMode: error
 
-# DCYFR-specific agents (requires @dcyfr/agents)
+# DCYFR-specific agents (requires @dcyfr/workspace-agents)
 agents:
   designTokens:
     enabled: true
@@ -364,7 +363,7 @@ import {
   barrelExportChecker,
   pageLayoutEnforcer,
   testDataGuardian,
-} from '@dcyfr/agents';
+} from '@dcyfr/workspace-agents';
 
 const loader = new PluginLoader();
 
@@ -433,20 +432,17 @@ export const myCustomValidator: Plugin = {
 ### Session Management
 
 ```typescript
-import { TelemetryEngine, TelemetrySessionManager } from '@dcyfr/ai';
+import { TelemetryEngine } from '@dcyfr/ai';
 
 const engine = new TelemetryEngine({
   storage: 'file',
-  storagePath: '.dcyfr/telemetry',
+  basePath: '.dcyfr/telemetry',
 });
 
-const manager = new TelemetrySessionManager(engine);
-
 // Start session
-const session = manager.startSession('claude', {
+const session = engine.startSession('anthropic', {
   taskType: 'refactor',
-  taskDescription: 'Extract shared utilities',
-  projectName: 'my-app',
+  description: 'Extract shared utilities',
 });
 
 // Record various metrics
@@ -456,31 +452,23 @@ session.recordMetric('lintViolations', 3);
 session.recordMetric('executionTime', 45000);
 
 // Complete with outcome
-session.complete({
-  success: true,
-  outcome: 'success',
-});
+await session.end('success');
 ```
 
 ### Analytics & Reporting
 
 ```typescript
 // Get agent statistics
-const stats = await engine.getAgentStats('claude', '30d');
-console.log('Claude Statistics (30 days):');
+const stats = await engine.getAgentStats('anthropic', '30d');
+console.log('Anthropic statistics (30 days):');
 console.log(`- Total sessions: ${stats.totalSessions}`);
-console.log(`- Success rate: ${stats.successRate * 100}%`);
-console.log(`- Avg quality: ${stats.avgQuality * 100}%`);
-console.log(`- Total cost: $${stats.totalCost}`);
+console.log(`- Successes: ${stats.outcomes.success}`);
+console.log(`- Avg token compliance: ${stats.quality.averageTokenCompliance * 100}%`);
+console.log(`- Total cost: $${stats.cost.totalCost}`);
 
-// Get all sessions
-const sessions = await engine.getAllSessions();
-console.log(`Total sessions across all agents: ${sessions.length}`);
-
-// Filter by date range
-const recentSessions = sessions.filter(s => 
-  s.startTime > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-);
+// Compare all agents over a period
+const comparison = await engine.compareAgents('7d');
+comparison.recommendations.forEach((rec) => console.log(rec));
 ```
 
 ## Multi-Provider AI
@@ -491,46 +479,54 @@ const recentSessions = sessions.filter(s =>
 import { ProviderRegistry } from '@dcyfr/ai';
 
 const registry = new ProviderRegistry({
-  providers: {
-    claude: { enabled: true },
-    groq: { enabled: true },
-    ollama: { enabled: true },
-  },
-  fallbackOrder: ['claude', 'groq', 'ollama'],
+  primaryProvider: 'anthropic',
+  fallbackChain: ['github-models', 'ollama'],
+  autoReturn: true,
+  healthCheckInterval: 60000,
 });
 
 // Execute with automatic fallback
 const result = await registry.executeWithFallback(
-  'claude',
-  { taskType: 'feature', projectName: 'my-app' },
+  {
+    description: 'Generate API documentation',
+    phase: 'implementation',
+    filesInProgress: ['src/api/docs.ts'],
+  },
   async (provider) => {
     console.log(`Executing with ${provider}`);
     // Your AI call here
     return await myAIFunction(provider);
   }
 );
+
+console.log(result.provider, result.fallbackUsed);
 ```
 
-### Manual Provider Switching
+### Checking Provider State
 
 ```typescript
-// Check provider health
-const health = registry.getProviderHealth('claude');
-console.log(`Claude status: ${health.available ? 'available' : 'unavailable'}`);
+// Currently active provider
+console.log(registry.getCurrentProvider());
 
-// Switch providers manually
-await registry.switchProvider('claude', 'groq', 'rate-limit');
+// Health of every provider (a Map keyed by provider name)
+for (const [provider, health] of registry.getHealthStatus()) {
+  console.log(`${provider}: ${health.available ? 'available' : 'unavailable'}`);
+}
+
+// Stop health monitoring
+registry.destroy();
 ```
+
+Valid provider names are `local`, `ollama`, `workbench`, `github-models` and `anthropic`. Switching happens automatically on failure or rate limit; there is no public manual switch method.
 
 ## Examples
 
 See the [examples/](../examples/) directory for complete examples:
 
-- **basic-usage.ts** - Getting started with the framework
+- **basic-usage.ts** - Telemetry, provider fallback and analytics
 - **plugin-system.ts** - Creating and using plugins
 - **configuration.ts** - Configuration management
-- **telemetry-example.ts** - Telemetry and analytics
-- **multi-provider.ts** - Provider fallback patterns
+- **autonomous-agent.ts** - Autonomous agent example
 
 ## CLI Commands
 
@@ -577,7 +573,7 @@ npx dcyfr-ai config:schema
 5. 🔌 Explore [Plugin Development](./PLUGINS.md)
 
 ### For DCYFR Projects
-1. ✅ Install both `@dcyfr/ai` and `@dcyfr/agents`
+1. ✅ Install both `@dcyfr/ai` and `@dcyfr/workspace-agents`
 2. ✅ Configure specialized agents
 3. ✅ Run validation gates
 4. 📊 Monitor telemetry

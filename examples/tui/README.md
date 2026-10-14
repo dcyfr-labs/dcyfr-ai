@@ -270,7 +270,7 @@ npm list @opentui/core
 
 - [OpenTUI Documentation](https://opentui.com/docs)
 - [DCYFR AI Framework Docs](https://github.com/dcyfr-labs/dcyfr-ai/blob/main/docs/)
-- [Examples Source Code](./examples/tui/)
+- [Examples Source Code](./)
 
 ---
 

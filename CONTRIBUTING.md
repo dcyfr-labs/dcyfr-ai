@@ -4,7 +4,7 @@ Thank you for your interest in contributing to @dcyfr/ai! This document provides
 
 ## Code of Conduct
 
-Be respectful, inclusive, and professional in all interactions.
+This project follows the DCYFR Labs [Code of Conduct](https://github.com/dcyfr-labs/.github/blob/main/CODE_OF_CONDUCT.md).
 
 ## Licensing & Contributions
 

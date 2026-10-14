@@ -3,102 +3,20 @@
 
 ## For Contributors
 
-### Making Changes
+1. Make your code changes.
+2. Open a PR whose title is a [conventional commit](https://www.conventionalcommits.org/):
+   - `fix:` or `deps:` or `perf:`: patch bump
+   - `feat:`: minor bump
+   - `feat!:` or a `BREAKING CHANGE:` footer: major bump
+   - `docs:`, `test:`, `ci:`, `chore:`, `refactor:`: no release
+3. Squash-merge. The PR title becomes the commit message release-please reads.
 
-1. **Make your code changes**
-2. **Add a changeset:**
-   ```bash
-   npm run changeset
-   ```
-3. **Select version bump type:**
-   - `patch` - Bug fixes (1.0.0 → 1.0.1)
-   - `minor` - New features (1.0.0 → 1.1.0)
-   - `major` - Breaking changes (1.0.0 → 2.0.0)
-
-4. **Write a clear summary**
-5. **Commit everything:**
-   ```bash
-   git add .
-   git commit -m "feat: your feature description"
-   git push
-   ```
+There is nothing else to add: no changeset files and no version edits.
 
 ## For Maintainers
 
-### Standard Release
+1. Merge PRs to `main`.
+2. Review the Release PR release-please opens (version, `CHANGELOG.md`, `.release-please-manifest.json`).
+3. Merge it. The release workflow tags, creates the GitHub Release and publishes to npm with provenance.
 
-1. **Review and merge PRs to `main`**
-   - Changesets bot will create a "Release PR"
-
-2. **Review the Release PR**
-   - Check version bump is correct
-   - Review CHANGELOG.md updates
-
-3. **Merge the Release PR**
-   - Package automatically publishes to npm
-   - Git tag created automatically
-   - GitHub release created
-
-### Canary Release (Pre-release Testing)
-
-1. **Go to GitHub Actions**
-2. **Select "Publish Canary" workflow**
-3. **Click "Run workflow"**
-4. **Choose tag:** `canary`, `beta`, `alpha`, or `next`
-5. **Package published as:** `@dcyfr/ai@canary`
-
-### Emergency Hotfix
-
-```bash
-# Make fix
-git commit -m "fix: critical bug"
-
-# Quick version bump
-npm run version:patch
-
-# Push with tag
-git push && git push --tags
-
-# Manual publish
-npm run build
-npm publish
-```
-
-## Common Commands
-
-```bash
-# Create changeset
-npm run changeset
-
-# Build package
-npm run build
-
-# Test
-npm run test
-
-# Type check
-npm run typecheck
-
-# Lint
-npm run lint
-```
-
-## Installation
-
-```bash
-# Latest stable
-npm install @dcyfr/ai
-
-# Specific version
-npm install @dcyfr/ai@1.0.2
-
-# Canary/pre-release
-npm install @dcyfr/ai@canary
-npm install @dcyfr/ai@beta
-```
-
-## Links
-
-- **Full Documentation:** [RELEASE_MANAGEMENT.md](./RELEASE_MANAGEMENT.md)
-- **npm Package:** https://www.npmjs.com/package/@dcyfr/ai
-- **GitHub:** https://github.com/dcyfr-labs/dcyfr-ai
+For canary builds, emergency handling and troubleshooting, see [RELEASE_MANAGEMENT.md](./RELEASE_MANAGEMENT.md).

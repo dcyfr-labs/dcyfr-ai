@@ -14,7 +14,7 @@ The DCYFR Capability Bootstrap Toolkit provides automated capability manifest ge
 ## Quick Start
 
 ```typescript
-import { bootstrapAgent } from '@dcyfr/ai/capability-bootstrap';
+import { bootstrapAgent } from '@dcyfr/ai';
 
 // Bootstrap from Markdown agent file
 const result = await bootstrapAgent({
@@ -245,7 +245,7 @@ console.log(`Bootstrapped ${results.length} agents`);
 ### Basic Agent Bootstrapping
 
 ```typescript
-import { bootstrapAgent } from '@dcyfr/ai/capability-bootstrap';
+import { bootstrapAgent } from '@dcyfr/ai';
 
 // Load and bootstrap an agent
 const result = await bootstrapAgent({
@@ -277,7 +277,7 @@ if (result.suggestions.length > 0) {
 ### Custom Configuration
 
 ```typescript
-import { CapabilityBootstrap } from '@dcyfr/ai/capability-bootstrap';
+import { CapabilityBootstrap } from '@dcyfr/ai';
 
 // Create bootstrap with custom configuration
 const bootstrap = new CapabilityBootstrap(
@@ -311,7 +311,7 @@ const result = await bootstrap.bootstrap({
 ### Batch Processing
 
 ```typescript
-import { bootstrapAgents } from '@dcyfr/ai/capability-bootstrap';
+import { bootstrapAgents } from '@dcyfr/ai';
 import { glob } from 'glob';
 
 // Find all agent files
@@ -338,51 +338,6 @@ for (const result of results) {
 }
 
 console.log(`Successfully bootstrapped ${results.length} agents`);
-```
-
-### Integration with Agent Factory
-
-```typescript
-import { bootstrapAgent } from '@dcyfr/ai/capability-bootstrap';
-import { AgentFactory } from '@dcyfr/ai';
-
-// Bootstrap and create agent instance
-async function createAgentFromDefinition(agentPath: string) {
-  // Bootstrap to generate capability manifest
-  const bootstrap = await bootstrapAgent({
-    type: 'file',
-    filePath: agentPath
-  });
-  
-  // Create agent instance with generated manifest
-  const agent = AgentFactory.create({
-    ...bootstrap.manifest,
-    capabilities: bootstrap.manifest.capabilities.map(c => ({
-      ...c,
-      // Custom capability initialization
-      enabled: c.confidence_level > 0.7
-    }))
-  });
-  
-  return {
-    agent,
-    bootstrap,
-    suggestions: bootstrap.suggestions
-  };
-}
-
-// Usage
-const { agent, bootstrap, suggestions } = await createAgentFromDefinition(
-  './agents/fullstack-developer.agent.md'
-);
-
-// Review suggestions for improvement
-if (suggestions.length > 0) {
-  console.log('Bootstrap suggestions:');
-  suggestions.forEach((suggestion, i) => {
-    console.log(`${i + 1}. ${suggestion}`);
-  });
-}
 ```
 
 ## Capability Detection Patterns
@@ -499,33 +454,7 @@ if (result.suggestions.length > 0) {
 
 ## Integration Points
 
-### Agent Factory Integration
-
-```typescript
-import { bootstrapAgent } from '@dcyfr/ai/capability-bootstrap';
-import { AgentFactory } from '@dcyfr/ai';
-
-const bootstrap = await bootstrapAgent(source);
-const agent = AgentFactory.create(bootstrap.manifest);
-```
-
-### Capability Validation Integration
-
-```typescript
-import { validateCapabilities } from '@dcyfr/ai/capability-validation';
-
-const result = await bootstrapAgent(source);
-const validationReport = await validateCapabilities(result.manifest);
-```
-
-### Monitoring Integration
-
-```typescript
-import { trackCapabilityMetrics } from '@dcyfr/ai/monitoring';
-
-const result = await bootstrapAgent(source);
-trackCapabilityMetrics(result.agentId, result.manifest.capabilities);
-```
+`bootstrapAgent()` returns a `BootstrapResult` whose `manifest` can be passed to `CapabilityRegistry.registerManifest()` (see `CapabilityRegistry` and `createCapabilityRegistry` in [index.md](./index.md)).
 
 ---
 

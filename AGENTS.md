@@ -1,362 +1,212 @@
 # AGENTS.md - @dcyfr/ai
 
-**Portable AI Agent Harness**
+**Portable AI agent harness**
 
-Version: 1.0.3  
-Type: Public npm package  
+Type: Public npm package (`@dcyfr/ai`, current version in [package.json](package.json))
 License: MIT
 
----
-
-## 🎯 Project Overview
-
-`@dcyfr/ai` is a **portable, plugin-based AI agent harness** designed for:
-- Building AI-powered CLI tools
-- Creating interactive TUI (Terminal UI) applications
-- Implementing multi-agent workflows
-- Rapid prototyping with LLMs
-
-**Key Features:**
-- Zero vendor lock-in (supports multiple LLM providers)
-- Plugin architecture for extensibility
-- Built-in agent primitives
-- TypeScript-first design
+For the full API surface see [docs/API.md](docs/API.md) and [docs/api/index.md](docs/api/index.md). Those files are the source of truth; this file is a map for agents working in the repository.
 
 ---
 
-## 🏗️ Architecture Patterns
+## Project Overview
+
+`@dcyfr/ai` is a plugin-based harness for validation, telemetry, provider fallback and agent definitions:
+
+- **Plugin system:** `PluginLoader` loads plugins that implement `onValidate` and lifecycle hooks.
+- **Validation:** `ValidationFramework` runs plugins grouped into gates.
+- **Telemetry:** `TelemetryEngine` records sessions, metrics, violations and handoffs.
+- **Providers:** `ProviderRegistry` handles provider health checks and fallback.
+- **Config:** `ConfigLoader` / `loadConfig` read `.dcyfr.yaml` (or `.dcyfr.json`, `dcyfr.config.*`) and validate it with Zod.
+- **Agents:** `agents/` holds the agent loader, registry and router; `agents-builtin/` ships generic agent definitions.
+- **Other entry points:** `@dcyfr/ai/mcp`, `/memory`, `/compaction`, `/skills`, `/session`, `/scheduler`, `/gateway` (see the `exports` map in `package.json`).
+
+---
+
+## Architecture Patterns
 
 ### 1. Plugin System
 
-**Plugins are the core extension mechanism:**
+A plugin is an object with a `manifest` and optional hooks (`onLoad`, `onUnload`, `onValidate`, `onComplete`):
 
 ```typescript
-import { AgentFramework, Plugin } from '@dcyfr/ai';
+import { PluginLoader, type Plugin } from '@dcyfr/ai';
 
-// Define a plugin
 const myPlugin: Plugin = {
-  name: 'my-plugin',
-  version: '1.0.0',
-  
-  async initialize(framework) {
-    console.log('Plugin initialized');
+  manifest: {
+    name: 'my-plugin',
+    version: '1.0.0',
+    description: 'Example validator',
   },
-  
-  async execute(context) {
-    // Plugin logic
-    return { success: true };
+  async onValidate(context) {
+    return { valid: true, violations: [], warnings: [] };
   },
 };
 
-// Use the plugin
-const framework = new AgentFramework();
-framework.use(myPlugin);
+const loader = new PluginLoader();
+await loader.loadPlugin(myPlugin);
+const result = await loader.validateAll({
+  projectRoot: process.cwd(),
+  files: [],
+  config: {},
+});
 ```
 
-### 2. Agent Primitives
-
-**Built-in agents for common tasks:**
+### 2. Validation Gates
 
 ```typescript
-import { 
-  CodeGeneratorAgent,
-  DocumentationAgent,
-  TestGeneratorAgent,
-  SecurityScannerAgent 
-} from '@dcyfr/ai/agents-builtin';
+import { ValidationFramework } from '@dcyfr/ai';
 
-// Use a built-in agent
-const codeAgent = new CodeGeneratorAgent({
-  model: 'gpt-4',
-  temperature: 0.7,
+const framework = new ValidationFramework({
+  gates: [{ name: 'quality', plugins: ['my-plugin'], required: true, failureMode: 'error' }],
 });
-
-const code = await codeAgent.generate({
-  prompt: 'Create a TypeScript function to validate emails',
-  language: 'typescript',
-});
+await framework.loadPlugins(['my-plugin']);
+const report = await framework.validate({ projectRoot: process.cwd(), files: [], config: {} });
 ```
 
-### 3. Provider Abstraction
-
-**Support for multiple LLM providers:**
+### 3. Provider Fallback
 
 ```typescript
-import { LLMProvider } from '@dcyfr/ai';
+import { ProviderRegistry } from '@dcyfr/ai';
 
-// OpenAI
-const openai = new LLMProvider({
-  provider: 'openai',
-  apiKey: process.env.OPENAI_API_KEY,
-  model: 'gpt-4',
-});
-
-// Anthropic
-const anthropic = new LLMProvider({
-  provider: 'anthropic',
-  apiKey: process.env.ANTHROPIC_API_KEY,
-  model: 'claude-3-opus',
-});
-
-// Local models (Ollama)
-const ollama = new LLMProvider({
-  provider: 'ollama',
-  baseURL: 'http://localhost:11434',
-  model: 'llama2',
+const registry = new ProviderRegistry({
+  primaryProvider: 'anthropic',
+  fallbackChain: ['github-models', 'workbench'],
+  autoReturn: true,
+  healthCheckInterval: 60000,
 });
 ```
 
-### 4. Configuration System
+Valid `ProviderType` values are `local`, `ollama`, `workbench`, `github-models` and `anthropic`.
 
-**YAML-based configuration:**
+### 4. Configuration
 
 ```yaml
-# config/default.yaml
-framework:
-  name: "my-ai-app"
-  version: "1.0.0"
-
-providers:
-  default: openai
-  
-  openai:
-    model: gpt-4
-    temperature: 0.7
-    maxTokens: 2000
-  
-  anthropic:
-    model: claude-3-opus
-    temperature: 0.5
-
-plugins:
-  - name: code-generator
-    enabled: true
-  - name: documentation
-    enabled: false
+# .dcyfr.yaml
+version: "1.0.0"
+projectName: my-app
+validation:
+  enabled: true
+  parallel: true
+telemetry:
+  enabled: true
 ```
+
+Templates are in [config/](config/); the key reference is [docs/CONFIG_REFERENCE.md](docs/CONFIG_REFERENCE.md).
 
 ---
 
-## 📦 Package Structure
+## Package Structure
 
 ```
 packages/ai/
-├── agents/               # Agent abstractions
-│   ├── base-agent.ts
-│   ├── code-agent.ts
-│   └── doc-agent.ts
-├── agents-builtin/       # 15 generic built-in agents
-│   ├── code-generator/
-│   ├── documentation/
-│   ├── test-generator/
-│   └── security-scanner/
-├── providers/            # LLM provider integrations
-│   ├── openai.ts
-│   ├── anthropic.ts
-│   └── ollama.ts
-├── plugins/              # Plugin system
-│   ├── plugin-manager.ts
-│   └── plugin-types.ts
-└── utils/                # Shared utilities
-    ├── config.ts
-    └── logger.ts
+├── agents/            # Agent loader, registry, router, types
+├── agents-builtin/    # Generic built-in agent definitions
+├── config/            # ConfigLoader and Zod schemas
+├── core/              # TelemetryEngine, ProviderRegistry
+├── plugins/           # PluginLoader
+├── validation/        # ValidationFramework
+├── mcp/  memory/      # MCP client and memory subsystems
+├── src/               # compaction, skills, session, scheduler, gateway, cli
+├── types/             # Shared types
+├── utils/             # Storage adapters, safe fs helpers
+└── index.ts           # Public entry point
+bin/                   # dcyfr-ai CLI (cli.js) and dcyfr-ai-tui (tui.js)
+config/                # default.yaml, default.json, minimal.yaml, schema.json
+docs/                  # Guides and API reference
+examples/              # Runnable examples
 ```
 
 ---
 
-## 🧩 Built-In Agents (15 Total)
+## Built-In Agents
 
-1. **CodeGeneratorAgent** - Generate code from natural language
-2. **DocumentationAgent** - Create technical documentation
-3. **TestGeneratorAgent** - Generate unit tests
-4. **SecurityScannerAgent** - Scan for security vulnerabilities
-5. **RefactoringAgent** - Suggest code refactorings
-6. **APIDesignAgent** - Design REST/GraphQL APIs
-7. **DatabaseSchemaAgent** - Generate database schemas
-8. **ConfigGeneratorAgent** - Create configuration files
-9. **GitCommitAgent** - Generate meaningful commit messages
-10. **ChangelogAgent** - Generate CHANGELOG entries
-11. **ReadmeAgent** - Create README documentation
-12. **MigrationAgent** - Generate database migrations
-13. **ValidationAgent** - Validate code patterns
-14. **OptimizationAgent** - Suggest performance optimizations
-15. **TranslationAgent** - Translate code between languages
+`@dcyfr/ai/agents-builtin` exports generic agent definitions: `fullstackDeveloper`, `frontendDeveloper`, `backendArchitect`, `typescriptPro`, `testEngineer`, `debugger`, `securityEngineer`, `architectureReviewer`, `databaseArchitect`, `cloudArchitect`, `performanceProfiler`, `devopsEngineer`, `dataScientist`, `technicalWriter` and `researchOrchestrator`. `loadBuiltinAgents()` returns them all. They are definitions (manifest plus prompt), not classes to instantiate.
+
+Private, organization-specific agents live in `@dcyfr/workspace-agents`, not here.
 
 ---
 
-## 🛠️ Development Patterns
-
-### Creating a New Agent
-
-```typescript
-import { BaseAgent, AgentConfig } from '@dcyfr/ai';
-
-export class MyCustomAgent extends BaseAgent {
-  constructor(config: AgentConfig) {
-    super({
-      name: 'my-custom-agent',
-      version: '1.0.0',
-      ...config,
-    });
-  }
-
-  async execute(input: string): Promise<string> {
-    // Agent implementation
-    const response = await this.llm.complete({
-      prompt: this.buildPrompt(input),
-      temperature: this.config.temperature || 0.7,
-    });
-    
-    return response.text;
-  }
-
-  private buildPrompt(input: string): string {
-    return `You are a helpful assistant. ${input}`;
-  }
-}
-```
-
-### Creating a Plugin
-
-```typescript
-import { Plugin, PluginContext } from '@dcyfr/ai';
-
-export const myPlugin: Plugin = {
-  name: 'my-plugin',
-  version: '1.0.0',
-  
-  async initialize(context: PluginContext) {
-    // Setup logic
-    context.logger.info('Plugin initialized');
-  },
-  
-  async execute(context: PluginContext) {
-    // Main plugin logic
-    return { success: true };
-  },
-  
-  async cleanup(context: PluginContext) {
-    // Teardown logic
-    context.logger.info('Plugin cleaned up');
-  },
-};
-```
-
----
-
-## 🧪 Testing
+## Development
 
 ```bash
-# Run all tests
-npm run test
-
-# Watch mode
-npm run test:watch
-
-# Type checking
-npm run typecheck
+npm run build        # tsc + import fix-up (runs gen-version first)
+npm run test         # vitest run
+npm run test:watch   # vitest watch mode
+npm run typecheck    # tsc --noEmit
+npm run lint         # eslint packages/
+npm run check:parity # doc-parity gates (version, exports, env, config)
 ```
 
-**Test Patterns:**
+Tests use [vitest](https://vitest.dev/) and live next to the code in `__tests__/` directories:
 
 ```typescript
 import { describe, it, expect } from 'vitest';
-import { CodeGeneratorAgent } from '../agents-builtin/code-generator';
+import { PluginLoader } from '../plugin-loader';
 
-describe('CodeGeneratorAgent', () => {
-  it('should generate valid TypeScript code', async () => {
-    const agent = new CodeGeneratorAgent({
-      provider: 'mock',  // Use mock provider in tests
-    });
-    
-    const code = await agent.generate({
-      prompt: 'Create a hello world function',
-      language: 'typescript',
-    });
-    
-    expect(code).toContain('function');
-    expect(code).toContain('hello');
+describe('PluginLoader', () => {
+  it('starts empty', () => {
+    expect(new PluginLoader().getPluginCount()).toBe(0);
   });
 });
 ```
 
 ---
 
-## 📚 CLI & TUI
-
-### CLI Usage
+## CLI & TUI
 
 ```bash
-# Generate code
-dcyfr-ai generate --prompt "Create a REST API" --language typescript
+npx dcyfr-ai config:init       # create a starter .dcyfr.yaml
+npx dcyfr-ai config:validate   # validate the current config
+npx dcyfr-ai config:schema     # print the config schema
+npx dcyfr-ai --help
 
-# Generate tests
-dcyfr-ai test --file src/app.ts
-
-# Scan for security issues
-dcyfr-ai security --dir ./src
-
-# Interactive mode
-dcyfr-ai interactive
+npx dcyfr-ai-tui dashboard     # interactive validation dashboard
+npx dcyfr-ai-tui wizard        # configuration wizard
 ```
 
-### TUI Usage
-
-```bash
-# Launch interactive terminal UI
-dcyfr-ai-tui
-
-# Or
-node bin/tui.js
-```
+Run `npx dcyfr-ai --help` for the authoritative command list. In a checkout, `npm run cli` and `npm run tui` run the same entry points.
 
 ---
 
-## 🔒 Security
+## Security
 
-- **API Keys:** Never commit API keys. Use environment variables.
-- **Input Validation:** Always validate user inputs before passing to LLMs.
-- **Rate Limiting:** Implement rate limiting for API calls.
-- **Sandboxing:** Execute generated code in isolated environments.
-
----
-
-## 📦 Publishing
-
-```bash
-# Build the package
-npm run build
-
-# Publish to npm (automated via CI)
-npm publish --access public
-```
-
-**Versioning:** Follows semantic versioning (semver)
+- **API keys:** never commit them. Use environment variables.
+- **Input validation:** validate user input before passing it to LLMs.
+- **Rate limiting:** `ProviderRegistry` detects rate limits and falls back; add your own limits for user-facing calls.
+- **Sandboxing:** plugins run in the host process. Review plugin code before loading it, and run generated code in an isolated environment.
 
 ---
 
-## 🔗 Related Packages
+## Publishing
 
-- **@dcyfr/agents** - Proprietary DCYFR-specific agents (private)
-- **@dcyfr/ai-nodejs** - Node.js starter template using this framework
-- **@dcyfr/ai-sandbox** - Examples and experimentation sandbox
+Releases are automated with release-please from conventional-commit PR titles. Do not run `npm publish` by hand. See [docs/RELEASE_MANAGEMENT.md](docs/RELEASE_MANAGEMENT.md) and [CONTRIBUTING.md](CONTRIBUTING.md#release-process).
 
 ---
 
-## 📄 Documentation
+## Related Packages
 
-- [API.md](docs/API.md) - Complete API reference
-- [examples/](examples/) - Usage examples
-- [CONTRIBUTING.md](CONTRIBUTING.md) - Contribution guidelines
-- [examples/](examples/) - Code examples
+- **@dcyfr/workspace-agents**: private, organization-specific agents
+- **@dcyfr/ai-nodejs-starter**: Node.js starter template using this framework (not yet published to npm)
+- **@dcyfr/ai-sandbox**: examples and experimentation sandbox (not yet published to npm)
 
 ---
 
-**Last Updated:** February 1, 2026  
-**Maintained By:** DCYFR Labs  
+## Documentation
+
+- [docs/API.md](docs/API.md): API reference
+- [docs/GETTING-STARTED.md](docs/GETTING-STARTED.md): tutorial
+- [docs/PLUGINS.md](docs/PLUGINS.md): plugin authoring
+- [examples/](examples/): usage examples
+- [CONTRIBUTING.md](CONTRIBUTING.md): contribution guidelines
+
+---
+
+**Maintained By:** DCYFR Labs
 **NPM:** [@dcyfr/ai](https://www.npmjs.com/package/@dcyfr/ai)
 
 ## Quality Gates
+
 - TypeScript: 0 errors (`npm run typecheck`)
-- Tests: ≥99% pass rate (`npm run test`)
+- Tests: passing (`npm run test`)
 - Lint: 0 errors (`npm run lint`)

@@ -239,17 +239,15 @@ const contract = await manager.createContract({
 
 ---
 
-## Changeset
+## Release
 
-A changeset should be created for downstream packages before upgrading to v3.0.0:
+Downstream packages are released with release-please, so no changeset file is needed. Use a conventional-commit PR title such as:
 
-```bash
-cd dcyfr-ai
-npx changeset
-# Select: @dcyfr/ai
-# Version bump: minor (all changes are additive)
-# Description: "feat(delegation): session handoff protocol v3.0 (handoff_context, requires_confirmation, schema_version)"
 ```
+feat(delegation): session handoff protocol v3.0 (handoff_context, requires_confirmation, schema_version)
+```
+
+See [RELEASE_MANAGEMENT.md](../RELEASE_MANAGEMENT.md).
 
 ---
 
