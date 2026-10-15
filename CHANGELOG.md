@@ -1,5 +1,18 @@
 # Changelog
 
+## [3.7.3](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.7.2...v3.7.3) (2026-10-15)
+
+
+### Bug Fixes
+
+* placeholder escalation contacts and sandbox-safe test temp dirs ([#519](https://github.com/dcyfr-labs/dcyfr-ai/issues/519)) ([2db6582](https://github.com/dcyfr-labs/dcyfr-ai/commit/2db658236cc173d038b083d647126e43b3e6278a))
+
+
+### Dependencies
+
+* bump @modelcontextprotocol/sdk from 1.30.0 to 1.32.1 ([#488](https://github.com/dcyfr-labs/dcyfr-ai/issues/488)) ([044dcfd](https://github.com/dcyfr-labs/dcyfr-ai/commit/044dcfda39a17081e26bb384dd6eb14be569fb6f))
+* bump typescript-eslint from 8.70.0 to 8.71.1 ([#505](https://github.com/dcyfr-labs/dcyfr-ai/issues/505)) ([2f6450e](https://github.com/dcyfr-labs/dcyfr-ai/commit/2f6450e98790b665cdbac84c4701282eb9c40ddb))
+
 ## [3.7.2](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.7.1...v3.7.2) (2026-10-14)
 
 
