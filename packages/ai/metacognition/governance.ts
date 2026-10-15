@@ -1,6 +1,6 @@
 /**
  * Metacognitive Improvement — Explicit Governance Guards
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  *
  * Named, standalone governance guard functions that enforce:
  *   4.2 — production_direct improvements require at least `third_party_audit`

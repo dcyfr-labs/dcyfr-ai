@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * DCYFR Delegation Telemetry System
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  *
  * Comprehensive telemetry system for tracking delegation contracts, chain
  * correlation, performance metrics, and event streaming for DCYFR AI agents.

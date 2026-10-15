@@ -1,6 +1,6 @@
 /**
  * Rate Limiter Middleware — per-agent sliding window
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  *
  * Limits how many delegation operations an agent can initiate per hour.
  * Uses a simple in-memory sliding-window algorithm.

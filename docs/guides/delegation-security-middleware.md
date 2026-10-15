@@ -1,8 +1,8 @@
-<!-- TLP:AMBER - Internal Use Only -->
+<!-- TLP:CLEAR -->
 # Delegation Security Middleware Architecture
 
-**Information Classification:** TLP:AMBER (Limited Distribution)  
-**Audience:** Internal engineering team  
+**Information Classification:** TLP:CLEAR (Public)  
+**Audience:** Engineers building on `@dcyfr/ai`  
 **Last Updated:** 2026-02-26  
 **Version:** 1.0.0
 

@@ -1,6 +1,6 @@
 /**
  * DCYFR Permission Attenuation Engine
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  * 
  * Implements hierarchical permission token attenuation with least-privilege enforcement.
  * Ensures delegated permissions are always a proper subset of parent permissions.

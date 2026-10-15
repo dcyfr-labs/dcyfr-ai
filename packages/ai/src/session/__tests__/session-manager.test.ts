@@ -1,6 +1,6 @@
 /**
  * Session Manager Tests
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  *
  * Comprehensive tests for:
  *   - Session lifecycle (create, get, suspend, resume, destroy)

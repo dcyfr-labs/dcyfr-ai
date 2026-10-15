@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Delegation Security Integration Tests
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  *
  * End-to-end scenarios covering the full security middleware chain wired into
  * DelegationContractManager:

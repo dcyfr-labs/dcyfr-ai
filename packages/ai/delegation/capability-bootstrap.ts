@@ -1,6 +1,6 @@
 /**
  * DCYFR Capability Bootstrap Utilities
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  * 
  * Tools to generate initial capability manifests from agent definitions.
  * Supports confidence score initialization and gradual validation.

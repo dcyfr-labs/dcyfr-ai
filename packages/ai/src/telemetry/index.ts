@@ -1,6 +1,6 @@
 /**
  * DCYFR Delegation Telemetry System
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  * 
  * Comprehensive telemetry system for monitoring delegation contracts,
  * chain correlation, performance metrics, and event streaming.

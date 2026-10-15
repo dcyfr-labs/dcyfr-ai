@@ -1,6 +1,6 @@
 /**
  * Metacognitive telemetry tests — task 5.1
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';

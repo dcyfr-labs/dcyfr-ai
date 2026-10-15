@@ -1,6 +1,6 @@
 /**
  * Message Gateway Tests
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  *
  * Tests for:
  *   - Input sanitization (prompt injection, Unicode direction overrides)

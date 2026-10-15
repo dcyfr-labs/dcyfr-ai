@@ -1,6 +1,6 @@
 /**
  * Working Memory Persistence Tests
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  *
  * Tests for:
  *   - Flushing Map<string, unknown> to Markdown files

@@ -1,6 +1,6 @@
 /**
  * TLP Classification Enforcement for DCYFR Delegation Framework
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  * 
  * Implements Traffic Light Protocol classification enforcement to ensure
  * delegation contracts respect security boundaries and agent clearance levels.

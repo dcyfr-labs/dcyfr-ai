@@ -1,6 +1,6 @@
 /**
  * DCYFR Agent Capability Manifest Types
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  * 
  * Type definitions for agent capability declaration and matching.
  * Enables intelligent task delegation based on agent capabilities,

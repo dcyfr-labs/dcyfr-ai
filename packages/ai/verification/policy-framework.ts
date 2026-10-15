@@ -1,6 +1,6 @@
 /**
  * DCYFR Verification Policy Framework
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  * 
  * Framework for implementing different verification modes for delegation contracts.
  * Supports direct inspection, third-party audit, cryptographic proof, and human review.

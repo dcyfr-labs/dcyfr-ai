@@ -1,6 +1,6 @@
 /**
  * Agent Registry — HMAC-SHA256 Identity Provider
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  *
  * Provides agent registration, key management, and HMAC-SHA256 token
  * verification for the delegation identity layer.

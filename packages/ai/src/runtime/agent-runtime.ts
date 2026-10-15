@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * DCYFR Agent Runtime with Delegation Support
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  * 
  * Agent runtime engine supporting delegation contract execution, capability
  * self-assessment, and confidence tracking. Integrates with DCYFR delegation

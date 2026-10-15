@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /**
  * DCYFR Delegation Chain Tracker Tests
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  * 
  * Comprehensive tests for delegation chain tracking with loop detection.
  * 

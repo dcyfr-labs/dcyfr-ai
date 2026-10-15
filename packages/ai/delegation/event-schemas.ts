@@ -1,6 +1,6 @@
 /**
  * Delegation Execution Mode Event Schemas
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  *
  * Type definitions for events emitted during execution mode lifecycle:
  *   - session.created   — A new delegation session started

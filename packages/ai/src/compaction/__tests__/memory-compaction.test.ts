@@ -1,6 +1,6 @@
 /**
  * Memory Compaction Tests
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  *
  * Tests for:
  *   - Cross-backend deduplication (file + mem0)

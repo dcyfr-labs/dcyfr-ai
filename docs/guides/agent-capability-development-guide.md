@@ -1,7 +1,7 @@
-<!-- TLP:GREEN - Limited Distribution -->
+<!-- TLP:CLEAR -->
 # Agent Capability Development Guide
 
-**Information Classification:** TLP:GREEN (Limited Distribution)  
+**Information Classification:** TLP:CLEAR (Public)  
 **Audience:** DCYFR Agent Developers  
 **Last Updated:** February 15, 2026  
 **Version:** 1.0.0
@@ -1293,6 +1293,6 @@ For additional resources:
 
 ---
 
-**Document Classification:** TLP:GREEN (Limited Distribution)  
-**Maintained By:** DCYFR Labs Delegation Framework Team  
+**Document Classification:** TLP:CLEAR (Public)  
+**Maintained By:** DCYFR Delegation Framework Team  
 **Next Review:** March 15, 2026

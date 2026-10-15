@@ -1,6 +1,6 @@
 /**
  * Circuit Breaker — per-agent failure state machine
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  *
  * Design decision D6: Circuit breaker with cascading revocation.
  *

@@ -1,6 +1,6 @@
 /**
  * Identity Middleware — HMAC-SHA256 token verification
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  *
  * Verifies that delegator and delegatee have valid auth tokens before allowing
  * a delegation operation.  When the `identity_auth` feature flag is disabled

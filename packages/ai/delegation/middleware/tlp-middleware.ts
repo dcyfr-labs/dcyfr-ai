@@ -1,6 +1,6 @@
 /**
  * TLP Classification Middleware — wraps TLPEnforcementEngine
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  *
  * Checks that the delegatee agent has sufficient TLP clearance for the contract's
  * classification level.  Delegates to the standalone TLPEnforcementEngine already

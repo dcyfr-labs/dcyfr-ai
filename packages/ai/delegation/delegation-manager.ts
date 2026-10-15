@@ -1,6 +1,6 @@
 /**
  * DCYFR Delegation Manager — Ralph Loop V2
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  *
  * High-level orchestration layer on top of DelegationContractManager.
  * Provides failure analysis (analyzeFailure) to categorise why a contract

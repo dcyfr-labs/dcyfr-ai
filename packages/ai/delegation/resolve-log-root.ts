@@ -1,6 +1,6 @@
 /**
  * DCYFR Delegation Log-Root Resolver
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  *
  * Resolves the base directory that delegation modules persist logs under
  * (session archives, checkpoints, dashboard reports).

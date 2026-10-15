@@ -1,6 +1,6 @@
 /**
  * DCYFR Permission Token Types
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  * 
  * Type definitions for hierarchical permission tokens with attenuation.
  * Implements least-privilege access control for delegation chains.

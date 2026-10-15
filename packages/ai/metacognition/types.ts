@@ -1,6 +1,6 @@
 /**
  * Metacognitive Improvement Runtime — Type Contracts
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  *
  * Interfaces and policy schema for the metacognitive improvement runtime.
  * Defines the governed lifecycle (`propose → evaluate → approve → apply → rollback`)

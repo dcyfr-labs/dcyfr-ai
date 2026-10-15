@@ -1,6 +1,6 @@
 /**
  * Execution Mode Reputation Adjuster
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  *
  * Provides mode-specific dimension weighting on top of the existing
  * `ReputationEngine`. Each execution mode has different performance criteria:

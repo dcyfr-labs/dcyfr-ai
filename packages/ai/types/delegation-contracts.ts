@@ -1,6 +1,6 @@
 /**
  * DCYFR Delegation Contract Types
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  * 
  * Type definitions for intelligent AI delegation framework based on
  * DeepMind's "Towards Scalable Oversight with Recursive Reward Modeling"

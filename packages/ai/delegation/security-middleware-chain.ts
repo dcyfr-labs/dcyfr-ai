@@ -1,6 +1,6 @@
 /**
  * Security Middleware Chain
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  *
  * Composable pipeline that runs a registered set of SecurityMiddleware
  * implementations against a SecurityContext.  The chain:

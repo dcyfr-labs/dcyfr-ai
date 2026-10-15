@@ -1,6 +1,6 @@
 /**
  * Improvement Ledger — Append-Only Schema and Serializers
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  *
  * Implements the append-only improvement ledger with:
  *   - Typed schema for all lifecycle event entries

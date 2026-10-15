@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 /**
  * DCYFR Telemetry Utilities Tests
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  * 
  * Tests for telemetry analysis, chain correlation, performance summarization,
  * and anomaly detection utilities.

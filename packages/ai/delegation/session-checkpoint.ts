@@ -1,6 +1,6 @@
 /**
  * DCYFR Session Checkpoint System
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  *
  * Manages point-in-time snapshots of delegation session state.
  * Checkpoints are persisted to disk for crash recovery and handoff.

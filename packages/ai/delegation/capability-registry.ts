@@ -1,6 +1,6 @@
 /**
  * DCYFR Capability Registry
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  * 
  * Central registry for agent capability manifests.
  * Enables intelligent task delegation based on agent capabilities,

@@ -1,6 +1,6 @@
 /**
  * Tests for Permission Attenuation Engine
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  * 
  * @module __tests__/permissions/attenuation-engine.test.ts
  * @version 1.0.0

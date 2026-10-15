@@ -1,6 +1,6 @@
 /**
  * Contract Timeout Watchdog
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  *
  * Design decision D3: Periodic watchdog model.
  * Scans all active contracts on a configurable interval and fires timeout events

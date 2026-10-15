@@ -1,6 +1,6 @@
 /**
  * DCYFR Verification Output Parser & Integration
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  * 
  * Parser for verification outputs and integration with AgentRuntime
  * to enable automated contract compliance checking and multi-modal

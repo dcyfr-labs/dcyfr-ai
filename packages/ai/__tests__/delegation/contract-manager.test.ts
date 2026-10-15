@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /**
  * DCYFR Delegation Contract Manager Tests
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  * 
  * Comprehensive unit tests for the delegation contract manager.
  * Tests CRUD operations, validation, and edge cases.

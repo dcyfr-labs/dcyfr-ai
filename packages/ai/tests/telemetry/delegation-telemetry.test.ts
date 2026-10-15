@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 /**
  * DCYFR Delegation Telemetry Tests
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  *
  * Comprehensive test suite for delegation telemetry engine, runtime integration,
  * event correlation, and performance tracking.

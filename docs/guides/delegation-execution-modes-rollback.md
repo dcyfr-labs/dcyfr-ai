@@ -1,7 +1,7 @@
-<!-- TLP:GREEN -->
+<!-- TLP:CLEAR -->
 # Delegation Execution Modes — Rollback Guide
 
-**Information Classification:** TLP:GREEN (Internal)  
+**Information Classification:** TLP:CLEAR (Public)  
 **Last Updated:** 2026-02-26  
 **Version:** 1.0.0
 

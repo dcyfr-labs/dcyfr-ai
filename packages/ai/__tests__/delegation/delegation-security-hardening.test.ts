@@ -1,6 +1,6 @@
 /**
  * Tests for the Security Middleware Chain and Individual Middleware
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  *
  * Covers:
  *   - SecurityMiddlewareChain: ordering, short-circuit, feature-flag skip

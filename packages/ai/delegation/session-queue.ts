@@ -1,6 +1,6 @@
 /**
  * DCYFR Background Session Queue
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  *
  * FIFO queue managing the 10-slot background session concurrency limit.
  * Prevents resource exhaustion while providing observability into queue state.

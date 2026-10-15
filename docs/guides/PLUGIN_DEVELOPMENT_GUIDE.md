@@ -1,8 +1,8 @@
-<!-- TLP:GREEN — Limited Distribution: DCYFR Organization and Partners -->
+<!-- TLP:CLEAR -->
 
 # Plugin Development Guide
 
-**Information Classification:** TLP:GREEN (Limited Distribution)
+**Information Classification:** TLP:CLEAR (Public)
 **Audience:** Plugin Developers, Marketplace Contributors
 **Version:** 1.0.0
 **Last Updated:** 2026-02-28

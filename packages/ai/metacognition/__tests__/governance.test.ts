@@ -1,6 +1,6 @@
 /**
  * Governance guard tests — tasks 4.2 and 4.3
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  */
 
 import { describe, it, expect } from 'vitest';

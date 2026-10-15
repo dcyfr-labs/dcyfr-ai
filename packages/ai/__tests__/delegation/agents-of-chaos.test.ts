@@ -1,6 +1,6 @@
 /**
  * Agents of Chaos — Security Regression Tests
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  *
  * Reproduces the six adversarial scenarios from the "Agents of Chaos" research
  * paper as regression tests.  Each scenario is designed to:
