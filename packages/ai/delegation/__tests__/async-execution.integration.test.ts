@@ -12,17 +12,21 @@
  *
  * @module delegation/__tests__/async-execution.integration
  */
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, afterAll } from 'vitest';
 import { DelegationContractManager } from '../contract-manager.js';
 import { ExecutionMode } from '../../types/agent-capabilities.js';
 import type { CreateDelegationContractRequest } from '../../types/delegation-contracts.js';
-import { existsSync, unlinkSync } from 'fs';
+import { existsSync, unlinkSync, mkdtempSync, rmSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
-const TEST_DB = '/tmp/test-async-exec-integration.db';
+// Per-suite temp dir: bare /tmp writes are denied in sandboxed checkouts.
+const TEST_TMP_DIR = mkdtempSync(join(tmpdir(), 'async-execution.integration-'));
+const TEST_DB = join(TEST_TMP_DIR, 'test-async-exec-integration.db');
 
 const makeRequest = (
   overrides: Partial<CreateDelegationContractRequest> = {},
@@ -41,6 +45,10 @@ const makeRequest = (
 // ─────────────────────────────────────────────────────────────────────────────
 // Suite
 // ─────────────────────────────────────────────────────────────────────────────
+
+afterAll(() => {
+  rmSync(TEST_TMP_DIR, { recursive: true, force: true });
+});
 
 describe('Async Execution Mode — Integration', () => {
   let cm: DelegationContractManager;

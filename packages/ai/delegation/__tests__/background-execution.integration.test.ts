@@ -10,7 +10,7 @@
  *
  * @module delegation/__tests__/background-execution.integration
  */
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi, afterAll } from 'vitest';
 import { DelegationContractManager } from '../contract-manager.js';
 import { ExecutionMode } from '../../types/agent-capabilities.js';
 import type { CreateDelegationContractRequest } from '../../types/delegation-contracts.js';
@@ -23,7 +23,9 @@ import { join } from 'path';
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
-const TEST_DB = '/tmp/test-background-exec-integration.db';
+// Per-suite temp dir: bare /tmp writes are denied in sandboxed checkouts.
+const TEST_TMP_DIR = mkdtempSync(join(tmpdir(), 'background-execution.integration-'));
+const TEST_DB = join(TEST_TMP_DIR, 'test-background-exec-integration.db');
 
 const makeRequest = (
   overrides: Partial<CreateDelegationContractRequest> = {},
@@ -42,6 +44,10 @@ const makeRequest = (
 // ─────────────────────────────────────────────────────────────────────────────
 // Suite
 // ─────────────────────────────────────────────────────────────────────────────
+
+afterAll(() => {
+  rmSync(TEST_TMP_DIR, { recursive: true, force: true });
+});
 
 describe('Background Execution Mode — Integration', () => {
   let cm: DelegationContractManager;

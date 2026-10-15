@@ -3,14 +3,22 @@
  * TLP:CLEAR
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { existsSync, unlinkSync } from 'node:fs';
+import { describe, it, expect, beforeEach, afterEach, afterAll } from 'vitest';
+import { existsSync, unlinkSync, mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 import { DelegationContractManager } from '../../delegation/contract-manager';
 import type { CreateDelegationContractRequest, DelegationAgent } from '../../types/delegation-contracts';
 import { ExecutionMode } from '../../types/agent-capabilities';
 
-const TEST_DB_PATH = '/tmp/test-delegation-contracts-container-session.db';
+// Per-suite temp dir: bare /tmp writes are denied in sandboxed checkouts.
+const TEST_TMP_DIR = mkdtempSync(join(tmpdir(), 'contract-manager.container-session-'));
+const TEST_DB_PATH = join(TEST_TMP_DIR, 'test-delegation-contracts-container-session.db');
+
+afterAll(() => {
+  rmSync(TEST_TMP_DIR, { recursive: true, force: true });
+});
 
 describe('DelegationContractManager container session tracking', () => {
   let manager: DelegationContractManager;

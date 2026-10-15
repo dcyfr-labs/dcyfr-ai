@@ -239,10 +239,12 @@ export class LiabilityFirebreakEnforcer {
       },
       emergency_procedures: {
         max_emergency_depth: config.emergency_procedures?.max_emergency_depth || 10,
+        // PLACEHOLDER defaults (RFC 2606 reserved domain, not real mailboxes).
+        // Callers MUST supply real contacts via `emergency_procedures.emergency_contacts`.
         emergency_contacts: config.emergency_procedures?.emergency_contacts || [
-          { authority: 'supervisor', contact_id: 'supervisor@dcyfr.ai', response_time_sla_minutes: 30 },
-          { authority: 'manager', contact_id: 'manager@dcyfr.ai', response_time_sla_minutes: 60 },
-          { authority: 'executive', contact_id: 'executive@dcyfr.ai', response_time_sla_minutes: 120 },
+          { authority: 'supervisor', contact_id: 'supervisor@example.com', response_time_sla_minutes: 30 },
+          { authority: 'manager', contact_id: 'manager@example.com', response_time_sla_minutes: 60 },
+          { authority: 'executive', contact_id: 'executive@example.com', response_time_sla_minutes: 120 },
         ],
       },
     };
@@ -421,7 +423,8 @@ export class LiabilityFirebreakEnforcer {
       agent_id: escalationData.agent_id,
       emergency_level: escalationData.emergency_level,
       emergency_contact_notified: true,
-      emergency_contact: emergencyContact?.contact_id || 'emergency@dcyfr.ai',
+      // Fallback is a placeholder (RFC 2606); configure real emergency contacts.
+      emergency_contact: emergencyContact?.contact_id || 'emergency@example.com',
       bypass_granted: false, // Manual approval required
       approval_required: true,
       escalation_timestamp: new Date().toISOString(),

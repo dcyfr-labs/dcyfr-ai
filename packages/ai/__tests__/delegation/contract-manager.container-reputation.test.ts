@@ -3,15 +3,23 @@
  * TLP:CLEAR
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { existsSync, unlinkSync } from 'node:fs';
+import { describe, it, expect, beforeEach, afterEach, afterAll } from 'vitest';
+import { existsSync, unlinkSync, mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 import { DelegationContractManager } from '../../delegation/contract-manager';
 import { ReputationEngine } from '../../reputation/reputation-engine';
 import type { CreateDelegationContractRequest, DelegationAgent } from '../../types/delegation-contracts';
 
-const MANAGER_DB_PATH = '/tmp/test-delegation-contracts-container-reputation.db';
-const REPUTATION_DB_PATH = '/tmp/test-reputation-container-results.db';
+// Per-suite temp dir: bare /tmp writes are denied in sandboxed checkouts.
+const TEST_TMP_DIR = mkdtempSync(join(tmpdir(), 'contract-manager.container-reputation-'));
+const MANAGER_DB_PATH = join(TEST_TMP_DIR, 'test-delegation-contracts-container-reputation.db');
+const REPUTATION_DB_PATH = join(TEST_TMP_DIR, 'test-reputation-container-results.db');
+
+afterAll(() => {
+  rmSync(TEST_TMP_DIR, { recursive: true, force: true });
+});
 
 describe('DelegationContractManager container result reputation wiring', () => {
   let manager: DelegationContractManager;

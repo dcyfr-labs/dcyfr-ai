@@ -10,14 +10,22 @@
  * @date 2026-02-13
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { unlinkSync, existsSync } from 'fs';
+import { describe, it, expect, beforeEach, afterEach, afterAll } from 'vitest';
+import { unlinkSync, existsSync, mkdtempSync, rmSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
 import Database from 'better-sqlite3';
 import { DelegationContractManager } from '../../delegation/contract-manager';
 import { DelegationChainTracker } from '../../delegation/chain-tracker';
 import type { CreateDelegationContractRequest, DelegationAgent, DelegationContract } from '../../types/delegation-contracts';
 
-const TEST_DB_PATH = '/tmp/test-chain-tracker.db';
+// Per-suite temp dir: bare /tmp writes are denied in sandboxed checkouts.
+const TEST_TMP_DIR = mkdtempSync(join(tmpdir(), 'chain-tracker-'));
+const TEST_DB_PATH = join(TEST_TMP_DIR, 'test-chain-tracker.db');
+
+afterAll(() => {
+  rmSync(TEST_TMP_DIR, { recursive: true, force: true });
+});
 
 describe('DelegationChainTracker', () => {
   let manager: DelegationContractManager;
