@@ -1,8 +1,8 @@
-<!-- TLP:GREEN - Limited distribution to organization and trusted contributors -->
+<!-- TLP:CLEAR -->
 
 # Plugin Security Policy
 
-**Information Classification:** TLP:GREEN (Organization + Contributors)  
+**Information Classification:** TLP:CLEAR (Public)  
 **Effective Date:** 2026-03-01  
 **Last Updated:** 2026-03-01  
 **Owner:** DCYFR Labs Security Team  

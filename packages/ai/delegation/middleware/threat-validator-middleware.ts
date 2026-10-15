@@ -1,6 +1,6 @@
 /**
  * Threat Validator Middleware — wraps SecurityThreatValidator
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  *
  * Runs the full 7-vector threat detection pipeline from
  * src/delegation/security-threat-model.ts against the contract being created or

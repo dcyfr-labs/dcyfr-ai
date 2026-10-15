@@ -1,6 +1,6 @@
 /**
  * DCYFR Messaging Gateway
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  *
  * Provides a platform-agnostic messaging interface for autonomous agents.
  * Features:

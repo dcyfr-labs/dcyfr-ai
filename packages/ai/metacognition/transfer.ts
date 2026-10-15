@@ -1,6 +1,6 @@
 /**
  * Cross-Domain Transfer Evaluation Pipeline
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  *
  * Implements the transfer evaluation contract and gate logic for
  * cross-domain promotion of improvement proposals.

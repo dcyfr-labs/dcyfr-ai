@@ -1,6 +1,6 @@
 /**
  * Feature flag wiring tests — ENABLE_METACOG_RUNTIME
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  */
 
 import { describe, it, expect, afterEach } from 'vitest';

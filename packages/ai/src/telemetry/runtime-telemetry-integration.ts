@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * DCYFR Agent Runtime Telemetry Integration
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  * 
  * Integration layer that connects the AgentRuntime's EventEmitter system
  * with the DelegationTelemetryEngine for comprehensive delegation monitoring.

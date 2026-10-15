@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /**
  * DCYFR Verification Policy Framework Tests
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  * 
  * Comprehensive tests for all verification modes.
  * 

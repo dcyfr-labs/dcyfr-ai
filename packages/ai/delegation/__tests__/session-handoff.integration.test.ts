@@ -1,6 +1,6 @@
 /**
  * Integration Tests: Session Handoff Scenarios
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  *
  * Task 6.5 — delegation-execution-modes
  *

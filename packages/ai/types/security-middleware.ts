@@ -1,6 +1,6 @@
 /**
  * Security Middleware Types for DCYFR Delegation Framework
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  *
  * Defines the pluggable middleware contracts used by SecurityMiddlewareChain to
  * evaluate delegation operation requests against a composable set of guards.

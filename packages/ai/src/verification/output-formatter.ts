@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * DCYFR Contract Verification Output Formatter
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  * 
  * Multi-modal output formatting system for delegation contract verification.
  * Supports automated parsing, human-readable reports, and contract compliance

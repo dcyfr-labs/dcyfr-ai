@@ -4,7 +4,7 @@
  * Tests for classifyPlugin(), getTlpBadge(), clearance validation,
  * and all boundary cases of the rule engine.
  *
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  *
  * @module __tests__/tlp/tlp-classification.test.ts
  * @version 1.0.0

@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * DCYFR Telemetry Utilities and Helpers
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  * 
  * Utility functions for telemetry event analysis, correlation, and reporting.
  * 

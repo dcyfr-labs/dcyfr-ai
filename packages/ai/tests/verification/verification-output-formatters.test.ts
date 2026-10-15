@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 /**
  * DCYFR Verification Output Formatter Tests
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  * 
  * Comprehensive test suite for verification output formatting system
  * including multi-modal formatters, contract compliance, and parser integration.

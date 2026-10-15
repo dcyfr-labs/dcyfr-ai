@@ -1,6 +1,6 @@
 /**
  * Execution Mode Performance Dashboard Data Source
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  *
  * Aggregates per-execution-mode delegation metrics and writes a daily
  * report to `logs/delegation/reports/YYYY-MM-DD.execution-modes.json`.

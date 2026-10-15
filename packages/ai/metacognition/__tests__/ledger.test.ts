@@ -1,6 +1,6 @@
 /**
  * Improvement Ledger tests — tasks 2.1, 2.2, 2.3
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  *
  * Covers:
  *   2.1 — Serialization round-trip, append-only enforcement, idempotent append

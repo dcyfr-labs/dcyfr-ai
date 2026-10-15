@@ -1,6 +1,6 @@
 /**
  * Metacognitive Improvement Runtime — Lifecycle State Machine
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  *
  * Implements the governed lifecycle state machine for improvement proposals:
  *   propose → evaluate → approve → apply → (rollback)

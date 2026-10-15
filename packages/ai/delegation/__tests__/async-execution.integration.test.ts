@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Integration Tests: Async Execution Mode
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  *
  * Task 6.4 — delegation-execution-modes
  *

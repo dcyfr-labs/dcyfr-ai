@@ -1,6 +1,6 @@
 /**
  * MetacognitiveImprovementRuntime — lifecycle state machine tests
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  *
  * Covers:
  *   - Schema version compatibility enforcement

@@ -1,6 +1,6 @@
 /**
  * DCYFR Delegation Chain Tracker
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  * 
  * Tracks multi-hop delegation chains with loop detection and liability firebreaks.
  * Implements accountability boundaries to prevent unlimited delegation depth.

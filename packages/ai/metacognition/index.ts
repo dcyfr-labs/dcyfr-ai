@@ -1,6 +1,6 @@
 /**
  * Metacognitive Improvement Runtime — Public Module Entry
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  *
  * Exports all types, runtime, ledger, and the environment-wired default instance.
  * Nothing here changes existing agent behaviour — the runtime only activates when

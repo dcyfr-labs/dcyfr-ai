@@ -1,6 +1,6 @@
 /**
  * Metacognitive Improvement — Structured Telemetry
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  *
  * Emits structured telemetry events for the metacognitive improvement lifecycle.
  * Tracks proposal throughput, approval ratio, and rollback rate.

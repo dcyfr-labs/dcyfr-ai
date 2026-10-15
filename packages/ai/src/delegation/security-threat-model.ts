@@ -1,6 +1,6 @@
 /**
  * Security Threat Model Validation for DCYFR Delegation Framework
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  * 
  * Implements attack scenario detection, delegation abuse monitoring, and
  * anomaly detection to protect against security threats in delegation chains.

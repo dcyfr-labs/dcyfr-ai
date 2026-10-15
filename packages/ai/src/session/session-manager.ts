@@ -1,6 +1,6 @@
 /**
  * DCYFR Autonomous Agent Session Manager
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  *
  * Manages autonomous agent sessions with:
  *   - Isolated DCYFRMemory instances per session (namespaced storage)

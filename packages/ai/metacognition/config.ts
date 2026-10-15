@@ -1,6 +1,6 @@
 /**
  * Metacognitive Improvement Runtime — Feature Flag Configuration
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  *
  * Reads `ENABLE_METACOG_RUNTIME` from the process environment and wires it
  * into a ready-to-use MetacognitiveImprovementRuntime singleton.

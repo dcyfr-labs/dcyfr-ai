@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * DCYFR Multi-Modal Verification Formatters
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  * 
  * Concrete implementations of verification output formatters for multiple
  * formats including JSON, YAML, Markdown, HTML, and contract compliance.

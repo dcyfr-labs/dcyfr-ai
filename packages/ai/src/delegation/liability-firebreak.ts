@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Liability Firebreak Enforcement for DCYFR Delegation Framework
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  * 
  * Implements accountability boundaries in delegation chains to prevent
  * unlimited delegation and ensure clear liability assignment. Includes

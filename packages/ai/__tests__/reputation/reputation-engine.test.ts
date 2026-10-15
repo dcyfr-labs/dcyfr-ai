@@ -1,6 +1,6 @@
 /**
  * DCYFR Reputation Engine Tests
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  * 
  * Comprehensive tests for multi-dimensional reputation scoring.
  * 

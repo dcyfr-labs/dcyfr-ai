@@ -1,8 +1,8 @@
-<!-- TLP:GREEN - Organization + Clients -->
+<!-- TLP:CLEAR -->
 
 # Slack Integration for DCYFR AI Framework
 
-**Information Classification:** TLP:GREEN (Limited Distribution)  
+**Information Classification:** TLP:CLEAR (Public)  
 **Created:** February 5, 2026  
 **Status:** Backlog  
 **Priority:** Medium  

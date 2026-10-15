@@ -1,6 +1,6 @@
 /**
  * Shared MCP transport + fail-closed bearer auth tests.
- * TLP:AMBER
+ * TLP:CLEAR
  *
  * Covers the four serving guarantees task `dcyfr-mcp-remote-serving` 1.1 asks a
  * factory server to honor once its start script wires these helpers:

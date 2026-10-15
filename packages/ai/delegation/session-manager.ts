@@ -1,6 +1,6 @@
 /**
  * DCYFR Session Manager
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  *
  * Lifecycle tracking for delegation sessions.
  *

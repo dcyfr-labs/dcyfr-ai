@@ -1,6 +1,6 @@
 /**
  * DCYFR Delegation Framework - Barrel Export
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  *
  * Central re-export for all delegation module components.
  *

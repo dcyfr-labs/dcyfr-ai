@@ -1,7 +1,7 @@
 /**
  * Escalation Trigger Tests
  *
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  *
  * @module __tests__/escalation/escalation-trigger.test.ts
  * @version 1.0.0

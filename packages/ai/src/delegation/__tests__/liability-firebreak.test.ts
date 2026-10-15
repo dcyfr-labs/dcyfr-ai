@@ -1,6 +1,6 @@
 /**
  * Liability Firebreak Enforcement Tests
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  * 
  * Tests for accountability boundaries in delegation chains, manual override
  * capabilities, and escalation procedures.

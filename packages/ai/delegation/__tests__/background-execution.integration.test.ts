@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 /**
  * Integration Tests: Background Execution Mode
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  *
  * Task 6.3 — delegation-execution-modes
  *

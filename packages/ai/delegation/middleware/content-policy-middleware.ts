@@ -1,6 +1,6 @@
 /**
  * Content Policy Middleware — task instruction sanitization
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  *
  * Checks `context.task_content` for prompt-injection patterns and content-policy
  * violations.  Only fires when `content_security` feature flag is enabled and

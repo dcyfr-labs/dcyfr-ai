@@ -1,6 +1,6 @@
 /**
  * Chain Depth + Fan-Out Middleware
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  *
  * Enforces:
  *   1. Maximum delegation chain depth (default: 5)

@@ -1,6 +1,6 @@
 /**
  * Contract Manager Benchmark — Middleware Chain Latency
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  *
  * Measures the P99 latency overhead of `createContract()` with the full
  * security middleware chain enabled.  Target: P99 < 5ms.

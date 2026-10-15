@@ -1,6 +1,6 @@
 /**
  * Cross-Domain Transfer Evaluation tests — tasks 3.1, 3.2, 3.3
- * TLP:AMBER - Internal Use Only
+ * TLP:CLEAR
  *
  * Covers:
  *   3.1 — Contract and type validation (source/target domain, transfer score schema)
