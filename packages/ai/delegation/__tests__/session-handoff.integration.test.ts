@@ -12,17 +12,21 @@
  *
  * @module delegation/__tests__/session-handoff.integration
  */
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, afterAll } from 'vitest';
 import { DelegationContractManager } from '../contract-manager.js';
 import { ExecutionMode } from '../../types/agent-capabilities.js';
 import type { CreateDelegationContractRequest } from '../../types/delegation-contracts.js';
-import { existsSync, unlinkSync } from 'fs';
+import { existsSync, unlinkSync, mkdtempSync, rmSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
-const TEST_DB = '/tmp/test-session-handoff-integration.db';
+// Per-suite temp dir: bare /tmp writes are denied in sandboxed checkouts.
+const TEST_TMP_DIR = mkdtempSync(join(tmpdir(), 'session-handoff.integration-'));
+const TEST_DB = join(TEST_TMP_DIR, 'test-session-handoff-integration.db');
 
 let _taskSeq = 0;
 
@@ -49,6 +53,10 @@ const snapshot = (msgs: string[] = []) => ({
 // ─────────────────────────────────────────────────────────────────────────────
 // Suite
 // ─────────────────────────────────────────────────────────────────────────────
+
+afterAll(() => {
+  rmSync(TEST_TMP_DIR, { recursive: true, force: true });
+});
 
 describe('Session Handoff — Integration', () => {
   let cm: DelegationContractManager;

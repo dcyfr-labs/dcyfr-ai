@@ -9,13 +9,21 @@
  * @date 2026-02-13
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { unlinkSync, existsSync } from 'fs';
+import { describe, it, expect, beforeEach, afterEach, afterAll } from 'vitest';
+import { unlinkSync, existsSync, mkdtempSync, rmSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
 import Database from 'better-sqlite3';
 import { ReputationEngine } from '../../reputation/reputation-engine';
 import type { TaskOutcome } from '../../reputation/reputation-engine';
 
-const TEST_DB_PATH = '/tmp/test-reputation-engine.db';
+// Per-suite temp dir: bare /tmp writes are denied in sandboxed checkouts.
+const TEST_TMP_DIR = mkdtempSync(join(tmpdir(), 'reputation-engine-'));
+const TEST_DB_PATH = join(TEST_TMP_DIR, 'test-reputation-engine.db');
+
+afterAll(() => {
+  rmSync(TEST_TMP_DIR, { recursive: true, force: true });
+});
 
 describe('ReputationEngine', () => {
   let engine: ReputationEngine;

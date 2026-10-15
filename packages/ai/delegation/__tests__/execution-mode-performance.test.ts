@@ -14,17 +14,21 @@
  *
  * @module delegation/__tests__/execution-mode-performance
  */
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, afterAll } from 'vitest';
 import { DelegationContractManager } from '../contract-manager.js';
 import { ExecutionMode } from '../../types/agent-capabilities.js';
 import type { CreateDelegationContractRequest } from '../contract-manager.js';
-import { existsSync, unlinkSync } from 'fs';
+import { existsSync, unlinkSync, mkdtempSync, rmSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
-const TEST_DB = '/tmp/test-execution-mode-perf.db';
+// Per-suite temp dir: bare /tmp writes are denied in sandboxed checkouts.
+const TEST_TMP_DIR = mkdtempSync(join(tmpdir(), 'execution-mode-performance-'));
+const TEST_DB = join(TEST_TMP_DIR, 'test-execution-mode-perf.db');
 
 let _seq = 0;
 
@@ -51,6 +55,10 @@ function pct(sorted: number[], n: number): number {
 // ─────────────────────────────────────────────────────────────────────────────
 // Suite
 // ─────────────────────────────────────────────────────────────────────────────
+
+afterAll(() => {
+  rmSync(TEST_TMP_DIR, { recursive: true, force: true });
+});
 
 describe('Execution Mode Performance', () => {
   let cm: DelegationContractManager;

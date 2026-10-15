@@ -11,13 +11,21 @@
  * @date 2026-02-13
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { unlinkSync, existsSync } from 'fs';
+import { describe, it, expect, beforeEach, afterEach, vi, afterAll } from 'vitest';
+import { unlinkSync, existsSync, mkdtempSync, rmSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
 import { DelegationContractManager } from '../../delegation/contract-manager';
 import type { CreateDelegationContractRequest, DelegationAgent } from '../../types/delegation-contracts';
 import { ExecutionMode } from '../../types/agent-capabilities';
 
-const TEST_DB_PATH = '/tmp/test-delegation-contracts.db';
+// Per-suite temp dir: bare /tmp writes are denied in sandboxed checkouts.
+const TEST_TMP_DIR = mkdtempSync(join(tmpdir(), 'contract-manager-'));
+const TEST_DB_PATH = join(TEST_TMP_DIR, 'test-delegation-contracts.db');
+
+afterAll(() => {
+  rmSync(TEST_TMP_DIR, { recursive: true, force: true });
+});
 
 describe('DelegationContractManager', () => {
   let manager: DelegationContractManager;
