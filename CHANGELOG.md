@@ -1,5 +1,21 @@
 # Changelog
 
+## [3.7.4](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.7.3...v3.7.4) (2026-10-23)
+
+
+### Dependencies
+
+* bump @types/node from 26.6.4 to 26.6.5 ([#526](https://github.com/dcyfr-labs/dcyfr-ai/issues/526)) ([032358b](https://github.com/dcyfr-labs/dcyfr-ai/commit/032358b3a207f208a0d8476b6503057037e5c6b5))
+* bump @vitest/coverage-v8 from 5.0.3 to 5.0.5 ([#523](https://github.com/dcyfr-labs/dcyfr-ai/issues/523)) ([41d54b8](https://github.com/dcyfr-labs/dcyfr-ai/commit/41d54b892aed497f6e87f898d26a69e824f1e4af))
+* bump fastmcp from 4.22.4 to 4.22.10 ([#524](https://github.com/dcyfr-labs/dcyfr-ai/issues/524)) ([3996896](https://github.com/dcyfr-labs/dcyfr-ai/commit/3996896fbb8ad6d2b6e10213edbd754e6ab0bc63))
+* bump follow-redirects from 1.16.0 to 1.16.1 ([#530](https://github.com/dcyfr-labs/dcyfr-ai/issues/530)) ([55df3c0](https://github.com/dcyfr-labs/dcyfr-ai/commit/55df3c06c79528871f078393b603816e2e04733f))
+* bump inquirer from 14.2.2 to 14.2.3 ([#522](https://github.com/dcyfr-labs/dcyfr-ai/issues/522)) ([81fc51e](https://github.com/dcyfr-labs/dcyfr-ai/commit/81fc51e4f6d7bb1203b71aedcb3c3eb4a84fc925))
+* bump mem0ai from 3.3.0 to 3.3.1 ([#527](https://github.com/dcyfr-labs/dcyfr-ai/issues/527)) ([a8721c2](https://github.com/dcyfr-labs/dcyfr-ai/commit/a8721c2f4d2dde89c9924d50966f61965a96f4c6))
+* bump typescript-eslint from 8.71.1 to 8.71.2 ([#525](https://github.com/dcyfr-labs/dcyfr-ai/issues/525)) ([eb4ce46](https://github.com/dcyfr-labs/dcyfr-ai/commit/eb4ce46b45bb0c83de0dd6ab66aa5e3c9769bd6e))
+* bump vite from 8.3.0 to 8.3.4 ([#528](https://github.com/dcyfr-labs/dcyfr-ai/issues/528)) ([950ddd7](https://github.com/dcyfr-labs/dcyfr-ai/commit/950ddd7912713134a6a3ebe8ffbc05d6f1cfbcb0))
+* bump vitest from 5.0.3 to 5.0.5 ([#520](https://github.com/dcyfr-labs/dcyfr-ai/issues/520)) ([78827ca](https://github.com/dcyfr-labs/dcyfr-ai/commit/78827caa13eaf5bc5f6a4caed0cfec98362d482e))
+* bump zod from 4.6.5 to 4.6.7 ([#521](https://github.com/dcyfr-labs/dcyfr-ai/issues/521)) ([b2793f2](https://github.com/dcyfr-labs/dcyfr-ai/commit/b2793f25ae201ab8610abd2de2be8b89969f5b38))
+
 ## [3.7.3](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.7.2...v3.7.3) (2026-10-15)
 
 
