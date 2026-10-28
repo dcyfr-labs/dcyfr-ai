@@ -12,7 +12,7 @@
     "telemetry:report": "node scripts/telemetry-report.js"
   },
   "dependencies": {
-    "@dcyfr/ai": "^1.0.0",
+    "@dcyfr/ai": "^3.7.3",
     "next": "^15.5.28",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
