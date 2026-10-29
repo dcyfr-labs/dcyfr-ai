@@ -2,7 +2,7 @@
 
 # Dependabot Accepted Risks
 
-**Information Classification:** TLP:CLEAR (Public)
+**Information Classification:** TLP:CLEAR (Public)  
 **Last Updated:** 2026-10-28
 
 Open Dependabot alerts that have no fix available, with the reason each one is accepted and the condition that ends it. An alert listed here stays open on GitHub on purpose: it is the reminder to re-check.
