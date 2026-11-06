@@ -1,5 +1,14 @@
 # Changelog
 
+## [3.7.5](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.7.4...v3.7.5) (2026-11-06)
+
+
+### Dependencies
+
+* bump @upstash/redis from 1.39.0 to 1.40.0 ([#551](https://github.com/dcyfr-labs/dcyfr-ai/issues/551)) ([ab6615c](https://github.com/dcyfr-labs/dcyfr-ai/commit/ab6615c405eb7ff210a10448c9849d6922d9fb21))
+* bump eslint from 10.13.0 to 10.14.0 ([#560](https://github.com/dcyfr-labs/dcyfr-ai/issues/560)) ([8bf3b5c](https://github.com/dcyfr-labs/dcyfr-ai/commit/8bf3b5cfcb865b61af74619dc1d9eb341fd35106))
+* bump ora from 9.4.1 to 10.0.0 ([#559](https://github.com/dcyfr-labs/dcyfr-ai/issues/559)) ([7d30690](https://github.com/dcyfr-labs/dcyfr-ai/commit/7d3069039a698b0dafbc41b7e4950c1f1c9ff43d))
+
 ## [3.7.4](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.7.3...v3.7.4) (2026-11-02)
 
 
