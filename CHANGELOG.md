@@ -1,5 +1,18 @@
 # Changelog
 
+## [3.7.6](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.7.5...v3.7.6) (2026-11-10)
+
+
+### Dependencies
+
+* bump @upstash/redis from 1.40.0 to 1.41.0 ([#567](https://github.com/dcyfr-labs/dcyfr-ai/issues/567)) ([d5b94d9](https://github.com/dcyfr-labs/dcyfr-ai/commit/d5b94d90dbb4b85c9c55013c082c7aba154b2088))
+* bump @vitest/coverage-v8 from 5.0.5 to 5.1.0 ([#571](https://github.com/dcyfr-labs/dcyfr-ai/issues/571)) ([be28867](https://github.com/dcyfr-labs/dcyfr-ai/commit/be28867f69d46232a8a8510de0e190f95dd6183c))
+* bump fastmcp from 4.23.8 to 4.24.3 ([#566](https://github.com/dcyfr-labs/dcyfr-ai/issues/566)) ([8a5e38d](https://github.com/dcyfr-labs/dcyfr-ai/commit/8a5e38d7e0268df27eef7e37e9e2ee9de78a39b4))
+* bump glob from 14.0.3 to 14.0.4 ([#569](https://github.com/dcyfr-labs/dcyfr-ai/issues/569)) ([eacb1b7](https://github.com/dcyfr-labs/dcyfr-ai/commit/eacb1b75c282b6003debeec7acfd2a9d5fc97c8c))
+* bump globals from 17.13.0 to 17.14.0 ([#570](https://github.com/dcyfr-labs/dcyfr-ai/issues/570)) ([ad30c38](https://github.com/dcyfr-labs/dcyfr-ai/commit/ad30c3800dc1d1de851454aaa88baf31d030316d))
+* bump vite from 8.3.5 to 8.3.6 ([#565](https://github.com/dcyfr-labs/dcyfr-ai/issues/565)) ([cf3c340](https://github.com/dcyfr-labs/dcyfr-ai/commit/cf3c3405dbb520b3307bb5ecab6cc1c95889c791))
+* bump vitest from 5.0.5 to 5.1.0 ([#568](https://github.com/dcyfr-labs/dcyfr-ai/issues/568)) ([12e45f6](https://github.com/dcyfr-labs/dcyfr-ai/commit/12e45f6f4ca0aaa2372fce34cb0d0c70e498a5ff))
+
 ## [3.7.5](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.7.4...v3.7.5) (2026-11-08)
 
 
