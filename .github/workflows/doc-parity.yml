@@ -82,6 +82,10 @@ jobs:
         if: steps.changed.outputs.parity == 'true'
         run: npm run check:env
 
+      - name: Check capabilities manifest
+        if: steps.changed.outputs.parity == 'true'
+        run: npm run check:capabilities
+
       - name: Rebuild native modules
         if: steps.changed.outputs.parity == 'true'
         run: npm rebuild better-sqlite3

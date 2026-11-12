@@ -1,0 +1,84 @@
+{
+  "version": 1,
+  "capabilities": [
+    {
+      "id": "config-zod-validation",
+      "name": "Zod configuration validation",
+      "status": "shipped",
+      "module": "packages/ai/config/schema.ts",
+      "usedBy": "packages/ai/config/loader.ts",
+      "claimTerms": [],
+      "summary": "The config loader parses the merged configuration with FrameworkConfigSchema (Zod) before returning it.",
+      "readme": {
+        "section": "security-considerations",
+        "line": "**Zod validation:** Configuration is validated with Zod schemas before use (`FrameworkConfigSchema`)"
+      }
+    },
+    {
+      "id": "plugin-sandbox-enforcement",
+      "name": "Sandboxed plugin loading",
+      "status": "planned",
+      "claimTerms": ["sandbox", "isolation"],
+      "summary": "The plugin loader runs plugins in the host process; nothing routes plugin execution through a sandbox runner.",
+      "readme": {
+        "section": "security-considerations",
+        "line": "**No remote code execution:** Plugins run in the local environment only, in the host process and not in a sandbox (see [Known Limitations](#️-known-limitations))"
+      }
+    },
+    {
+      "id": "plugin-sandbox-docker",
+      "name": "Docker plugin sandbox",
+      "status": "planned",
+      "module": "packages/ai/src/plugins/runtime/docker-plugin-runner.ts",
+      "claimTerms": ["sandbox", "isolation"],
+      "summary": "A Docker-based plugin runner exists in the source tree but is not imported by the plugin loader or exported from the package.",
+      "readme": {
+        "section": "known-limitations",
+        "line": "**Plugin isolation:** The plugin loader runs plugins in the host process with no sandbox, so trust plugin code before loading. Docker and gVisor sandbox runners exist in the source tree (`packages/ai/src/plugins/runtime`, with a WASM runner alongside) and are unit-tested, but the loader does not call them and the published package does not export them. There is no opt-in today"
+      }
+    },
+    {
+      "id": "plugin-sandbox-gvisor",
+      "name": "gVisor plugin sandbox",
+      "status": "planned",
+      "module": "packages/ai/src/plugins/runtime/gvisor-plugin-runner.ts",
+      "claimTerms": ["sandbox", "isolation"],
+      "summary": "A gVisor-based plugin runner exists in the source tree but is not imported by the plugin loader or exported from the package."
+    },
+    {
+      "id": "plugin-sandbox-wasm",
+      "name": "WASM plugin sandbox",
+      "status": "planned",
+      "module": "packages/ai/src/plugins/runtime/wasm-plugin-runner.ts",
+      "claimTerms": ["sandbox", "isolation"],
+      "summary": "A WASM-based plugin runner exists in the source tree but nothing imports it and the runtime index does not export it."
+    },
+    {
+      "id": "telemetry-env-opt-out",
+      "name": "Telemetry opt-out via DCYFR_TELEMETRY_ENABLED",
+      "status": "planned",
+      "claimTerms": [],
+      "summary": "DCYFR_TELEMETRY_ENABLED=false sets telemetry.enabled in the loaded config, but no runtime code reads that flag; AgentRuntime records telemetry to the TelemetryEngine it is given.",
+      "readme": {
+        "section": "security-considerations",
+        "line": "**Telemetry privacy:** `AgentRuntime` records telemetry to the `TelemetryEngine` you construct and pass in. `DCYFR_TELEMETRY_ENABLED=false` sets `telemetry.enabled` in the loaded config, but no runtime code reads that flag yet"
+      }
+    },
+    {
+      "id": "session-trust-level-policy",
+      "name": "Session trust-level tool policies",
+      "status": "library-only",
+      "module": "packages/ai/src/session/session-manager.ts",
+      "claimTerms": [],
+      "summary": "SessionManager maps full, sandboxed and readonly trust levels to tool policies; it is exported at @dcyfr/ai/session but nothing else in the package calls it, and the sandboxed level is a tool allowlist, not process isolation."
+    },
+    {
+      "id": "gateway-input-sanitization",
+      "name": "Gateway input sanitization",
+      "status": "library-only",
+      "module": "packages/ai/src/gateway/message-gateway.ts",
+      "claimTerms": [],
+      "summary": "MessageGateway runs inbound text through sanitizeInput, which strips Unicode direction overrides and flags or blocks known prompt-injection patterns; it is exported at @dcyfr/ai/gateway and nothing else in the package calls it."
+    }
+  ]
+}
