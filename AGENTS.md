@@ -135,7 +135,7 @@ npm run test         # vitest run
 npm run test:watch   # vitest watch mode
 npm run typecheck    # tsc --noEmit
 npm run lint         # eslint packages/
-npm run check:parity # doc-parity gates (version, exports, env, config)
+npm run check:parity # doc-parity gates (version, exports, env, config, capabilities)
 ```
 
 Tests use [vitest](https://vitest.dev/) and live next to the code in `__tests__/` directories:

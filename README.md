@@ -928,9 +928,12 @@ Found a security issue? Report it privately:
 ### Security Considerations
 
 - **No API keys stored:** Use environment variables for sensitive data (Zod validates but doesn't store)
-- **Zod validation:** All inputs validated with schemas before processing
+<!-- capabilities:security-considerations:start -->
+<!-- GENERATED from docs/capabilities.json by scripts/doc-parity/gen-capabilities.mjs. Do not edit by hand; run `npm run docs:gen`. -->
+- **Zod validation:** Configuration is validated with Zod schemas before use (`FrameworkConfigSchema`)
 - **No remote code execution:** Plugins run in the local environment only, in the host process and not in a sandbox (see [Known Limitations](#️-known-limitations))
-- **Telemetry privacy:** Optional, disable with `DCYFR_TELEMETRY_ENABLED=false`
+- **Telemetry privacy:** `AgentRuntime` records telemetry to the `TelemetryEngine` you construct and pass in. `DCYFR_TELEMETRY_ENABLED=false` sets `telemetry.enabled` in the loaded config, but no runtime code reads that flag yet
+<!-- capabilities:security-considerations:end -->
 - **Dependencies:** Regular Dependabot updates, npm audit on CI
 
 ### Best Practices
@@ -949,7 +952,10 @@ Found a security issue? Report it privately:
 
 ### Current Constraints
 
+<!-- capabilities:known-limitations:start -->
+<!-- GENERATED from docs/capabilities.json by scripts/doc-parity/gen-capabilities.mjs. Do not edit by hand; run `npm run docs:gen`. -->
 - **Plugin isolation:** The plugin loader runs plugins in the host process with no sandbox, so trust plugin code before loading. Docker and gVisor sandbox runners exist in the source tree (`packages/ai/src/plugins/runtime`, with a WASM runner alongside) and are unit-tested, but the loader does not call them and the published package does not export them. There is no opt-in today
+<!-- capabilities:known-limitations:end -->
 - **File-based telemetry only:** No database storage adapter yet (not scheduled)
 - **Config caching:** Requires manual cache invalidation on config changes (no hot-reload yet)
 - **Provider-specific features:** Some providers may have limited support (e.g., streaming not supported for all)
