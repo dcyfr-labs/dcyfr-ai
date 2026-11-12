@@ -929,7 +929,7 @@ Found a security issue? Report it privately:
 
 - **No API keys stored:** Use environment variables for sensitive data (Zod validates but doesn't store)
 - **Zod validation:** All inputs validated with schemas before processing
-- **No remote code execution:** Plugins run in local environment only (no sandboxing yet - see limitations)
+- **No remote code execution:** Plugins run in the local environment only, in the host process and not in a sandbox (see [Known Limitations](#️-known-limitations))
 - **Telemetry privacy:** Optional, disable with `DCYFR_TELEMETRY_ENABLED=false`
 - **Dependencies:** Regular Dependabot updates, npm audit on CI
 
@@ -949,7 +949,7 @@ Found a security issue? Report it privately:
 
 ### Current Constraints
 
-- **Plugin isolation:** Plugins run in same process (no sandboxing yet) - trust plugin code before loading
+- **Plugin isolation:** The plugin loader runs plugins in the host process with no sandbox, so trust plugin code before loading. Docker and gVisor sandbox runners exist in the source tree (`packages/ai/src/plugins/runtime`, with a WASM runner alongside) and are unit-tested, but the loader does not call them and the published package does not export them. There is no opt-in today
 - **File-based telemetry only:** No database storage adapter yet (not scheduled)
 - **Config caching:** Requires manual cache invalidation on config changes (no hot-reload yet)
 - **Provider-specific features:** Some providers may have limited support (e.g., streaming not supported for all)
@@ -964,7 +964,7 @@ Found a security issue? Report it privately:
 ### Planned Improvements
 
 - [ ] Database storage adapter for telemetry (PostgreSQL, SQLite)
-- [ ] Plugin sandboxing for security (worker threads or VM isolation)
+- [ ] Plugin sandboxing for security: wire the existing Docker and gVisor runners into the plugin load path and export them
 - [ ] Hot-reload config watching (auto-reload on file changes)
 - [ ] Web UI for telemetry dashboard (view costs, usage, quality over time)
 - [ ] Enhanced provider feature parity (streaming, function calling, vision)
