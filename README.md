@@ -254,6 +254,8 @@ const report = await validator.validate({
 
 `AgentRuntime` executes multi-step tasks against the provider registry, with memory retrieval, tool execution, and telemetry built in.
 
+> **Current limitation:** `execute` does not call a model yet. The completion step returns a fixed placeholder, so the output below is not model output. See [Known Limitations](#️-known-limitations).
+
 ### Prerequisites
 
 ```bash
@@ -955,6 +957,7 @@ Found a security issue? Report it privately:
 <!-- capabilities:known-limitations:start -->
 <!-- GENERATED from docs/capabilities.json by scripts/doc-parity/gen-capabilities.mjs. Do not edit by hand; run `npm run docs:gen`. -->
 - **Plugin isolation:** The plugin loader runs plugins in the host process with no sandbox, so trust plugin code before loading. Docker and gVisor sandbox runners exist in the source tree (`packages/ai/src/plugins/runtime`, with a WASM runner alongside) and are unit-tested, but the loader does not call them and the published package does not export them. There is no opt-in today
+- **Agent runtime model calls:** `AgentRuntime.execute` does not call a model yet. It runs the loop (memory retrieval, provider selection and fallback, telemetry), but the step that asks the provider for a completion returns a fixed placeholder, so `result.output` is not model output and `result.success` does not mean a model answered. To make real calls today, pass your own executor to `ProviderRegistry.executeWithFallback`
 <!-- capabilities:known-limitations:end -->
 - **File-based telemetry only:** No database storage adapter yet (not scheduled)
 - **Config caching:** Requires manual cache invalidation on config changes (no hot-reload yet)
