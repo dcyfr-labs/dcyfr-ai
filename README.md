@@ -991,7 +991,11 @@ See [GitHub Issues](https://github.com/dcyfr-labs/dcyfr-ai/issues) for tracked f
 
 ### Sponsorship
 
-Development is supported through sponsorship — if @dcyfr/ai is useful to you or your business, consider sponsoring.
+Development is supported through sponsorship. If @dcyfr/ai is useful to you or your business, consider sponsoring.
+
+Four tiers run from $5 to $500 a month. Every tier puts your name in [SPONSORS.md](./SPONSORS.md) and sends a monthly build note. Builder adds pre-release builds and the private early-access repository. Team and Partner add priority triage and scheduled time with the maintainer. [SPONSORS.md](./SPONSORS.md) lists what each tier includes and how each benefit reaches you.
+
+**Sponsors:** none yet. The first names go here and in [SPONSORS.md](./SPONSORS.md).
 
 **Join:** [GitHub Sponsors](https://github.com/sponsors/dcyfr)
 **Contact:** [hello@dcyfr.ai](mailto:hello@dcyfr.ai)
