@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.7.7](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.7.6...v3.7.7) (2026-11-14)
+
+
+### Dependencies
+
+* bump @hono/node-server from 2.1.5 to 2.1.8 ([#576](https://github.com/dcyfr-labs/dcyfr-ai/issues/576)) ([9fb30d3](https://github.com/dcyfr-labs/dcyfr-ai/commit/9fb30d36c5ca5a532c15fb0e2ea04c15cbf3725e))
+* bump hono from 4.13.14 to 4.13.18 ([#582](https://github.com/dcyfr-labs/dcyfr-ai/issues/582)) ([efb70ec](https://github.com/dcyfr-labs/dcyfr-ai/commit/efb70ec6ce9305b7792335607a024940250bcb91))
+
 ## [3.7.6](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.7.5...v3.7.6) (2026-11-10)
 
 
