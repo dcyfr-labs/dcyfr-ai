@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.7.8](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.7.7...v3.7.8) (2026-11-16)
+
+
+### Dependencies
+
+* bump better-sqlite3 from 13.0.3 to 13.1.1 ([#592](https://github.com/dcyfr-labs/dcyfr-ai/issues/592)) ([11dacd9](https://github.com/dcyfr-labs/dcyfr-ai/commit/11dacd92ddead6d7ac1691451f4a256bde412216))
+* bump fastmcp from 4.24.3 to 4.26.2 ([#590](https://github.com/dcyfr-labs/dcyfr-ai/issues/590)) ([80d564d](https://github.com/dcyfr-labs/dcyfr-ai/commit/80d564db6f55ae85f874fd9a963a77703bec5484))
+* bump glob from 14.0.4 to 14.0.6 ([#588](https://github.com/dcyfr-labs/dcyfr-ai/issues/588)) ([2cdcb63](https://github.com/dcyfr-labs/dcyfr-ai/commit/2cdcb634d0427e835b2cc824e125cb324da616ae))
+* bump inquirer from 14.2.5 to 14.3.0 ([#587](https://github.com/dcyfr-labs/dcyfr-ai/issues/587)) ([d855372](https://github.com/dcyfr-labs/dcyfr-ai/commit/d8553721dc090cb82f20b381738f0e6e18971af4))
+* bump typescript-eslint from 8.72.1 to 8.72.2 ([#586](https://github.com/dcyfr-labs/dcyfr-ai/issues/586)) ([ce10816](https://github.com/dcyfr-labs/dcyfr-ai/commit/ce108163d32a92062055c741372a707a7e7e9763))
+* bump vite from 8.3.6 to 8.3.8 ([#589](https://github.com/dcyfr-labs/dcyfr-ai/issues/589)) ([07ad5e3](https://github.com/dcyfr-labs/dcyfr-ai/commit/07ad5e3fbe0742d98e74596fdcb1f98143114914))
+
 ## [3.7.7](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.7.6...v3.7.7) (2026-11-14)
 
 
