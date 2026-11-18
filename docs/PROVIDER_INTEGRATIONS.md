@@ -68,13 +68,13 @@ The `copilot` provider uses Msty's Vibe CLI Proxy to route requests through your
 5. **Test Connection**
    ```bash
    cd dcyfr-ai
-   npm run test:run
+   npm test
    ```
 
 ### Example Configuration
 
 ```typescript
-import { ProviderRegistry } from '@dcyfr/ai/core/provider-registry';
+import { ProviderRegistry } from '@dcyfr/ai';
 
 const registry = new ProviderRegistry({
   primaryProvider: 'copilot',
@@ -136,13 +136,13 @@ GitHub Models provides API access to:
 4. **Test Connection**
    ```bash
    cd dcyfr-ai
-   npm run test:run
+   npm test
    ```
 
 ### Example Configuration
 
 ```typescript
-import { ProviderRegistry } from '@dcyfr/ai/core/provider-registry';
+import { ProviderRegistry } from '@dcyfr/ai';
 
 const registry = new ProviderRegistry({
   primaryProvider: 'github-models',
@@ -369,13 +369,13 @@ const registry = new ProviderRegistry({
 
 ```bash
 cd dcyfr-ai
-npm run test:run -- --grep "provider"
+npm test -- -t "provider"
 ```
 
 ### Test Specific Model
 
 ```typescript
-import { AgentRuntime } from '@dcyfr/ai/runtime';
+import { AgentRuntime } from '@dcyfr/ai';
 
 const runtime = new AgentRuntime(/* ... */);
 const result = await runtime.execute({

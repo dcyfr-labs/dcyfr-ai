@@ -85,15 +85,15 @@ interface MemoryContext {
 ```bash
 # Required: Vector Database
 VECTOR_DB_PROVIDER=qdrant  # qdrant | pinecone | weaviate
-QDRANT_URL=http://localhost:6333
-QDRANT_API_KEY=your-api-key
+VECTOR_DB_URL=http://localhost:6333
+VECTOR_DB_API_KEY=your-api-key
 
 # Required: LLM Provider
 LLM_PROVIDER=openai  # openai | anthropic
 OPENAI_API_KEY=sk-your-api-key
 
 # Optional: Caching
-ENABLE_MEMORY_CACHING=true
+MEMORY_CACHE_ENABLED=true
 MEMORY_CACHE_TTL=300  # 5 minutes
 ```
 

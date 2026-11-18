@@ -39,7 +39,7 @@ export LLM_MODEL=gpt-4o  # or llama-3.1-70b-instruct
 **Option B: Programmatic Configuration**
 
 ```typescript
-import { ProviderRegistry } from '@dcyfr/ai/core/provider-registry';
+import { ProviderRegistry } from '@dcyfr/ai';
 
 const registry = new ProviderRegistry({
   primaryProvider: 'github-models',
@@ -52,7 +52,7 @@ const registry = new ProviderRegistry({
 ### 3. Use in Your Code
 
 ```typescript
-import { AgentRuntime } from '@dcyfr/ai/runtime';
+import { AgentRuntime } from '@dcyfr/ai';
 
 const agent = new AgentRuntime({
   name: 'my-agent',
@@ -135,7 +135,7 @@ curl -H "Authorization: Bearer $GITHUB_TOKEN" \
 ### Example 1: Code Review Agent
 
 ```typescript
-import { AgentRuntime } from '@dcyfr/ai/runtime';
+import { AgentRuntime } from '@dcyfr/ai';
 
 const reviewer = new AgentRuntime({
   name: 'code-reviewer',

@@ -107,7 +107,7 @@ After any rollback, verify:
 
 ```bash
 # 1. Tests pass
-cd dcyfr-ai && npm run test:run
+cd dcyfr-ai && npm test
 # Expected: all tests passing, 0 failing
 
 # 2. TypeScript compiles clean

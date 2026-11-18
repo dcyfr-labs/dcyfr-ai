@@ -67,7 +67,7 @@ transfer between shifts.
 #### 1. Simple two-contract chain
 
 ```typescript
-import { DelegationContractManager } from '@dcyfr/ai/delegation/contract-manager.js';
+import { ContractManager as DelegationContractManager } from '@dcyfr/ai';
 
 const manager = new DelegationContractManager({ db });
 
@@ -145,7 +145,7 @@ const contractC = await manager.createContract({
 When using `SessionManager.register()`, pass `handoffContext` as the fifth argument:
 
 ```typescript
-import { SessionManager } from '@dcyfr/ai/delegation/session-manager.js';
+import { SessionManager } from '@dcyfr/ai';
 
 const sessionManager = new SessionManager();
 

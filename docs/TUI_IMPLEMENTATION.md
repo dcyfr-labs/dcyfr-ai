@@ -12,7 +12,7 @@ Successfully implemented interactive terminal UIs for the dcyfr-ai CLI using mat
 | Library | Version | Purpose |
 |---------|---------|---------|
 | **chalk** | ^4.1.2 | Terminal colors and text styling |
-| **ora** | ^9.1.0 | Elegant terminal spinners |
+| **ora** | ^10.0.0 | Elegant terminal spinners |
 | **cli-table3** | ^0.6.5 | Beautiful ASCII tables |
 | **inquirer** | ^14.0.2 | Interactive command-line prompts |
 

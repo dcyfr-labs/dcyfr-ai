@@ -5,7 +5,7 @@
 **Information Classification:** TLP:CLEAR (Public)  
 **Last Updated:** February 15, 2026  
 **Version:** 1.0.0  
-**Module:** `@dcyfr/ai/capability-bootstrap`
+**Module:** `@dcyfr/ai` (root export)
 
 ## Overview
 

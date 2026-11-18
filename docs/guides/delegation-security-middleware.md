@@ -245,7 +245,7 @@ Security violations (triggered by `ThreatValidatorMiddleware` blocking) apply a 
 reputation penalty via a slower-recovery α=0.1 coefficient.
 
 ```typescript
-import { ReputationEngine } from '@dcyfr/ai/reputation';
+import { ReputationEngine } from '@dcyfr/ai';
 
 const reputationEngine = new ReputationEngine();
 const manager = new DelegationContractManager({ reputationEngine });

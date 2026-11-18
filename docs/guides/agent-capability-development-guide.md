@@ -228,7 +228,7 @@ For fine-grained control, create manifests manually:
 import type { 
   AgentCapabilityManifest, 
   AgentCapability 
-} from '@dcyfr/ai/types/agent-capabilities';
+} from '@dcyfr/ai';
 
 // 2. Define capabilities
 const capabilities: AgentCapability[] = [
@@ -362,7 +362,7 @@ console.log(`Peers average: ${avgPeerConfidence}, My initial: ${myInitialConfide
 Use past task performance to calibrate:
 
 ```typescript
-import { ReputationEngine } from '@dcyfr/ai/reputation/reputation-engine';
+import { ReputationEngine } from '@dcyfr/ai';
 
 const reputationEngine = new ReputationEngine();
 

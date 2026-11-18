@@ -51,13 +51,12 @@ Documentation for `@dcyfr/ai`. For an overview, installation, and a quick start,
 - [api/scheduler.md](api/scheduler.md): generated reference for `@dcyfr/ai/scheduler`.
 - [api/gateway.md](api/gateway.md): generated reference for `@dcyfr/ai/gateway`.
 - [api/security-prompt-scan-worker.md](api/security-prompt-scan-worker.md): generated reference for `@dcyfr/ai/security/prompt-scan-worker`.
-- [api/capability-bootstrap-api.md](api/capability-bootstrap-api.md): reference for the `@dcyfr/ai/capability-bootstrap` module, which generates capability manifests for new agent onboarding.
+- [api/capability-bootstrap-api.md](api/capability-bootstrap-api.md): reference for the capability bootstrap exports of `@dcyfr/ai`, which generates capability manifests for new agent onboarding.
 - [capabilities.json](capabilities.json): the machine-readable capability list that the README's capability tables are generated from.
 
 ## Terminal UI
 
-- [OPENTUI_INTEGRATION.md](OPENTUI_INTEGRATION.md): the terminal UI integration built on chalk, ora, cli-table3, and inquirer, and why the project moved away from OpenTUI.
-- [TUI_IMPLEMENTATION.md](TUI_IMPLEMENTATION.md): the final terminal UI implementation using those libraries instead of OpenTUI.
+- [TUI_IMPLEMENTATION.md](TUI_IMPLEMENTATION.md): the terminal UI implementation, built on chalk, ora, cli-table3, and inquirer instead of OpenTUI.
 
 ## Releases
 
@@ -69,9 +68,14 @@ Documentation for `@dcyfr/ai`. For an overview, installation, and a quick start,
 - [backlog/SLACK_INTEGRATION_2026-02-05.md](backlog/SLACK_INTEGRATION_2026-02-05.md): a medium priority feature request, dated 2026-02-05, for talking to DCYFR AI agents through Slack.
 - [backlog/DISCORD_INTEGRATION_2026-02-05.md](backlog/DISCORD_INTEGRATION_2026-02-05.md): a medium priority feature request, dated 2026-02-05, for a Discord integration.
 
+## Audits
+
+- [AUDIT-2026-11.md](AUDIT-2026-11.md): file-by-file verdicts (keep, fix, archive) from the November 2026 documentation audit, with the list of fixes still open.
+
 ## Possibly outdated
 
-- [TUI.md](TUI.md): describes the OpenTUI integration and the `@opentui/core` module. `package.json` has no `@opentui` dependency and `bin/tui.js` imports `chalk` and `ora`, which matches `OPENTUI_INTEGRATION.md` and `TUI_IMPLEMENTATION.md` recording the move away from OpenTUI.
+- [TUI.md](TUI.md): describes the earlier OpenTUI integration and the `@opentui/core` module. It now opens with an outdated notice, because `package.json` has no `@opentui` dependency and `bin/tui.js` imports `chalk` and `ora`. A rewrite is listed in the audit.
+- [archive/OPENTUI_INTEGRATION.md](archive/OPENTUI_INTEGRATION.md): the delivery report for the terminal UI work, including why the project moved away from OpenTUI. Archived in the 2026-11 audit.
 - [archive/README.md](archive/README.md): says the files in `archive/` are v1.0.0 launch-era reports from January 2026, kept for reference, while the package is now at 3.7.8.
 - [archive/LAUNCH-SUMMARY.md](archive/LAUNCH-SUMMARY.md): launch summary for the v1.0.0 release of `@dcyfr/ai`.
 - [archive/POST-LAUNCH-STATUS.md](archive/POST-LAUNCH-STATUS.md): the v1.0.0 release summary, published January 27, 2026.
