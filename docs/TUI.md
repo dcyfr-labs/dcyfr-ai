@@ -1,4 +1,6 @@
 <!-- TLP:CLEAR -->
+> **Outdated:** this page describes an earlier OpenTUI (`@opentui/core`) implementation. `@opentui/core` is not a dependency of this package. The terminal UI in `bin/tui.js` and `bin/tui/` now uses `chalk`, `ora`, `cli-table3` and `inquirer`. See [TUI_IMPLEMENTATION.md](TUI_IMPLEMENTATION.md) for the current implementation and [archive/OPENTUI_INTEGRATION.md](archive/OPENTUI_INTEGRATION.md) for why the project moved away from OpenTUI. The component API, code samples and performance figures below are not verified against the current code.
+
 # OpenTUI Integration for DCYFR AI Framework
 
 This document describes the OpenTUI integration that provides interactive terminal UIs for the dcyfr-ai CLI.
@@ -312,4 +314,4 @@ OpenTUI is licensed under MIT. See their [license](https://github.com/anomalyco/
 
 **Last Updated:** February 1, 2026  
 **OpenTUI Version:** 0.1.75  
-**Integration Status:** ✅ Production Ready
+**Integration Status:** superseded by `TUI_IMPLEMENTATION.md`

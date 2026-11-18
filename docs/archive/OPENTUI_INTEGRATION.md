@@ -20,7 +20,7 @@ This stack provides better compatibility, stability, and a smaller bundle size w
 
 ### 1. Core TUI Components
 
-#### [bin/tui/validation-dashboard.js](../bin/tui/validation-dashboard.js)
+#### [bin/tui/validation-dashboard.js](../../bin/tui/validation-dashboard.js)
 Interactive validation dashboard with:
 - Real-time validation gate status (using chalk for colors)
 - Progress bars for compliance metrics (text-based with Unicode blocks)
@@ -28,7 +28,7 @@ Interactive validation dashboard with:
 - Agent summary with enable/disable status
 - Overall validation summary
 
-#### [bin/tui/config-wizard.js](../bin/tui/config-wizard.js)
+#### [bin/tui/config-wizard.js](../../bin/tui/config-wizard.js)
 Interactive configuration wizard with:
 - inquirer-based prompts for all settings
 - Input fields for project settings
@@ -38,14 +38,14 @@ Interactive configuration wizard with:
 
 ### 2. CLI Integration
 
-#### [bin/tui.js](../bin/tui.js)
+#### [bin/tui.js](../../bin/tui.js)
 New TUI CLI entry point with commands:
 - `tui:dashboard` - Run validation dashboard
 - `tui:wizard` - Run configuration wizard
 - Keyboard input handling (Q=quit, R=refresh, V=verbose)
 - Integration with existing validation framework
 
-#### [bin/cli.js](../bin/cli.js)
+#### [bin/cli.js](../../bin/cli.js)
 Updated main CLI to support TUI commands:
 - Added `tui:dashboard` command
 - Added `tui:wizard` command
@@ -53,19 +53,19 @@ Updated main CLI to support TUI commands:
 
 ### 3. Examples & Demos
 
-#### [examples/tui/demo-dashboard.js](../examples/tui/demo-dashboard.js)
+#### [examples/tui/demo-dashboard.js](../../examples/tui/demo-dashboard.js)
 Dashboard demo with mock data showing:
 - Validation gate visualization
 - Real-time updates (press R)
 - Interactive keyboard controls
 
-#### [examples/tui/demo-wizard.js](../examples/tui/demo-wizard.js)
+#### [examples/tui/demo-wizard.js](../../examples/tui/demo-wizard.js)
 Wizard demo showing:
 - Interactive form navigation
 - State management
 - Submit/cancel workflow
 
-#### [examples/tui/demo-custom.js](../examples/tui/demo-custom.js)
+#### [examples/tui/demo-custom.js](../../examples/tui/demo-custom.js)
 Custom components demo featuring:
 - Custom metric cards
 - System resource visualization
@@ -74,7 +74,7 @@ Custom components demo featuring:
 
 ### 4. Documentation
 
-#### [examples/tui/README.md](../examples/tui/README.md)
+#### [examples/tui/README.md](../../examples/tui/README.md)
 Comprehensive examples documentation with:
 - Component usage guide
 - Keyboard shortcuts reference
@@ -82,7 +82,7 @@ Comprehensive examples documentation with:
 - CI/CD integration patterns
 - Troubleshooting guide
 
-#### [docs/TUI.md](../docs/TUI.md)
+#### [docs/TUI.md](../TUI.md)
 Full TUI integration documentation:
 - Architecture overview
 - Component API reference
@@ -92,7 +92,7 @@ Full TUI integration documentation:
 
 ### 5. Package Updates
 
-#### [package.json](../package.json)
+#### [package.json](../../package.json)
 - Removed `@opentui/core` (compatibility issues)
 - Added `chalk@^4.1.2` - Terminal colors and styling
 - Added `ora@^9.1.0` - Terminal spinners
@@ -231,8 +231,8 @@ node examples/tui/demo-dashboard.js
 - [OpenTUI Website](https://opentui.com/)
 - [OpenTUI GitHub](https://github.com/anomalyco/opentui)
 - [OpenTUI Docs](https://opentui.com/docs/getting-started)
-- [dcyfr-ai README](../README.md)
-- [TUI Documentation](../docs/TUI.md)
+- [dcyfr-ai README](../../README.md)
+- [TUI Documentation](../TUI.md)
 
 ---
 
