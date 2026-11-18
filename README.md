@@ -696,6 +696,7 @@ See [examples/](./examples/) directory:
 
 ## Documentation
 
+- [Docs index](./docs/README.md)
 - [Getting Started](./docs/GETTING-STARTED.md)
 - [Provider Integrations](./docs/PROVIDER_INTEGRATIONS.md) - **OpenAI, Anthropic, Ollama, Msty Vibe CLI Proxy**
 - [Memory Setup](./docs/MEMORY_SETUP.md) - Vector database and memory configuration
