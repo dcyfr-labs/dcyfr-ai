@@ -2,15 +2,15 @@
   "repo_notes": [
     {
       "content": "Published to npm as @dcyfr/ai under MIT. The framework lives entirely under packages/ai/.",
-      "author": "rei-doc-specialist"
+      "author": "dcyfr-doc-specialist"
     },
     {
       "content": "The largest subsystems by file count are manifests/ (85), src/plugins/ (47) and delegation/ (50 plus 20 tests). Document those before the smaller ones.",
-      "author": "rei-doc-specialist"
+      "author": "dcyfr-doc-specialist"
     },
     {
       "content": "There is no packages/ai/llm/ directory. Provider code, where it exists, sits under src/integrations/ and src/gateway/.",
-      "author": "rei-doc-specialist"
+      "author": "dcyfr-doc-specialist"
     }
   ],
   "pages": [
