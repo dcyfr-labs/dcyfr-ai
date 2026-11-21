@@ -1,7 +1,7 @@
 # docs-wiki-eval — the caller, tracked here and installed in the documented repo.
 #
 # This file belongs in dcyfr-labs/dcyfr-ai at .github/workflows/docs-wiki-eval.yml.
-# It is kept in rei-workspace because the thing it pins is generated here: the
+# It is kept in the generator's workspace because the thing it pins is generated here: the
 # gate runner in usr/docgen/gate-runner/, published to dcyfr-labs/.github. A
 # caller living only in the documented repository would drift from the bundle
 # it pins with nothing able to notice, which is the failure this whole change
@@ -22,7 +22,14 @@
 # either is neither a full SHA nor the GATE_RUNNER_SHA placeholder, or where
 # gate-version drifts from the committed bundle.
 #
-# Moved from 0.3.0 at bbb9fcc8 to 0.3.1 at f276a268, which is dcyfr-labs/.github's
+# Moved from 0.3.1 at f276a268 to 0.3.2 at 9de86d6a, which is dcyfr-labs/.github's
+# main head after dcyfr-labs/.github#29 published the rebuilt bundle. 0.3.2
+# renames the generator to `dcyfr-doc-specialist` in `generated_by` and in the
+# managed-block marker. Front matter is checked by equality, so 0.3.2 and 0.3.1
+# disagree about any generated page. No gate run has recorded that either: this
+# job reads docs/wiki/*.md, and dcyfr-ai has none yet.
+#
+# 0.3.1 moved from 0.3.0 at bbb9fcc8 to f276a268, which is dcyfr-labs/.github's
 # main head after dcyfr-labs/.github#11 published the rebuilt bundle. 0.3.1
 # disagrees with 0.3.0 in H1 alone: a bare climb with a trailing slash (`../../`,
 # a link to a parent directory) no longer lands on the empty path, which the deny
@@ -37,7 +44,7 @@
 # lands (#1046, as corrected by #1107).
 #
 # Each version passes through the GATE_RUNNER_SHA placeholder first (#1027
-# for 0.2.0, #1104 for 0.3.0, #1113 for 0.3.1), because a caller may not name a
+# for 0.2.0, #1104 for 0.3.0, #1113 for 0.3.1, #1994 for 0.3.2), because a caller may not name a
 # published SHA before one exists: an old SHA beside a new gate-version pins a
 # runner that fails its own version assertion inside the job. Before 0.3.0 it was
 # 0.2.0 at 6bd0095c, and before that 0.1.0 at 9150f27e.
@@ -71,8 +78,8 @@ jobs:
     # A pull request that touches a generated path but was not opened by Scribe
     # is still gated: the point is that the paths are generator-owned, not that
     # the author claimed to be the generator.
-    uses: dcyfr-labs/.github/.github/workflows/docs-wiki-eval-reusable.yml@f276a26822bfce07d2f8335d50253083edf8edcc
+    uses: dcyfr-labs/.github/.github/workflows/docs-wiki-eval-reusable.yml@9de86d6a2e535a240bad23df99c08b3a8bdf9ab2
     with:
-      gate-ref: f276a26822bfce07d2f8335d50253083edf8edcc
-      gate-version: '0.3.1'
+      gate-ref: 9de86d6a2e535a240bad23df99c08b3a8bdf9ab2
+      gate-version: '0.3.2'
       base-sha: ${{ github.event.pull_request.base.sha || inputs.base-sha }}
