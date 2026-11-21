@@ -58,7 +58,10 @@ on:
       - 'llms.txt'
       - 'llms-full.txt'
       - 'AGENTS.md'
-      - '.devin/wiki.json'
+    # `.devin/wiki.json` is generator-owned but is not a trigger. No gate reads
+    # it, and a pull request that changes only that file in a repository with no
+    # wiki pages yet ends in a fault ("no docs/wiki pages to evaluate") instead
+    # of a verdict. A change that also touches a page still runs the gate.
   workflow_dispatch:
     inputs:
       base-sha:
