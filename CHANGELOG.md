@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.7.9](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.7.8...v3.7.9) (2026-11-23)
+
+
+### Dependencies
+
+* bump @vitest/coverage-v8 from 5.1.0 to 5.1.1 ([#605](https://github.com/dcyfr-labs/dcyfr-ai/issues/605)) ([72389a4](https://github.com/dcyfr-labs/dcyfr-ai/commit/72389a41a0d54aa138a95bd3b99850497e50a50a))
+* bump better-sqlite3 from 13.1.1 to 13.2.0 ([#604](https://github.com/dcyfr-labs/dcyfr-ai/issues/604)) ([a23ba7e](https://github.com/dcyfr-labs/dcyfr-ai/commit/a23ba7e952815db1b4c30b51d8e6c514e0119801))
+* bump eslint from 10.14.0 to 10.15.0 ([#601](https://github.com/dcyfr-labs/dcyfr-ai/issues/601)) ([79ac565](https://github.com/dcyfr-labs/dcyfr-ai/commit/79ac565e4f024b5a230c7b522d32e3527c2b290c))
+* bump fastmcp from 4.26.2 to 4.28.4 ([#603](https://github.com/dcyfr-labs/dcyfr-ai/issues/603)) ([63b68df](https://github.com/dcyfr-labs/dcyfr-ai/commit/63b68df389c8f0375f2a17e29855ff0be68f66d5))
+* bump typescript-eslint from 8.72.2 to 8.73.0 ([#602](https://github.com/dcyfr-labs/dcyfr-ai/issues/602)) ([aa8761b](https://github.com/dcyfr-labs/dcyfr-ai/commit/aa8761ba021fc9fdfb61254793057bedaef4681d))
+* bump vitest from 5.1.0 to 5.1.1 ([#600](https://github.com/dcyfr-labs/dcyfr-ai/issues/600)) ([2a2cd01](https://github.com/dcyfr-labs/dcyfr-ai/commit/2a2cd013dd78503813bfa2ab90055c631f95b72b))
+
 ## [3.7.8](https://github.com/dcyfr-labs/dcyfr-ai/compare/v3.7.7...v3.7.8) (2026-11-16)
 
 
